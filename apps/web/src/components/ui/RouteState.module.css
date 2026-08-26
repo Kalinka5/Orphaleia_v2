@@ -1,0 +1,15 @@
+.state { min-height: 280px; padding: 70px 20px; display: grid; place-items: center; align-content: center; text-align: center; color: var(--ink-muted); }
+.compact { min-height: 180px; padding-block: 38px; }
+.state h2 { margin: 12px 0; color: var(--night); font-size: clamp(1.8rem, 3vw, 2.4rem); font-weight: 500; line-height: 1.05; letter-spacing: -.035em; text-wrap: balance; }
+.state p { max-width: 52ch; margin: 0; line-height: 1.6; text-wrap: pretty; }
+.compass { color: var(--bronze); }
+.action { min-height: 44px; margin-top: 22px; padding: 0 18px; display: inline-flex; align-items: center; gap: 8px; color: white; background: var(--bronze); border: 0; border-radius: 8px; font-weight: 600; }
+.action:hover { background: #204c3d; transform: translateY(-1px); }
+.action:active { transform: translateY(1px) scale(.98); }
+.skeleton { width: min(100%, 380px); display: grid; gap: 11px; }
+.skeleton span { height: 12px; display: block; border-radius: 999px; background: linear-gradient(90deg, #e7e4dc 25%, #f7f4eb 45%, #e7e4dc 65%); background-size: 240% 100%; animation: shimmer 1.25s ease-in-out infinite; }
+.skeleton span:first-child { width: 56%; height: 25px; margin-inline: auto; }
+.skeleton span:nth-child(2) { width: 92%; }
+.skeleton span:nth-child(3) { width: 72%; margin-inline: auto; }
+@keyframes shimmer { to { background-position: -120% 0; } }
+@media (prefers-reduced-motion: reduce) { .skeleton span { animation: none; } }

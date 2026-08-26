@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-labelledby="title desc">
+  <title id="title">Orphaleia</title>
+  <desc id="desc">A circular O opening into the pages of a book.</desc>
+  <path fill="#18201d" fill-rule="evenodd" d="M50 4a46 46 0 1 1 0 92 46 46 0 0 1 0-92Zm0 12a34 34 0 1 0 0 68 34 34 0 0 0 0-68Z"/>
+  <path fill="#18201d" d="M12.9 66.2c13.7-2.7 26.2 2.6 37.1 17.1V96C38.9 80.9 26.7 74.4 11.8 76.7a46.1 46.1 0 0 1 1.1-10.5Z"/>
+  <path fill="#18201d" d="M87.1 66.2C73.4 63.5 60.9 68.8 50 83.3V96c11.1-15.1 23.3-21.6 38.2-19.3a46.1 46.1 0 0 0-1.1-10.5Z"/>
+  <path fill="#285f4c" d="M17 68.5c12.6-.6 23.6 5 33 17.1v5.5C40.2 80.4 29.3 75.7 16 76.8c.1-2.8.5-5.6 1-8.3Z"/>
+</svg>

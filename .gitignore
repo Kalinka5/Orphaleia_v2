@@ -1,0 +1,16 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+data/
+*.db
+apps/api/orphaleia.db
+apps/api/media/
