@@ -69,6 +69,187 @@ test('home presents the ordered classic collection with complete artwork', async
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 })
 
+test('Cheshire cat stays centered directly above the genre guidance', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('/')
+
+  const section = page.getByRole('region', { name: 'Follow your reading instinct.' })
+  const heading = section.getByRole('heading', { name: 'Follow your reading instinct.' })
+  const companion = section.getByTestId('genre-companion')
+  const cat = companion.locator('figure')
+  const copy = companion.getByText('Move sideways through the shelves. The collection that opens is the one asking for your attention.')
+
+  await companion.scrollIntoViewIfNeeded()
+  await expect(cat.locator('img')).toHaveJSProperty('complete', true)
+
+  const headingBox = await heading.boundingBox()
+  const catBox = await cat.boundingBox()
+  const copyBox = await copy.boundingBox()
+  expect(headingBox).not.toBeNull()
+  expect(catBox).not.toBeNull()
+  expect(copyBox).not.toBeNull()
+  expect(copyBox!.y - (catBox!.y + catBox!.height)).toBeCloseTo(24, 0)
+  expect(Math.abs((catBox!.x + catBox!.width / 2) - (copyBox!.x + copyBox!.width / 2))).toBeLessThan(2)
+
+  if ((page.viewportSize()?.width ?? 0) <= 760) {
+    expect(headingBox!.y + headingBox!.height).toBeLessThan(catBox!.y)
+  }
+
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+})
+
+test('Wonderland tea party sits below the genre accordion without overflow', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('/')
+
+  const accordion = page.getByTestId('genre-accordion')
+  const tableau = page.getByTestId('wonderland-tea-party')
+  const testimonials = page.getByRole('region', { name: 'Books travel farther when readers talk.' })
+  const image = tableau.locator('img')
+  await tableau.scrollIntoViewIfNeeded()
+  await expect(image).toHaveJSProperty('complete', true)
+  expect(await image.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBeGreaterThan(0)
+
+  const mobile = (page.viewportSize()?.width ?? 0) <= 760
+  expect(await image.evaluate((element: HTMLImageElement) => element.currentSrc)).toContain(`wonderland-tea-party-${mobile ? 'mobile' : 'desktop'}.png`)
+
+  const accordionBox = await accordion.boundingBox()
+  const tableauBox = await tableau.boundingBox()
+  expect(accordionBox).not.toBeNull()
+  expect(tableauBox).not.toBeNull()
+  const accordionGap = tableauBox!.y - (accordionBox!.y + accordionBox!.height)
+  expect(accordionGap).toBeGreaterThan(0)
+  expect(accordionGap).toBeLessThanOrEqual(60)
+  if (!mobile) {
+    expect(tableauBox!.width).toBeCloseTo(Math.min(1096, accordionBox!.width), 0)
+    expect(tableauBox!.x + tableauBox!.width / 2).toBeCloseTo(accordionBox!.x + accordionBox!.width / 2, 0)
+  }
+
+  const testimonialsBox = await testimonials.boundingBox()
+  expect(testimonialsBox).not.toBeNull()
+  const testimonialsGap = testimonialsBox!.y - (tableauBox!.y + tableauBox!.height)
+  expect(testimonialsGap).toBeLessThanOrEqual(220)
+
+  await expect(tableau).toHaveCSS('opacity', '1')
+  await expect(tableau).toHaveCSS('transform', 'none')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+})
+
+test('Peter Pan and Captain Hook frame the reader notes without covering its copy', async ({ page }) => {
+  await page.goto('/')
+
+  const section = page.getByRole('region', { name: 'Books travel farther when readers talk.' })
+  const stage = section.getByTestId('reader-notes-characters')
+  const heading = section.getByRole('heading', { name: 'Books travel farther when readers talk.' })
+  const peter = section.getByTestId('reader-notes-peter')
+  const hook = section.getByTestId('reader-notes-hook')
+
+  await stage.scrollIntoViewIfNeeded()
+  await expect(peter).toHaveAttribute('aria-hidden', 'true')
+  await expect(hook).toHaveAttribute('aria-hidden', 'true')
+
+  for (const image of [peter.locator('img'), hook.locator('img')]) {
+    await expect(image).toHaveJSProperty('complete', true)
+    expect(await image.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBeGreaterThan(0)
+  }
+
+  const peterBox = await peter.boundingBox()
+  const hookBox = await hook.boundingBox()
+  const headingBox = await heading.boundingBox()
+  expect(peterBox).not.toBeNull()
+  expect(hookBox).not.toBeNull()
+  expect(headingBox).not.toBeNull()
+  expect(peterBox!.x).toBeLessThan(hookBox!.x)
+
+  if ((page.viewportSize()?.width ?? 0) <= 760) {
+    expect(peterBox!.y + peterBox!.height).toBeLessThanOrEqual(headingBox!.y)
+    expect(hookBox!.y + hookBox!.height).toBeLessThanOrEqual(headingBox!.y)
+  } else {
+    expect(peterBox!.x + peterBox!.width).toBeLessThanOrEqual(headingBox!.x)
+    expect(hookBox!.x).toBeGreaterThanOrEqual(headingBox!.x + headingBox!.width)
+  }
+
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+})
+
+test('collection introduction stays pinned while its books scroll', async ({ page }) => {
+  await page.goto('/')
+
+  const intro = page.getByTestId('collection-intro')
+  const stack = page.getByTestId('collection-stack')
+  await expect(stack.locator('[data-collection-slug]')).toHaveCount(4)
+
+  if ((page.viewportSize()?.width ?? 0) <= 1050) {
+    await expect(intro).toHaveCSS('position', 'static')
+    return
+  }
+
+  await expect(intro).toHaveCSS('position', 'sticky')
+  const scrollRange = await stack.evaluate((element) => ({
+    top: element.getBoundingClientRect().top + window.scrollY,
+    height: element.getBoundingClientRect().height,
+  }))
+
+  const firstScrollY = scrollRange.top + scrollRange.height * 0.18
+  await page.evaluate((y) => {
+    document.documentElement.style.scrollBehavior = 'auto'
+    window.scrollTo(0, y)
+  }, firstScrollY)
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeCloseTo(firstScrollY, 0)
+  const firstPinnedY = (await intro.boundingBox())!.y
+
+  const secondScrollY = scrollRange.top + scrollRange.height * 0.58
+  await page.evaluate((y) => window.scrollTo(0, y), secondScrollY)
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeCloseTo(secondScrollY, 0)
+  await expect.poll(async () => (await intro.boundingBox())?.y).toBeCloseTo(firstPinnedY, 0)
+})
+
+test('Don Quixote tableau supports the collection introduction without obscuring it', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('/')
+
+  const section = page.getByRole('region', { name: 'A shelf should feel like a conversation.' })
+  const intro = section.getByTestId('collection-intro')
+  const tableau = section.getByTestId('don-quixote-tableau')
+  const image = tableau.locator('img')
+  const link = intro.getByRole('link', { name: /Explore all collections/i })
+  const firstCard = section.getByTestId('collection-stack').locator('[data-collection-slug]').first()
+
+  await tableau.scrollIntoViewIfNeeded()
+  await expect(tableau).toHaveAttribute('aria-hidden', 'true')
+  await expect(image).toHaveJSProperty('complete', true)
+  expect(await image.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBeGreaterThan(0)
+
+  const compact = (page.viewportSize()?.width ?? 0) <= 1050
+  expect(await image.evaluate((element: HTMLImageElement) => element.currentSrc)).toContain(`don-quixote-tableau-${compact ? 'mobile' : 'desktop'}.png`)
+  await expect(tableau).toHaveCSS('pointer-events', 'none')
+  await expect(tableau).toHaveCSS('opacity', '1')
+  await expect(tableau).toHaveCSS('transform', 'none')
+
+  const sectionBox = await section.boundingBox()
+  const tableauBox = await tableau.boundingBox()
+  expect(sectionBox).not.toBeNull()
+  expect(tableauBox).not.toBeNull()
+  expect(tableauBox!.x).toBeGreaterThanOrEqual(sectionBox!.x - 1)
+  expect(tableauBox!.x + tableauBox!.width).toBeLessThanOrEqual(sectionBox!.x + sectionBox!.width + 1)
+
+  if (compact) {
+    const linkBox = await link.boundingBox()
+    const firstCardBox = await firstCard.boundingBox()
+    expect(linkBox).not.toBeNull()
+    expect(firstCardBox).not.toBeNull()
+    expect(tableauBox!.y).toBeGreaterThan(linkBox!.y + linkBox!.height)
+    expect(tableauBox!.y + tableauBox!.height).toBeLessThan(firstCardBox!.y)
+  } else {
+    await expect(intro).toHaveCSS('position', 'sticky')
+    expect(Number(await tableau.evaluate((element) => getComputedStyle(element).zIndex))).toBeLessThan(
+      Number(await link.evaluate((element) => getComputedStyle(element).zIndex)),
+    )
+  }
+
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+})
+
 test('hero remains complete with reduced motion', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto('/')
@@ -146,9 +327,10 @@ test('auth pages use their focused responsive shell and artwork', async ({ page 
   await mockGuest(page)
   const mobile = (page.viewportSize()?.width ?? 0) <= 760
   const pages = [
-    { route: '/sign-in', heading: 'Welcome back.', asset: 'princess-book' },
-    { route: '/register', heading: 'Join the voyage.', asset: 'knight-book' },
+    { route: '/sign-in', heading: 'Login', asset: 'sherlock-holmes' },
+    { route: '/register', heading: 'Register', asset: 'doctor-watson' },
   ]
+  let loginPalette: string[] | undefined
 
   for (const entry of pages) {
     await page.goto(entry.route)
@@ -157,11 +339,29 @@ test('auth pages use their focused responsive shell and artwork', async ({ page 
 
     const artwork = page.getByTestId('auth-artwork')
     const form = page.getByTestId('auth-form-panel')
+    const formContent = form.locator('form')
     const image = artwork.getByRole('img')
     await expect(image).toBeVisible()
     await expect(image).toHaveJSProperty('complete', true)
     expect(await image.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBeGreaterThan(0)
     expect(await image.evaluate((element: HTMLImageElement) => element.currentSrc)).toContain(`${entry.asset}-${mobile ? 'mobile' : 'desktop'}.webp`)
+    expect(await artwork.evaluate((element) => getComputedStyle(element, '::before').content)).toBe('none')
+    expect(await artwork.evaluate((element) => getComputedStyle(element, '::after').content)).toBe('none')
+
+    const palette = await page.getByTestId('auth-shell').evaluate((shell) => {
+      const panel = shell.querySelector<HTMLElement>('[data-testid="auth-form-panel"]')!
+      const artworkPanel = shell.querySelector<HTMLElement>('[data-testid="auth-artwork"]')!
+      const submit = shell.querySelector<HTMLElement>('form > button')!
+      const heading = shell.querySelector<HTMLElement>('h1')!
+      return [
+        getComputedStyle(panel).backgroundColor,
+        getComputedStyle(artworkPanel).backgroundColor,
+        getComputedStyle(submit).backgroundColor,
+        getComputedStyle(heading).color,
+      ]
+    })
+    if (entry.route === '/sign-in') loginPalette = palette
+    else expect(palette).toEqual(loginPalette)
 
     if (mobile) {
       await expect(page.getByRole('link', { name: 'Back to shop' })).toBeVisible()
@@ -174,9 +374,15 @@ test('auth pages use their focused responsive shell and artwork', async ({ page 
       await expect(page.getByRole('link', { name: /Cart with 0 items/i })).toBeVisible()
       const shellBox = await page.getByTestId('auth-shell').boundingBox()
       const formBox = await form.boundingBox()
+      const formContentBox = await formContent.boundingBox()
       const artworkBox = await artwork.boundingBox()
+      const imageBox = await image.boundingBox()
       expect(shellBox!.height).toBeLessThanOrEqual((page.viewportSize()?.height ?? 0) - 76 + 1)
-      expect(artworkBox!.x + artworkBox!.width).toBeLessThanOrEqual(formBox!.x + 1)
+      expect(artworkBox!.x).toBeGreaterThanOrEqual(formBox!.x + formBox!.width - 1)
+      expect(formContentBox!.width).toBeLessThanOrEqual(421)
+      expect(formContentBox!.x).toBeLessThan(formBox!.x + (formBox!.width - formContentBox!.width) / 2)
+      expect(artworkBox!.width).toBeLessThan(formBox!.width)
+      expect(imageBox!.x).toBeLessThan(artworkBox!.x)
       expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 1)).toBe(true)
     }
 

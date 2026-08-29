@@ -36,6 +36,53 @@ test('home visual baseline', async ({ page }) => {
   await capture(page, 'home', false)
 })
 
+test('Wonderland genre tableau visual baseline', async ({ page }) => {
+  await page.goto('/')
+  const tableau = page.getByTestId('wonderland-tea-party')
+  const image = tableau.locator('img')
+  await tableau.scrollIntoViewIfNeeded()
+  await expect(image).toHaveJSProperty('complete', true)
+  await settle(page)
+  await expect(tableau).toHaveScreenshot('wonderland-genre-tableau.png', { animations: 'disabled', timeout: 15_000 })
+})
+
+test('Cheshire cat genre heading visual baseline', async ({ page }) => {
+  await page.goto('/')
+  const heading = page.getByRole('heading', { name: 'Follow your reading instinct.' })
+  const composition = heading.locator('..')
+  const image = page.getByTestId('genre-companion').locator('img')
+  await composition.scrollIntoViewIfNeeded()
+  await expect(image).toHaveJSProperty('complete', true)
+  await settle(page)
+  await expect(composition).toHaveScreenshot('cheshire-cat-genre-heading.png', { animations: 'disabled', timeout: 15_000 })
+})
+
+test('collection-to-genre desktop transition visual baseline', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium', 'This transition adjustment is desktop-only.')
+  await page.goto('/')
+  const collectionCards = page.getByTestId('collection-stack').locator('article')
+  await expect(collectionCards).toHaveCount(4)
+  await collectionCards.last().scrollIntoViewIfNeeded()
+  await expect(collectionCards.last().locator('img')).toHaveJSProperty('complete', true)
+  const genreSection = page.locator('section[aria-labelledby="genre-section-title"]')
+  await genreSection.scrollIntoViewIfNeeded()
+  await expect(page.getByTestId('genre-companion').locator('img')).toHaveJSProperty('complete', true)
+  await settle(page)
+  const genreTop = await genreSection.evaluate((element) => element.getBoundingClientRect().top + window.scrollY)
+  await page.evaluate((top) => window.scrollTo(0, top), Math.max(0, genreTop - 320))
+  await expect(page).toHaveScreenshot('collection-genre-transition.png', { animations: 'disabled', fullPage: false, timeout: 15_000 })
+})
+
+test('Don Quixote collection introduction visual baseline', async ({ page }) => {
+  await page.goto('/')
+  const intro = page.getByTestId('collection-intro')
+  const image = intro.getByTestId('don-quixote-tableau').locator('img')
+  await intro.scrollIntoViewIfNeeded()
+  await expect(image).toHaveJSProperty('complete', true)
+  await settle(page)
+  await expect(intro).toHaveScreenshot('don-quixote-collection-intro.png', { animations: 'disabled', timeout: 15_000 })
+})
+
 test('catalog open-filter visual baseline', async ({ page }) => {
   await page.goto('/books')
   await page.getByRole('button', { name: /Genre All genres/i }).click()
@@ -49,10 +96,14 @@ test('book detail visual baseline', async ({ page }) => {
   await capture(page, 'book-detail')
 })
 
-test('authentication visual baseline', async ({ page }) => {
+test('authentication visual baselines', async ({ page }) => {
   await page.goto('/sign-in')
-  await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible()
   await capture(page, 'sign-in')
+
+  await page.goto('/register')
+  await expect(page.getByRole('heading', { name: 'Register' })).toBeVisible()
+  await capture(page, 'register')
 })
 
 test('checkout visual baseline', async ({ page }) => {

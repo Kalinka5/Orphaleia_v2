@@ -6,6 +6,7 @@ import { api, money } from './api'
 import { PageMeta } from './components/PageMeta'
 import { ErrorState, RouteState as State } from './components/ui/RouteState'
 import { SelectControl, type SelectOption } from './components/ui/SelectControl'
+import { CtaWithMarquee } from './components/ui/cta-with-marquee'
 import { TestimonialsColumn, type Testimonial } from './components/ui/testimonials-columns-1'
 import { getGenreIllustration, homepageGenreSlugs } from './genreIllustrations'
 import { getLandingIllustration, orderHomepageBooks } from './landingIllustrations'
@@ -188,14 +189,22 @@ function Testimonials() {
   const thirdColumn = readerTestimonials.slice(6, 9)
 
   return <section className={s.testimonialsSection} aria-labelledby="reader-notes-title">
-    <div className={s.testimonialsHeading}>
-      <p>Notes from the reading room</p>
-      <h2 id="reader-notes-title">Books travel farther<br />when readers talk.</h2>
-      <span>Thoughts from people who followed their curiosity through our shelves.</span>
-      <button className={s.motionToggle} type="button" onClick={() => setPaused((value) => !value)} aria-pressed={paused}>
-        {paused ? <Play size={15} aria-hidden="true" /> : <Pause size={15} aria-hidden="true" />}
-        {paused ? 'Resume reader notes' : 'Pause reader notes'}
-      </button>
+    <div className={s.testimonialsHeadingStage} data-testid="reader-notes-characters">
+      <figure className={`${s.readerNotesCharacter} ${s.readerNotesPeter}`} data-testid="reader-notes-peter" aria-hidden="true">
+        <img src="/assets/landing/peter-pan-reader-notes.png" alt="" width="1024" height="1536" loading="lazy" decoding="async" />
+      </figure>
+      <div className={s.testimonialsHeading}>
+        <p>Notes from the reading room</p>
+        <h2 id="reader-notes-title">Books travel farther<br />when readers talk.</h2>
+        <span>Thoughts from people who followed their curiosity through our shelves.</span>
+        <button className={s.motionToggle} type="button" onClick={() => setPaused((value) => !value)} aria-pressed={paused}>
+          {paused ? <Play size={15} aria-hidden="true" /> : <Pause size={15} aria-hidden="true" />}
+          {paused ? 'Resume reader notes' : 'Pause reader notes'}
+        </button>
+      </div>
+      <figure className={`${s.readerNotesCharacter} ${s.readerNotesHook}`} data-testid="reader-notes-hook" aria-hidden="true">
+        <img src="/assets/landing/captain-hook-reader-notes.png" alt="" width="1024" height="1536" loading="lazy" decoding="async" />
+      </figure>
     </div>
     <div className={s.testimonialsColumns}>
       <TestimonialsColumn testimonials={firstColumn} duration={18} paused={paused} />
@@ -253,7 +262,6 @@ function Home() {
   const query = useQuery({ queryKey: ['home-selection'], queryFn: () => api<Page<Book>>('/books?featured=true&page_size=4&sort=title') })
   const genres = useQuery({ queryKey: ['genres'], queryFn: () => api<{ items: Genre[] }>('/genres') })
   const root = useRef<HTMLDivElement>(null)
-  const pin = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
@@ -270,9 +278,24 @@ function Home() {
           .from(`.${s.heroReveal}`, { y: 18, opacity: 0, duration: .72, stagger: .08, ease: 'power3.out' }, '-=.62')
           .from(`.${s.heroButtons}`, { y: 18, duration: .72, ease: 'power3.out' }, '-=.56')
 
-        ScrollTrigger.create({ trigger: `.${s.collectionStory}`, start: 'top 12%', end: 'bottom 85%', pin: pin.current, pinSpacing: false })
         gsap.utils.toArray<HTMLElement>(`.${s.stackCard}`).forEach((card, index) => {
           gsap.fromTo(card, { y: 110, scale: 0.92, rotate: index % 2 ? 1.5 : -1.5 }, { y: 0, scale: 1, rotate: 0, ease: 'none', scrollTrigger: { trigger: card, start: 'top 92%', end: 'top 38%', scrub: 1 } })
+        })
+
+        gsap.from(`.${s.quixoteTableau}`, {
+          y: 38,
+          opacity: 0,
+          duration: .9,
+          ease: 'power3.out',
+          scrollTrigger: { trigger: `.${s.collectionStory}`, start: 'top 78%', once: true },
+        })
+
+        gsap.from(`.${s.wonderlandTeaParty}`, {
+          y: 54,
+          opacity: 0,
+          duration: 1,
+          ease: 'power3.out',
+          scrollTrigger: { trigger: `.${s.wonderlandTeaParty}`, start: 'top 88%', once: true },
         })
       }, root)
     }
@@ -320,8 +343,26 @@ function Home() {
         </div>}
     </section>
 
-    <section className={s.collectionStory}>
-      <div ref={pin} className={s.collectionIntro}><p>Chosen with intent</p><h2>A shelf should feel like a conversation.</h2><span>Each month, our booksellers follow one idea across eras, continents, and forms.</span><Link to="/genres">Explore all collections <ArrowUpRight size={15} aria-hidden="true" /></Link></div>
+    <section className={s.collectionStory} aria-labelledby="collection-story-title">
+      <div className={s.collectionIntro} data-testid="collection-intro">
+        <p>Chosen with intent</p>
+        <h2 id="collection-story-title">A shelf should feel like a conversation.</h2>
+        <span>Each month, our booksellers follow one idea across eras, continents, and forms.</span>
+        <Link to="/genres">Explore all collections <ArrowUpRight size={15} aria-hidden="true" /></Link>
+        <figure className={s.quixoteTableau} data-testid="don-quixote-tableau" aria-hidden="true">
+          <picture>
+            <source media="(max-width: 1050px)" srcSet="/assets/landing/don-quixote-tableau-mobile.png" width="1254" height="1254" />
+            <img
+              src="/assets/landing/don-quixote-tableau-desktop.png"
+              alt=""
+              width="1536"
+              height="1024"
+              loading="lazy"
+              decoding="async"
+            />
+          </picture>
+        </figure>
+      </div>
       <div className={s.collectionStack} data-testid="collection-stack">
         {featured.map((book, index) => {
           const illustration = getLandingIllustration(book, 'story')
@@ -334,7 +375,15 @@ function Home() {
     </section>
 
     <section className={s.genreSection} aria-labelledby="genre-section-title">
-      <div className={s.editorialHeading}><h2 id="genre-section-title">Follow your<br />reading instinct.</h2><p>Move sideways through the shelves. The collection that opens is the one asking for your attention.</p></div>
+      <div className={`${s.editorialHeading} ${s.genreHeading}`}>
+        <h2 id="genre-section-title">Follow your<br />reading instinct.</h2>
+        <div className={s.genreCompanion} data-testid="genre-companion">
+          <figure className={s.cheshireCat} aria-hidden="true">
+            <img src="/assets/landing/cheshire-cat-flying.png" alt="" loading="lazy" decoding="async" />
+          </figure>
+          <p>Move sideways through the shelves. The collection that opens is the one asking for your attention.</p>
+        </div>
+      </div>
       <div className={s.genreAccordion} data-testid="genre-accordion">{collectionGenres.map((genre, index) => {
         const illustration = getGenreIllustration(genre)
         return <Link
@@ -358,15 +407,24 @@ function Home() {
           <div className={s.genreCopy}><h3>{genre.name}</h3><p>{genre.description}</p><b>Explore collection</b></div>
         </Link>
       })}</div>
+      <figure className={s.wonderlandTeaParty} data-testid="wonderland-tea-party" aria-hidden="true">
+        <picture>
+          <source media="(max-width: 760px)" srcSet="/assets/landing/wonderland-tea-party-mobile.png" />
+          <img
+            src="/assets/landing/wonderland-tea-party-desktop.png"
+            alt=""
+            width="1672"
+            height="941"
+            loading="lazy"
+            decoding="async"
+          />
+        </picture>
+      </figure>
     </section>
 
     <Testimonials />
 
-    <section className={s.actionSection}>
-      <p>For people who read beyond the final page</p>
-      <h2>Find the book you’ll keep talking about.</h2>
-      <Link className={s.actionButton} to="/books">Browse every book <ArrowUpRight size={16} aria-hidden="true" /></Link>
-    </section>
+    <CtaWithMarquee />
   </div>
 }
 
@@ -513,16 +571,16 @@ function AuthPage({ register = false }: { register?: boolean }) {
       setSubmitting(false)
     }
   }
-  const title = register ? 'Join the voyage.' : 'Welcome back.'
+  const title = register ? 'Register' : 'Login'
   const description = register ? 'Keep your orders, ratings, and notes together in one quiet harbor.' : 'Your saved journey continues where you left it.'
   const artwork = register ? {
-    desktop: '/assets/auth/knight-book-desktop.webp',
-    mobile: '/assets/auth/knight-book-mobile.webp',
-    alt: 'A weathered knight’s gauntlet holding a green and bronze book in a moonlit castle library.',
+    desktop: '/assets/auth/doctor-watson-desktop.webp',
+    mobile: '/assets/auth/doctor-watson-mobile.webp',
+    alt: 'A stylized three-dimensional Doctor Watson writing in a journal beside a medical bag and a stack of books.',
   } : {
-    desktop: '/assets/auth/princess-book-desktop.webp',
-    mobile: '/assets/auth/princess-book-mobile.webp',
-    alt: 'A princess’s hand holding a green and bronze book in a sunlit Mediterranean garden.',
+    desktop: '/assets/auth/sherlock-holmes-desktop.webp',
+    mobile: '/assets/auth/sherlock-holmes-mobile.webp',
+    alt: 'A stylized three-dimensional Sherlock Holmes reading with a magnifying glass beside a stack of books.',
   }
   return <section className={`${s.authPage} ${register ? s.authRegister : s.authLogin}`} aria-labelledby="auth-title" data-testid="auth-shell">
     <div className={s.authFormPanel} data-testid="auth-form-panel">
@@ -532,11 +590,11 @@ function AuthPage({ register = false }: { register?: boolean }) {
           <h1 id="auth-title">{title}</h1>
           <p>{description}</p>
         </div>
-        {register && <label>Your name<input name="name" required minLength={2} autoComplete="name" /></label>}
-        <label>Email address<input name="email" type="email" required autoComplete="email" /></label>
-        <label>Password<span className={s.passwordField}><input id="auth-password" name="password" type={showPassword ? 'text' : 'password'} required minLength={10} autoComplete={register ? 'new-password' : 'current-password'} /><button type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? 'Hide password' : 'Show password'} aria-controls="auth-password">{showPassword ? <EyeSlash size={19} aria-hidden="true" /> : <Eye size={19} aria-hidden="true" />}</button></span></label>
+        {register && <label>Your name<input name="name" placeholder="Your name" required minLength={2} autoComplete="name" /></label>}
+        <label>Email address<input name="email" type="email" placeholder="reader@orphaleia.com" required autoComplete="email" /></label>
+        <label>Password<span className={s.passwordField}><input id="auth-password" name="password" type={showPassword ? 'text' : 'password'} placeholder="Enter your password" required minLength={10} autoComplete={register ? 'new-password' : 'current-password'} /><button type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? 'Hide password' : 'Show password'} aria-controls="auth-password">{showPassword ? <EyeSlash size={19} aria-hidden="true" /> : <Eye size={19} aria-hidden="true" />}</button></span></label>
         {!register && <Link className={s.authForgot} to="/forgot-password">Forgot your password?</Link>}
-        {register && <label>Confirm password<span className={s.passwordField}><input id="auth-confirm-password" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} required minLength={10} autoComplete="new-password" aria-invalid={error === 'Passwords do not match.' || undefined} aria-describedby={error === 'Passwords do not match.' ? 'auth-error' : undefined} /><button type="button" onClick={() => setShowConfirmPassword((visible) => !visible)} aria-label={showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'} aria-controls="auth-confirm-password">{showConfirmPassword ? <EyeSlash size={19} aria-hidden="true" /> : <Eye size={19} aria-hidden="true" />}</button></span></label>}
+        {register && <label>Confirm password<span className={s.passwordField}><input id="auth-confirm-password" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} placeholder="Repeat your password" required minLength={10} autoComplete="new-password" aria-invalid={error === 'Passwords do not match.' || undefined} aria-describedby={error === 'Passwords do not match.' ? 'auth-error' : undefined} /><button type="button" onClick={() => setShowConfirmPassword((visible) => !visible)} aria-label={showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'} aria-controls="auth-confirm-password">{showConfirmPassword ? <EyeSlash size={19} aria-hidden="true" /> : <Eye size={19} aria-hidden="true" />}</button></span></label>}
         {error && <p id="auth-error" className={s.formError} role="alert">{error}</p>}
         {sent && <p className={s.notice} role="status" aria-live="polite">{sent}</p>}
         <button className={`${s.primaryButton} ${s.authSubmit}`} disabled={submitting}>{submitting ? register ? 'Creating account…' : 'Signing in…' : register ? 'Create account' : 'Sign in'} {!submitting && <ArrowRight size={16} aria-hidden="true" />}</button>
