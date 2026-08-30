@@ -59,6 +59,69 @@ def test_catalog_filters_and_detail(client):
     detail = client.get("/api/v1/books/the-test-passage").json()
     assert detail["title"] == "The Test Passage"
     assert detail["authors"][0]["name"] == "Test Voyager"
+    assert detail["interior_image_url"] is None
+    assert detail["interior_image_alt"] is None
+    assert detail["pull_quote"] is None
+
+
+def test_admin_can_create_and_update_editorial_spread_content(client):
+    headers = login(client, "admin@orphaleia.local", "AdminPass!2026")
+    author = client.get("/api/v1/authors").json()["items"][0]
+    genre = client.get("/api/v1/genres").json()["items"][0]
+    payload = {
+        "title": "The Illustrated Crossing",
+        "slug": "the-illustrated-crossing",
+        "isbn": "9780000099987",
+        "description": "A sufficiently long description for an illustrated test edition.",
+        "publication_year": 2026,
+        "price_cents": 2490,
+        "stock_qty": 8,
+        "cover_url": "/covers/illustrated.webp",
+        "interior_image_url": "/uploads/illustrated-interior.webp",
+        "interior_image_alt": "A lantern glowing beside an open book at sea",
+        "pull_quote": "Every crossing begins with a page.",
+        "featured": False,
+        "active": True,
+        "author_ids": [author["id"]],
+        "genre_ids": [genre["id"]],
+    }
+
+    created = client.post("/api/v1/admin/books", json=payload, headers=headers)
+    assert created.status_code == 200
+    assert created.json()["interior_image_url"] == payload["interior_image_url"]
+    assert created.json()["interior_image_alt"] == payload["interior_image_alt"]
+    assert created.json()["pull_quote"] == payload["pull_quote"]
+
+    payload["pull_quote"] = "A changed line for the second spread."
+    updated = client.put(f"/api/v1/admin/books/{created.json()['id']}", json=payload, headers=headers)
+    assert updated.status_code == 200
+    detail = client.get("/api/v1/books/the-illustrated-crossing").json()
+    assert detail["pull_quote"] == payload["pull_quote"]
+
+
+def test_interior_artwork_requires_alt_text(client):
+    headers = login(client, "admin@orphaleia.local", "AdminPass!2026")
+    book = client.get("/api/v1/books/the-test-passage").json()
+    payload = {
+        "title": book["title"],
+        "slug": book["slug"],
+        "isbn": book["isbn"],
+        "description": book["description"],
+        "publication_year": book["publication_year"],
+        "price_cents": book["price_cents"],
+        "stock_qty": book["stock_qty"],
+        "cover_url": book["cover_url"],
+        "interior_image_url": "/uploads/missing-alt.webp",
+        "interior_image_alt": "",
+        "featured": book["featured"],
+        "active": book["active"],
+        "author_ids": [author["id"] for author in book["authors"]],
+        "genre_ids": [genre["id"] for genre in book["genres"]],
+    }
+
+    response = client.put(f"/api/v1/admin/books/{book['id']}", json=payload, headers=headers)
+    assert response.status_code == 422
+    assert "Interior image alt text is required" in response.text
 
 
 def test_author_and_genre_lists_hide_entries_without_active_books(client):

@@ -1,5 +1,7 @@
 import json
+import re
 import secrets
+import unicodedata
 import uuid
 from collections import defaultdict
 from contextlib import asynccontextmanager
@@ -32,6 +34,8 @@ from .models import (
     Order,
     OrderItem,
     PaymentAttempt,
+    RankingDataset,
+    RankingEntry,
     Rating,
     RatingEvent,
     RefreshSession,
@@ -53,6 +57,7 @@ from .schemas import (
     RegisterInput,
     ResetInput,
     RoleInput,
+    SalesRankingResponse,
     ShippingZoneInput,
     TokenInput,
 )
@@ -326,6 +331,89 @@ def genre_detail(slug: str, db: Session = Depends(get_db)):
 def rankings(publication_year: int, genre: str | None = None, author: str | None = None, db: Session = Depends(get_db)):
     payload = books(year=publication_year, genre=genre, author=author, sort="rating", page=1, page_size=60, db=db)
     return {"publication_year": publication_year, **payload}
+
+
+def ranking_filter_value(value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode().lower()
+    return re.sub(r"[^a-z0-9]+", "-", normalized).strip("-")
+
+
+@app.get("/api/v1/rankings/sales", response_model=SalesRankingResponse)
+def sales_rankings(
+    year: int | None = Query(default=None, ge=1900, le=2100),
+    market: str | None = None,
+    genre: str | None = None,
+    db: Session = Depends(get_db),
+):
+    published = list(
+        db.scalars(
+            select(RankingDataset)
+            .where(RankingDataset.published_at.is_not(None), RankingDataset.exact_units_public.is_(True))
+            .order_by(RankingDataset.year.desc(), RankingDataset.scope_label)
+        ).all()
+    )
+    available_years = sorted({dataset.year for dataset in published}, reverse=True)
+    selected_year = year if year is not None else (available_years[0] if available_years else None)
+    year_datasets = [dataset for dataset in published if dataset.year == selected_year]
+    available_markets = [{"value": dataset.scope_code, "label": dataset.scope_label} for dataset in year_datasets]
+    selected_market = market
+    if selected_market is None and year_datasets:
+        selected_market = next(
+            (dataset.scope_code for dataset in year_datasets if dataset.scope_code == "all-covered"),
+            year_datasets[0].scope_code,
+        )
+    dataset = next((item for item in year_datasets if item.scope_code == selected_market), None)
+    if dataset is None:
+        return {
+            "status": "unavailable",
+            "year": selected_year,
+            "market": selected_market,
+            "genre": genre,
+            "available_years": available_years,
+            "available_markets": available_markets,
+        }
+
+    entries = list(
+        db.scalars(
+            select(RankingEntry)
+            .options(selectinload(RankingEntry.catalog_book))
+            .where(RankingEntry.dataset_id == dataset.id)
+            .order_by(RankingEntry.units_sold.desc(), RankingEntry.title)
+        ).all()
+    )
+    genre_names = sorted({entry.genre for entry in entries}, key=str.casefold)
+    available_genres = [{"value": ranking_filter_value(name), "label": name} for name in genre_names]
+    if genre:
+        entries = [entry for entry in entries if ranking_filter_value(entry.genre) == genre]
+
+    return {
+        "status": "published",
+        "year": dataset.year,
+        "market": dataset.scope_code,
+        "genre": genre,
+        "scope_label": dataset.scope_label,
+        "source": {
+            "name": dataset.source_name,
+            "url": dataset.source_url,
+            "coverage_note": dataset.coverage_note,
+            "methodology_note": dataset.methodology_note,
+        },
+        "available_years": available_years,
+        "available_markets": available_markets,
+        "available_genres": available_genres,
+        "items": [
+            {
+                "rank": rank,
+                "title": entry.title,
+                "authors": json.loads(entry.authors_json),
+                "genre": entry.genre,
+                "units_sold": entry.units_sold,
+                "isbn13": entry.isbn13,
+                "catalog_slug": entry.catalog_book.slug if entry.catalog_book and entry.catalog_book.active else None,
+            }
+            for rank, entry in enumerate(entries, start=1)
+        ],
+    }
 
 
 @app.put("/api/v1/books/{book_id}/ratings", dependencies=[Depends(require_csrf), Depends(throttle(20, 60))])
@@ -670,7 +758,7 @@ def delete_genre(genre_id: str, _: User = Depends(admin_user), db: Session = Dep
 
 
 def apply_book_input(db: Session, book: Book, data: BookInput):
-    for field in ("title", "slug", "isbn", "description", "publication_year", "price_cents", "stock_qty", "cover_url", "featured", "active"):
+    for field in ("title", "slug", "isbn", "description", "publication_year", "price_cents", "stock_qty", "cover_url", "interior_image_url", "interior_image_alt", "pull_quote", "featured", "active"):
         setattr(book, field, getattr(data, field))
     book.video_url = str(data.video_url) if data.video_url else None
     book.authors = list(db.scalars(select(Author).where(Author.id.in_(data.author_ids))).all()) if data.author_ids else []
@@ -680,8 +768,8 @@ def apply_book_input(db: Session, book: Book, data: BookInput):
 @app.post("/api/v1/admin/books", dependencies=[Depends(require_csrf)])
 def create_book(data: BookInput, _: User = Depends(admin_user), db: Session = Depends(get_db)):
     book = Book(title=data.title, slug=data.slug, isbn=data.isbn, description=data.description, publication_year=data.publication_year, price_cents=data.price_cents, stock_qty=data.stock_qty, cover_url=data.cover_url)
-    apply_book_input(db, book, data)
     db.add(book)
+    apply_book_input(db, book, data)
     try:
         db.commit()
     except IntegrityError as exc:

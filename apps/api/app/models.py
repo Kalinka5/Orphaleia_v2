@@ -92,6 +92,9 @@ class Book(Base):
     currency: Mapped[str] = mapped_column(String(3), default="EUR")
     stock_qty: Mapped[int] = mapped_column(Integer, default=0)
     cover_url: Mapped[str] = mapped_column(String(500))
+    interior_image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    interior_image_alt: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    pull_quote: Mapped[str | None] = mapped_column(String(280), nullable=True)
     video_url: Mapped[str | None] = mapped_column(String(500))
     featured: Mapped[bool] = mapped_column(Boolean, default=False)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -100,6 +103,40 @@ class Book(Base):
     genres: Mapped[list[Genre]] = relationship(secondary=book_genres, back_populates="books")
     ratings: Mapped[list[Rating]] = relationship(back_populates="book", cascade="all, delete-orphan")
     comments: Mapped[list[Comment]] = relationship(back_populates="book", cascade="all, delete-orphan")
+
+
+class RankingDataset(Base):
+    __tablename__ = "ranking_datasets"
+    __table_args__ = (UniqueConstraint("source_name", "year", "scope_code", name="uq_ranking_dataset_source_year_scope"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    source_name: Mapped[str] = mapped_column(String(160))
+    source_url: Mapped[str] = mapped_column(String(500))
+    year: Mapped[int] = mapped_column(Integer, index=True)
+    scope_code: Mapped[str] = mapped_column(String(80), index=True)
+    scope_label: Mapped[str] = mapped_column(String(160))
+    coverage_note: Mapped[str] = mapped_column(Text)
+    methodology_note: Mapped[str] = mapped_column(Text)
+    exact_units_public: Mapped[bool] = mapped_column(Boolean, default=False)
+    checksum: Mapped[str] = mapped_column(String(64))
+    imported_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    entries: Mapped[list[RankingEntry]] = relationship(back_populates="dataset", cascade="all, delete-orphan")
+
+
+class RankingEntry(Base):
+    __tablename__ = "ranking_entries"
+    __table_args__ = (UniqueConstraint("dataset_id", "provider_work_key", name="uq_ranking_entry_dataset_work"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    dataset_id: Mapped[str] = mapped_column(ForeignKey("ranking_datasets.id", ondelete="CASCADE"), index=True)
+    provider_work_key: Mapped[str] = mapped_column(String(180))
+    isbn13: Mapped[str | None] = mapped_column(String(13), index=True)
+    title: Mapped[str] = mapped_column(String(240))
+    authors_json: Mapped[str] = mapped_column(Text)
+    genre: Mapped[str] = mapped_column(String(120), index=True)
+    units_sold: Mapped[int] = mapped_column(Integer)
+    catalog_book_id: Mapped[str | None] = mapped_column(ForeignKey("books.id", ondelete="SET NULL"), index=True)
+    dataset: Mapped[RankingDataset] = relationship(back_populates="entries")
+    catalog_book: Mapped[Book | None] = relationship()
 
 
 class Rating(Base):

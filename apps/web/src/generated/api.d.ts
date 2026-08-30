@@ -276,6 +276,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/rankings/sales": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sales Rankings */
+        get: operations["sales_rankings_api_v1_rankings_sales_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/books/{book_id}/ratings": {
         parameters: {
             query?: never;
@@ -837,6 +854,12 @@ export interface components {
             stock_qty: number;
             /** Cover Url */
             cover_url: string;
+            /** Interior Image Url */
+            interior_image_url?: string | null;
+            /** Interior Image Alt */
+            interior_image_alt?: string | null;
+            /** Pull Quote */
+            pull_quote?: string | null;
             /** Video Url */
             video_url?: string | null;
             /**
@@ -920,6 +943,13 @@ export interface components {
             /** Tracking Reference */
             tracking_reference?: string | null;
         };
+        /** RankingFilterOption */
+        RankingFilterOption: {
+            /** Value */
+            value: string;
+            /** Label */
+            label: string;
+        };
         /** RatingInput */
         RatingInput: {
             /** Value */
@@ -948,6 +978,59 @@ export interface components {
         RoleInput: {
             /** Role */
             role: string;
+        };
+        /** SalesRankingItem */
+        SalesRankingItem: {
+            /** Rank */
+            rank: number;
+            /** Title */
+            title: string;
+            /** Authors */
+            authors: string[];
+            /** Genre */
+            genre: string;
+            /** Units Sold */
+            units_sold: number;
+            /** Isbn13 */
+            isbn13?: string | null;
+            /** Catalog Slug */
+            catalog_slug?: string | null;
+        };
+        /** SalesRankingResponse */
+        SalesRankingResponse: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "published" | "unavailable";
+            /** Year */
+            year?: number | null;
+            /** Market */
+            market?: string | null;
+            /** Genre */
+            genre?: string | null;
+            /** Scope Label */
+            scope_label?: string | null;
+            source?: components["schemas"]["SalesRankingSource"] | null;
+            /** Available Years */
+            available_years?: number[];
+            /** Available Markets */
+            available_markets?: components["schemas"]["RankingFilterOption"][];
+            /** Available Genres */
+            available_genres?: components["schemas"]["RankingFilterOption"][];
+            /** Items */
+            items?: components["schemas"]["SalesRankingItem"][];
+        };
+        /** SalesRankingSource */
+        SalesRankingSource: {
+            /** Name */
+            name: string;
+            /** Url */
+            url: string;
+            /** Coverage Note */
+            coverage_note: string;
+            /** Methodology Note */
+            methodology_note: string;
         };
         /** ShippingZoneInput */
         ShippingZoneInput: {
@@ -1425,6 +1508,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sales_rankings_api_v1_rankings_sales_get: {
+        parameters: {
+            query?: {
+                year?: number | null;
+                market?: string | null;
+                genre?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesRankingResponse"];
                 };
             };
             /** @description Validation Error */

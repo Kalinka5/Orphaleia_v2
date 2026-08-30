@@ -1,8 +1,10 @@
-import { createContext, FormEvent, ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { createContext, FormEvent, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, ArrowRight, ArrowUpRight, CaretRight, Check, Eye, EyeSlash, MagnifyingGlass, Pause, Play, Sparkle, Star } from '@phosphor-icons/react'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { api, money } from './api'
+import { BookDetailExperience } from './components/BookDetailExperience'
+import { BookHeroScene, type HeroBook } from './components/BookHeroScene'
 import { PageMeta } from './components/PageMeta'
 import { ErrorState, RouteState as State } from './components/ui/RouteState'
 import { SelectControl, type SelectOption } from './components/ui/SelectControl'
@@ -10,7 +12,8 @@ import { CtaWithMarquee } from './components/ui/cta-with-marquee'
 import { TestimonialsColumn, type Testimonial } from './components/ui/testimonials-columns-1'
 import { getGenreIllustration, homepageGenreSlugs } from './genreIllustrations'
 import { getLandingIllustration, orderHomepageBooks } from './landingIllustrations'
-import type { Address, Author, Book, Cart, Genre, Order, Page, User } from './types'
+import { formatSalesUnits, salesBarRatio } from './rankingUtils'
+import type { Address, Author, Book, Cart, Genre, Order, Page, SalesRankingResponse, User } from './types'
 import s from './styles.module.css'
 
 type AuthValue = { user: User | null; loading: boolean; signOut: () => Promise<void>; refresh: () => Promise<void> }
@@ -73,7 +76,7 @@ function Layout({ children }: { children: ReactNode }) {
       </> : <>
         <button ref={menuButtonRef} className={s.menuButton} onClick={() => setMenu(!menu)} aria-expanded={menu} aria-controls="main-navigation" aria-label={menu ? 'Close navigation' : 'Open navigation'}>Menu</button>
         <nav ref={navRef} id="main-navigation" className={`${s.nav} ${menu ? s.navOpen : ''}`} aria-label="Main navigation" onClick={() => setMenu(false)}>
-          <NavLink to="/books">All books</NavLink><NavLink to="/genres">Genres</NavLink><NavLink to="/authors">Authors</NavLink><NavLink to="/rankings">Yearly charts</NavLink>
+          <NavLink to="/books">All books</NavLink><NavLink to="/genres">Genres</NavLink><NavLink to="/authors">Authors</NavLink><NavLink to="/rankings">Bestseller charts</NavLink>
         </nav>
         <div className={s.actions}>
           {user ? <><Link to="/account">{user.full_name.split(' ')[0]}</Link>{user.role === 'admin' && <Link to="/admin">Admin</Link>}<button className={s.textButton} onClick={() => void signOut()}>Sign out</button></> : <Link to="/sign-in">Sign in</Link>}
@@ -84,7 +87,7 @@ function Layout({ children }: { children: ReactNode }) {
     <main id="main" tabIndex={-1} className={`${s.siteMain} ${isAuthRoute ? s.authMain : ''}`}>{children}</main>
     {!isAuthRoute && <footer className={s.footer}>
       <div className={s.footerLead}><div className={s.footerBrand}>Orphaleia</div><p>Independent bookselling for restless minds and unhurried shelves.</p></div>
-      <div><b>Browse</b><Link to="/books">All books</Link><Link to="/rankings">Readers’ charts</Link><Link to="/genres">Collections</Link></div>
+      <div><b>Browse</b><Link to="/books">All books</Link><Link to="/rankings">Bestseller charts</Link><Link to="/genres">Collections</Link></div>
       <div><b>Elsewhere</b><Link to="/authors">Our authors</Link><Link to="/account">Your account</Link><span>Spain and EU delivery</span></div>
       <p className={s.copyright}>© 2026 Orphaleia. Built for the long read.</p>
     </footer>}
@@ -99,7 +102,7 @@ function getRouteMeta(pathname: string) {
   if (pathname.startsWith('/genres/')) return { title: 'Genre collection', description: 'Browse books from this Orphaleia collection.' }
   if (pathname === '/authors') return { title: 'Authors', description: 'Follow the voices represented on Orphaleia’s shelves.' }
   if (pathname.startsWith('/authors/')) return { title: 'Author', description: 'Discover books by this Orphaleia author.' }
-  if (pathname === '/rankings') return { title: 'Readers’ charts', description: 'Explore yearly book rankings from Orphaleia readers.' }
+  if (pathname === '/rankings') return { title: 'Annual bestsellers', description: 'Explore sourced annual print-sales rankings across explicitly covered BookScan markets.' }
   if (pathname === '/sign-in') return { title: 'Sign in', description: 'Continue your Orphaleia reading journey.' }
   if (pathname === '/register') return { title: 'Create an account', description: 'Create an Orphaleia reader account.' }
   if (pathname.includes('password')) return { title: 'Account recovery', description: 'Recover access to your Orphaleia account.' }
@@ -182,6 +185,22 @@ const readerTestimonials: Testimonial[] = [
   },
 ]
 
+const featuredDwarfs = [
+  { id: 'left-1', side: 'left', className: s.dwarfLeft1, src: '/assets/landing/snow-white-dwarf-left-1.webp', width: 420, height: 984, mobile: true },
+  { id: 'left-2', side: 'left', className: s.dwarfLeft2, src: '/assets/landing/snow-white-dwarf-left-2.webp', width: 420, height: 869, mobile: false },
+  { id: 'top-1', side: 'top', className: s.dwarfTop1, src: '/assets/landing/snow-white-dwarf-top-1.webp', width: 560, height: 546, mobile: false },
+  { id: 'top-2', side: 'top', className: s.dwarfTop2, src: '/assets/landing/snow-white-dwarf-top-2.webp', width: 560, height: 622, mobile: true },
+  { id: 'top-3', side: 'top', className: s.dwarfTop3, src: '/assets/landing/snow-white-dwarf-top-3.webp', width: 560, height: 693, mobile: false },
+  { id: 'right-1', side: 'right', className: s.dwarfRight1, src: '/assets/landing/snow-white-dwarf-right-1.webp', width: 420, height: 896, mobile: false },
+  { id: 'right-2', side: 'right', className: s.dwarfRight2, src: '/assets/landing/snow-white-dwarf-right-2.webp', width: 420, height: 957, mobile: true },
+] as const
+
+const fallbackHeroBooks: HeroBook[] = [
+  { slug: 'romeo-and-juliet', title: 'Romeo and Juliet', cover_url: '/covers/romeo-and-juliet.webp' },
+  { slug: 'the-adventures-of-sherlock-holmes', title: 'The Adventures of Sherlock Holmes', cover_url: '/covers/the-adventures-of-sherlock-holmes.webp' },
+  { slug: 'the-little-prince', title: 'The Little Prince', cover_url: '/covers/the-little-prince.webp' },
+]
+
 function Testimonials() {
   const [paused, setPaused] = useState(false)
   const firstColumn = readerTestimonials.slice(0, 3)
@@ -227,37 +246,6 @@ function BookCard({ book, routeIndex }: { book: Book; routeIndex?: number }) {
   </article>
 }
 
-function HeroMedia() {
-  const [videoReady, setVideoReady] = useState(false)
-
-  return <div className={s.heroMedia}>
-    <picture className={s.heroPoster}>
-      <source media="(max-width: 760px)" srcSet="/assets/landing/ophelia-hero-mobile.webp" />
-      <img
-        src="/assets/landing/ophelia-hero-desktop.webp"
-        alt="A cinematic interpretation of Ophelia floating peacefully among river flowers beneath a misty willow."
-        width="1537"
-        height="1023"
-        loading="eager"
-        fetchPriority="high"
-        decoding="async"
-      />
-    </picture>
-    <video
-      className={`${s.heroVideo} ${videoReady ? s.heroVideoReady : ''}`}
-      autoPlay
-      loop
-      muted
-      playsInline
-      preload="metadata"
-      aria-hidden="true"
-      onCanPlay={() => setVideoReady(true)}
-    >
-      <source media="(prefers-reduced-motion: no-preference)" src="/assets/landing/ophelia-hero.mp4" type="video/mp4" />
-    </video>
-  </div>
-}
-
 function Home() {
   const query = useQuery({ queryKey: ['home-selection'], queryFn: () => api<Page<Book>>('/books?featured=true&page_size=4&sort=title') })
   const genres = useQuery({ queryKey: ['genres'], queryFn: () => api<{ items: Genre[] }>('/genres') })
@@ -273,10 +261,10 @@ function Home() {
       gsap.registerPlugin(ScrollTrigger)
       context = gsap.context(() => {
         gsap.timeline()
-          .from(`.${s.heroPoster} img, .${s.heroVideo}`, { scale: 1.025, duration: 1.2, ease: 'power2.out' })
           .from(`.${s.heroWord}`, { yPercent: 112, opacity: 0, duration: 1, ease: 'power4.out' }, '-=.8')
           .from(`.${s.heroReveal}`, { y: 18, opacity: 0, duration: .72, stagger: .08, ease: 'power3.out' }, '-=.62')
           .from(`.${s.heroButtons}`, { y: 18, duration: .72, ease: 'power3.out' }, '-=.56')
+          .from(`.${s.heroBookStage}`, { y: 72, scale: .96, opacity: 0, duration: 1.05, ease: 'power3.out' }, '-=.72')
 
         gsap.utils.toArray<HTMLElement>(`.${s.stackCard}`).forEach((card, index) => {
           gsap.fromTo(card, { y: 110, scale: 0.92, rotate: index % 2 ? 1.5 : -1.5 }, { y: 0, scale: 1, rotate: 0, ease: 'none', scrollTrigger: { trigger: card, start: 'top 92%', end: 'top 38%', scrub: 1 } })
@@ -303,7 +291,10 @@ function Home() {
     return () => { cancelled = true; context?.revert() }
   }, [])
 
-  const featured = orderHomepageBooks(query.data?.items ?? [])
+  const featured = useMemo(() => orderHomepageBooks(query.data?.items ?? []), [query.data?.items])
+  const heroBooks = useMemo<HeroBook[]>(() => featured.length >= 3
+    ? featured.slice(0, 3).map(({ slug, title, cover_url }) => ({ slug, title, cover_url }))
+    : fallbackHeroBooks, [featured])
   const collectionGenres = homepageGenreSlugs.flatMap((slug) => {
     const genre = genres.data?.items.find((item) => item.slug === slug)
     return genre ? [genre] : []
@@ -311,35 +302,49 @@ function Home() {
 
   return <div ref={root} className={s.home}>
     <section className={s.hero} aria-labelledby="home-hero-title">
-      <HeroMedia />
       <div className={s.heroScrim} aria-hidden="true" />
-      <div className={s.heroCopy}>
-        <p className={`${s.kicker} ${s.heroReveal}`}>A literary afterlife</p>
+      <div className={s.heroCopy} data-testid="hero-copy">
+        <p className={`${s.kicker} ${s.heroReveal}`}>A hand-picked shelf</p>
         <h1 id="home-hero-title" className={`max-w-6xl ${s.heroTitle}`}>
-          <span className={s.heroLine}><span className={s.heroWord}>Ophelia, beyond the page.</span></span>
+          <span className={s.heroLine}><span className={s.heroWord}>Books worth</span></span>
+          <span className={s.heroLine}><span className={s.heroWord}>keeping close.</span></span>
         </h1>
-        <p className={`${s.heroDescription} ${s.heroReveal}`}>Her story has inspired centuries of poems, paintings, and songs, showing how literature lives beyond its final page.</p>
-        <div className={s.heroButtons}><Link className={s.primaryButton} to="/books">Browse books <ArrowUpRight size={16} aria-hidden="true" /></Link><Link className={s.heroSecondary} to="/rankings">Readers’ charts</Link></div>
+        <p className={`${s.heroDescription} ${s.heroReveal}`}>Three enduring stories, chosen by booksellers to be read, revisited, and passed on.</p>
+        <div className={s.heroButtons}><Link className={s.primaryButton} to="/books">Browse books <ArrowUpRight size={16} aria-hidden="true" /></Link><Link className={s.heroSecondary} to="/rankings">Bestseller charts</Link></div>
       </div>
+      <BookHeroScene books={heroBooks} />
     </section>
 
     <section className={s.featuredSection}>
       <div className={s.editorialHeading}><h2>Books that leave<br />the light on.</h2><p>Four classics chosen not by algorithm, but by attention. Read slowly, underline freely, lend reluctantly.</p></div>
       {query.isLoading ? <State title="Opening the shelves" /> : query.error ? <ErrorState error={query.error} /> :
-        <div className={s.featuredBento} data-testid="featured-bento">
-          {featured.map((book, index) => {
-            const illustration = getLandingIllustration(book, 'featured')
-            return <Link
-              className={`${s.bentoBook} ${s[`bentoBook${index + 1}` as keyof typeof s]}`}
-              data-featured-layout={index === 1 ? 'horizontal' : index === 0 ? 'lead' : 'small'}
-              data-featured-slug={book.slug}
-              key={book.id}
-              to={`/books/${book.slug}`}
+        <div className={s.featuredBentoStage} data-testid="featured-bento-stage">
+          <div className={s.featuredDwarfs} data-testid="featured-dwarfs" aria-hidden="true">
+            {featuredDwarfs.map((dwarf) => <figure
+              className={`${s.featuredDwarf} ${dwarf.className}`}
+              data-dwarf-id={dwarf.id}
+              data-dwarf-side={dwarf.side}
+              data-mobile-visible={dwarf.mobile}
+              key={dwarf.id}
             >
-              <div className={s.bentoImage}><img src={illustration.src} alt={illustration.alt} loading="lazy" decoding="async" style={{ objectPosition: illustration.objectPosition }} /></div>
-              <div className={s.bentoCopy}><span>{book.genres[0]?.name} · {book.publication_year}</span><h3>{book.title}</h3><p>{book.authors.map((author) => author.name).join(', ')}</p><b>{money(book.price_cents)}</b></div>
-            </Link>
-          })}
+              <img src={dwarf.src} alt="" width={dwarf.width} height={dwarf.height} loading="lazy" decoding="async" />
+            </figure>)}
+          </div>
+          <div className={s.featuredBento} data-testid="featured-bento">
+            {featured.map((book, index) => {
+              const illustration = getLandingIllustration(book, 'featured')
+              return <Link
+                className={`${s.bentoBook} ${s[`bentoBook${index + 1}` as keyof typeof s]}`}
+                data-featured-layout={index === 1 ? 'horizontal' : index === 0 ? 'lead' : 'small'}
+                data-featured-slug={book.slug}
+                key={book.id}
+                to={`/books/${book.slug}`}
+              >
+                <div className={s.bentoImage}><img src={illustration.src} alt={illustration.alt} loading="lazy" decoding="async" style={{ objectPosition: illustration.objectPosition }} /></div>
+                <div className={s.bentoCopy}><span>{book.genres[0]?.name} · {book.publication_year}</span><h3>{book.title}</h3><p>{book.authors.map((author) => author.name).join(', ')}</p><b>{money(book.price_cents)}</b></div>
+              </Link>
+            })}
+          </div>
         </div>}
     </section>
 
@@ -511,7 +516,7 @@ function BookPage() {
   return <div className={s.bookPage}>
     <PageMeta title={book.title} description={book.description.slice(0, 155)} />
     <div className={s.crumbs}><Link to="/books">All books</Link><CaretRight size={13} aria-hidden="true" />{book.genres[0] && <Link to={`/genres/${book.genres[0].slug}`}>{book.genres[0].name}</Link>}<CaretRight size={13} aria-hidden="true" /><span>{book.title}</span></div>
-    <section className={s.bookHero}><div className={s.detailCover}><img src={book.cover_url} alt={`Cover of ${book.title}`} width="600" height="900" />{book.featured && <span>Keeper’s choice</span>}</div><div className={s.bookInfo}><div className={s.eyebrow}>{book.genres.map((g) => g.name).join(' · ')} · {book.publication_year}</div><h1>{book.title}</h1><p className={s.detailByline}>by {book.authors.map((a) => <Link key={a.id} to={`/authors/${a.slug}`}>{a.name}</Link>).reduce((prev, curr) => <>{prev}, {curr}</>)}</p><Stars value={book.rating_average} count={book.rating_count} /><p className={s.description}>{book.description}</p><dl className={s.bookFacts}><div><dt>ISBN</dt><dd>{book.isbn}</dd></div><div><dt>Edition</dt><dd>Paperback</dd></div><div><dt>Availability</dt><dd>{book.available ? `${book.stock_qty} in stock` : 'Returning soon'}</dd></div></dl><div className={s.buyRow}><b>{money(book.price_cents)}</b><span>VAT included</span><button className={s.primaryButton} disabled={!book.available || cart.isPending} onClick={() => needsUser(() => cart.mutate(book.id))}>{cart.isPending ? 'Adding…' : book.available ? 'Add to bag' : 'Out of stock'} <ArrowRight size={16} aria-hidden="true" /></button></div>{notice && <div className={s.notice} role="status" aria-live="polite">{notice}</div>}</div></section>
+    <BookDetailExperience book={book} adding={cart.isPending} notice={notice} onAdd={() => needsUser(() => cart.mutate(book.id))} />
     {book.video_url && <section className={s.videoSection}><div><span className={s.eyebrow}>A TWO-MINUTE GLIMPSE</span><h2>Before you turn the first page</h2><p>A short, spoiler-free introduction to the world of the book.</p></div><div className={s.video}><iframe src={embedUrl(book.video_url)} title={`Introduction to ${book.title}`} loading="lazy" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowFullScreen /></div></section>}
     <section className={s.community}><div><span className={s.eyebrow}>READER’S LOG</span><h2>Ratings over the years</h2>{trend.isLoading ? <State title="Reading the chart…" loading compact /> : trend.error ? <ErrorState error={trend.error} retry={() => void trend.refetch()} compact /> : <div className={s.trend}>{trend.data?.points.length ? trend.data.points.map((p) => <div key={p.year}><span style={{ height: `${Math.max(12, p.average * 20)}%` }} /><b>{p.average}</b><small>{p.year}</small></div>) : <p>No route has been charted yet.</p>}</div>}<div className={s.rateBox}><b>Your reading, your measure</b><div>{[1,2,3,4,5].map((value) => <button type="button" key={value} disabled={rate.isPending} aria-label={`Rate ${value} stars`} onClick={() => needsUser(() => rate.mutate({ id: book.id, value }))}><Star size={24} weight="fill" aria-hidden="true" /></button>)}</div></div>{rate.error && <p className={s.formError} role="alert">{rate.error.message}</p>}</div><div><span className={s.eyebrow}>MARGINALIA</span><h2>From fellow readers</h2>{book.comments?.length ? <div className={s.comments}>{book.comments.map((c) => <article key={c.id}><p>{c.body}</p><small>{c.author} · {new Date(c.created_at).toLocaleDateString()}</small></article>)}</div> : <p className={s.muted}>No comments yet. Leave the first note in the margin.</p>}<form className={s.commentForm} aria-busy={post.isPending || undefined} onSubmit={(e) => { e.preventDefault(); needsUser(() => post.mutate({ id: book.id, body: comment })) }}><label htmlFor="comment">Add a thoughtful note</label><textarea id="comment" value={comment} onChange={(e) => setComment(e.target.value)} minLength={2} maxLength={2000} placeholder="What stayed with you?" required /><button className={s.secondaryButton} disabled={post.isPending}>{post.isPending ? 'Publishing…' : 'Publish comment'}</button>{post.error && <p className={s.formError} role="alert">{post.error.message}</p>}</form></div></section>
     {!!book.related?.length && <section className={s.related}><div className={s.sectionHeading}><div><span className={s.eyebrow}>CONTINUE THE JOURNEY</span><h2>Books on a nearby shore</h2></div></div><div className={s.bookGrid}>{book.related.map((x) => <BookCard key={x.id} book={x} />)}</div></section>}
@@ -529,16 +534,102 @@ function Shelf({ kind }: { kind: 'genres' | 'authors' }) {
   return <section className={s.page}><PageMeta title={query.data?.name ?? 'Shelf'} description={'description' in query.data! ? query.data.description : query.data?.bio ?? 'Browse this Orphaleia shelf.'} /><div className={s.pageHeading}><span className={s.eyebrow}>{kind === 'genres' ? 'GENRE SHELF' : 'AUTHOR SHELF'}</span><h1>{query.data?.name}</h1><p>{'description' in query.data! ? query.data.description : query.data?.bio}</p></div>{query.data?.books.length ? <div className={s.bookGrid}>{query.data.books.map((book) => <BookCard key={book.id} book={book} />)}</div> : <State title="This shelf is waiting" text="No books are currently assigned here." />}</section>
 }
 
+function RankingRowsSkeleton() {
+  return <div className={s.rankingSkeleton} role="status" aria-label="Loading annual sales rankings" aria-live="polite">
+    {[0, 1, 2, 3, 4].map((row) => <span key={row}><i /><i /><i /></span>)}
+  </div>
+}
+
 function Rankings() {
-  const [year, setYear] = useState(2024); const [genre, setGenre] = useState('')
-  const genres = useQuery({ queryKey: ['genres'], queryFn: () => api<{ items: Genre[] }>('/genres') })
-  const query = useQuery({ queryKey: ['rankings', year, genre], queryFn: () => api<Page<Book> & { publication_year: number }>(`/rankings?publication_year=${year}${genre ? `&genre=${genre}` : ''}`), placeholderData: keepPreviousData })
-  const yearOptions = [2026, 2025, 2024, 2023, 2022, 2021, 2020].map((item) => ({ value: String(item), label: String(item) }))
-  const genreOptions: SelectOption[] = [{ value: '', label: 'Every shelf' }, ...(genres.data?.items.map((item) => ({ value: item.slug, label: item.name })) ?? [])]
-  return <section className={s.page}><div className={s.pageHeading}><span className={s.eyebrow}>THE ANNUAL READER’S CHART</span><h1>Books that found their readers</h1><p>Explore current reader ratings among books first published in a chosen year.</p></div><div className={s.yearPicker} aria-busy={query.isFetching || undefined}>
-    <SelectControl label="Publication year" labelMode="inline" value={String(year)} options={yearOptions} onChange={(value) => setYear(Number(value))} />
-    <SelectControl label="Genre" labelMode="inline" value={genre} options={genreOptions} busy={genres.isLoading} onChange={setGenre} />
-  </div>{query.isLoading ? <State title="Counting readers’ marks…" loading /> : query.error ? <ErrorState error={query.error} retry={() => void query.refetch()} /> : query.data?.items.length ? <ol className={s.rankingList}>{query.data.items.map((book, i) => <li key={book.id}><span className={s.rank}>{String(i + 1).padStart(2, '0')}</span><img src={book.cover_url} alt={`Cover of ${book.title}`} loading="lazy" /><div><span className={s.eyebrow}>{book.genres[0]?.name}</span><h2><Link to={`/books/${book.slug}`}>{book.title}</Link></h2><p>{book.authors.map((x) => x.name).join(', ')}</p></div><Stars value={book.rating_average} count={book.rating_count} /><b>{money(book.price_cents)}</b></li>)}</ol> : <State title={`No chart for ${year}`} text="Choose another year or broaden the genre." />}</section>
+  const [searchParams, setSearchParams] = useSearchParams()
+  const selectedYear = searchParams.get('year') ?? ''
+  const selectedMarket = searchParams.get('market') ?? ''
+  const selectedGenre = searchParams.get('genre') ?? ''
+  const requestParams = new URLSearchParams()
+  if (selectedYear) requestParams.set('year', selectedYear)
+  if (selectedMarket) requestParams.set('market', selectedMarket)
+  if (selectedGenre) requestParams.set('genre', selectedGenre)
+  const requestSuffix = requestParams.size ? `?${requestParams.toString()}` : ''
+  const query = useQuery({
+    queryKey: ['sales-rankings', selectedYear, selectedMarket, selectedGenre],
+    queryFn: () => api<SalesRankingResponse>(`/rankings/sales${requestSuffix}`),
+    placeholderData: keepPreviousData,
+  })
+  const data = query.data
+
+  useEffect(() => {
+    if (!data?.available_years.length) return
+    const next = new URLSearchParams(searchParams)
+    const availableYears = data.available_years.map(String)
+    let changed = false
+    if (!selectedYear || !availableYears.includes(selectedYear)) {
+      next.set('year', String(data.available_years[0]))
+      next.delete('market')
+      next.delete('genre')
+      changed = true
+    } else if (data.available_markets.length && (!selectedMarket || !data.available_markets.some((option) => option.value === selectedMarket))) {
+      next.set('market', data.available_markets[0].value)
+      next.delete('genre')
+      changed = true
+    } else if (selectedGenre && !data.available_genres.some((option) => option.value === selectedGenre)) {
+      next.delete('genre')
+      changed = true
+    }
+    if (changed) setSearchParams(next, { replace: true })
+  }, [data, searchParams, selectedGenre, selectedMarket, selectedYear, setSearchParams])
+
+  function updateFilter(key: 'year' | 'market' | 'genre', value: string) {
+    const next = new URLSearchParams(searchParams)
+    if (value) next.set(key, value)
+    else next.delete(key)
+    if (key === 'year') {
+      next.delete('market')
+      next.delete('genre')
+    } else if (key === 'market') next.delete('genre')
+    setSearchParams(next)
+  }
+
+  const yearOptions: SelectOption[] = data?.available_years.map((year) => ({ value: String(year), label: String(year) })) ?? []
+  const marketOptions = data?.available_markets ?? []
+  const genreOptions: SelectOption[] = [{ value: '', label: 'Every category' }, ...(data?.available_genres ?? [])]
+  const maximumUnits = Math.max(0, ...(data?.items.map((item) => item.units_sold) ?? []))
+  const showFilters = Boolean(data?.available_years.length)
+
+  return <section className={`${s.page} ${s.rankingsPage}`}>
+    <header className={s.rankingsHero}>
+      <div className={s.rankingsIntro}>
+        <span className={s.eyebrow}>ANNUAL BESTSELLER CHART</span>
+        <h1>Top-selling books</h1>
+        <p>Verified calendar-year print sales across explicitly covered BookScan markets.</p>
+      </div>
+      {showFilters && <div className={s.rankingFilters} aria-label="Ranking filters" aria-busy={query.isFetching || undefined}>
+        <SelectControl label="Sales year" labelMode="stacked" value={selectedYear || String(data?.year ?? '')} options={yearOptions} disabled={query.isFetching} onChange={(value) => updateFilter('year', value)} />
+        <SelectControl label="Market" labelMode="stacked" value={selectedMarket || data?.market || ''} options={marketOptions} disabled={query.isFetching} onChange={(value) => updateFilter('market', value)} />
+        <SelectControl label="Category" labelMode="stacked" value={selectedGenre} options={genreOptions} disabled={query.isFetching} onChange={(value) => updateFilter('genre', value)} />
+      </div>}
+    </header>
+
+    {query.isLoading ? <RankingRowsSkeleton /> : query.error ? <ErrorState error={query.error} retry={() => void query.refetch()} /> : data?.status === 'unavailable' ? <State title="Verified annual data is not published yet" text="Orphaleia will show licensed print-sales rankings here once the source and public-display rights have been confirmed." /> : <>
+      {data?.source && <aside className={s.rankingSource} aria-label="Chart source and methodology">
+        <p><span>Source</span><a href={data.source.url} target="_blank" rel="noreferrer">{data.source.name}</a><i aria-hidden="true" /> <span>{data.year}</span><i aria-hidden="true" /> <span>{data.scope_label}</span><i aria-hidden="true" /> <span>Print editions</span></p>
+        <details><summary>Coverage and methodology</summary><div><p>{data.source.coverage_note}</p><p>{data.source.methodology_note}</p></div></details>
+      </aside>}
+      {data?.items.length ? <div className={`${s.salesRanking} ${query.isFetching ? s.rankingUpdating : ''}`} aria-busy={query.isFetching || undefined}>
+        <div className={s.rankingColumns} aria-hidden="true"><span>Rank</span><span>Title &amp; author</span><span>Category</span><span>Copies sold</span></div>
+        <ol aria-label={`${data.year} top-selling print books in ${data.scope_label}`}>
+          {data.items.map((item) => <li key={`${item.rank}-${item.title}`}>
+            <span className={s.salesRank} aria-label={`Rank ${item.rank}`}>{String(item.rank).padStart(2, '0')}</span>
+            <div className={s.rankingBook}><h2>{item.catalog_slug ? <Link to={`/books/${item.catalog_slug}`}>{item.title}</Link> : item.title}</h2><p>{item.authors.join(', ')}</p></div>
+            <span className={s.rankingGenre}>{item.genre}</span>
+            <div className={s.salesMeasure} aria-label={`${formatSalesUnits(item.units_sold)} copies sold`}>
+              <span className={s.salesBar} aria-hidden="true"><span style={{ transform: `scaleX(${salesBarRatio(item.units_sold, maximumUnits)})` }} /></span>
+              <strong>{formatSalesUnits(item.units_sold)}</strong>
+            </div>
+          </li>)}
+        </ol>
+      </div> : <State title="No books match these filters" text="Choose every category or select another annual market chart." action={selectedGenre ? { label: 'Reset category', onClick: () => updateFilter('genre', '') } : undefined} />}
+    </>}
+  </section>
 }
 
 function AuthPage({ register = false }: { register?: boolean }) {
@@ -700,7 +791,7 @@ function Admin() {
   if (loading) return <State title="Checking the keeper’s seal…" loading />; if (user?.role !== 'admin') return <Navigate to="/" />
   return <section className={s.adminPage}><aside className={s.adminNav}><span className={s.eyebrow}>KEEPER’S DESK</span><h1>Shop admin</h1>{['overview','books','taxonomy','shipping','orders','comments'].map((x) => <button type="button" className={tab === x ? s.activeTab : ''} aria-current={tab === x ? 'page' : undefined} key={x} onClick={() => setTab(x)}>{x}</button>)}</aside><div className={s.adminContent}>{message && <p className={s.notice} role="status" aria-live="polite">{message}</p>}
     {tab === 'overview' && <><h2>Today at Orphaleia</h2>{overview.isLoading ? <State title="Loading the overview…" loading compact /> : overview.error ? <ErrorState error={overview.error} retry={() => void overview.refetch()} compact /> : <><div className={s.stats}>{overview.data && Object.entries(overview.data).map(([key,value]) => <article key={key}><span>{key.replace('_',' ')}</span><b>{value}</b></article>)}</div><div className={s.adminNote}><h3>Operations note</h3><p>Payment events are replay-safe, stock reservations expire after 30 minutes, and outbound messages are handled by the worker.</p></div></>}</>}
-    {tab === 'books' && <><div className={s.adminTitle}><h2>Catalog</h2><Link className={s.secondaryButton} to="/admin/books/new">Add book</Link></div>{books.isLoading ? <State title="Loading the catalog…" loading compact /> : books.error ? <ErrorState error={books.error} retry={() => void books.refetch()} compact /> : books.data?.items.length ? <div className={s.table}>{books.data.items.map((book) => <div className={s.tableRow} key={book.id}><img src={book.cover_url} alt={`Cover of ${book.title}`} width="42" height="64" loading="lazy" /><div><b>{book.title}</b><small>{book.authors.map((x) => x.name).join(', ')}</small></div><span>{money(book.price_cents)}</span><span>{book.stock_qty} in stock</span><span className={book.active ? s.live : s.draft}>{book.active ? 'Live' : 'Hidden'}</span></div>)}</div> : <State title="No catalog books" compact />}</>}
+    {tab === 'books' && <><div className={s.adminTitle}><h2>Catalog</h2><Link className={s.secondaryButton} to="/admin/books/new">Add book</Link></div>{books.isLoading ? <State title="Loading the catalog…" loading compact /> : books.error ? <ErrorState error={books.error} retry={() => void books.refetch()} compact /> : books.data?.items.length ? <div className={s.table}>{books.data.items.map((book) => <div className={s.tableRow} key={book.id}><img src={book.cover_url} alt={`Cover of ${book.title}`} width="42" height="64" loading="lazy" /><div><b>{book.title}</b><small>{book.authors.map((x) => x.name).join(', ')} · <Link to={`/admin/books/${book.slug}/edit`}>Edit</Link></small></div><span>{money(book.price_cents)}</span><span>{book.stock_qty} in stock</span><span className={book.active ? s.live : s.draft}>{book.active ? 'Live' : 'Hidden'}</span></div>)}</div> : <State title="No catalog books" compact />}</>}
     {tab === 'taxonomy' && <><h2>Authors and shelves</h2>{authors.isLoading || genres.isLoading ? <State title="Loading taxonomy…" loading compact /> : authors.error || genres.error ? <ErrorState error={authors.error || genres.error} retry={() => { void authors.refetch(); void genres.refetch() }} compact /> : <div className={s.adminForms}><form className={s.stackForm} onSubmit={(e) => void createTaxonomy(e, 'authors')}><h3>Add author</h3><label>Name<input name="name" required /></label><label>Slug<input name="slug" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" /></label><label>Biography<textarea name="description" /></label><button className={s.secondaryButton}>Add author</button><small>{authors.data?.items.length ?? 0} authors currently available</small></form><form className={s.stackForm} onSubmit={(e) => void createTaxonomy(e, 'genres')}><h3>Add genre</h3><label>Name<input name="name" required /></label><label>Slug<input name="slug" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" /></label><label>Description<textarea name="description" /></label><button className={s.secondaryButton}>Add genre</button><small>{genres.data?.items.length ?? 0} shelves currently available</small></form></div>}</>}
     {tab === 'shipping' && <><h2>Shipping zones</h2>{zones.isLoading ? <State title="Loading shipping zones…" loading compact /> : zones.error ? <ErrorState error={zones.error} retry={() => void zones.refetch()} compact /> : <><div className={s.shippingList}>{zones.data?.items.length ? zones.data.items.map((zone) => <article key={zone.id}><div><b>{zone.name}</b><small>{zone.country_codes.join(', ')}</small></div><span>{money(zone.rate_cents)} delivery</span><span>{zone.free_over_cents ? `Free over ${money(zone.free_over_cents)}` : 'No free threshold'}</span></article>) : <State title="No shipping zones" compact />}</div><form className={s.inlineForm} onSubmit={(e) => void createZone(e)}><label>Zone name<input name="name" required /></label><label>Country codes<input name="countries" placeholder="ES, PT" required /></label><label>Rate in EUR<input name="rate" type="number" min="0" step="0.01" required /></label><label>Free over EUR<input name="free" type="number" min="0" step="0.01" /></label><button className={s.primaryButton}>Add zone</button></form></>}</>}
     {tab === 'orders' && <><h2>Orders</h2>{orders.isLoading ? <State title="Loading orders…" loading compact /> : orders.error ? <ErrorState error={orders.error} retry={() => void orders.refetch()} compact /> : orders.data?.items.length ? <div className={s.table}>{orders.data.items.map((order) => <div className={s.tableRow} key={order.id}><div><b>{order.number}</b><small>{new Date(order.created_at).toLocaleDateString()}</small></div><span>{money(order.total_cents)}</span><SelectControl label={`Status for ${order.number}`} value={order.status} options={['pending_payment','paid','processing','shipped','cancelled','refunded'].map((value) => ({ value, label: value.replace('_', ' ') }))} disabled={updateOrder.isPending} onChange={(status) => updateOrder.mutate({ id: order.id, status })} /></div>)}</div> : <State title="No orders yet" compact />}{updateOrder.error && <p className={s.formError} role="alert">{updateOrder.error.message}</p>}</>}
@@ -708,15 +799,116 @@ function Admin() {
   </div></section>
 }
 
-function NewBook() {
-  const { user } = useAuth(); const navigate = useNavigate(); const authors = useQuery({ queryKey: ['authors'], queryFn: () => api<{ items: Author[] }>('/authors') }); const genres = useQuery({ queryKey: ['genres'], queryFn: () => api<{ items: Genre[] }>('/genres') }); const [error, setError] = useState(''); const [busy, setBusy] = useState(false); const [authorId, setAuthorId] = useState(''); const [genreId, setGenreId] = useState('')
-  useEffect(() => { if (!authorId && authors.data?.items[0]) setAuthorId(authors.data.items[0].id) }, [authorId, authors.data])
-  useEffect(() => { if (!genreId && genres.data?.items[0]) setGenreId(genres.data.items[0].id) }, [genreId, genres.data])
+function BookEditor({ edit = false }: { edit?: boolean }) {
+  const { user } = useAuth()
+  const { slug = '' } = useParams()
+  const navigate = useNavigate()
+  const authors = useQuery({ queryKey: ['authors'], queryFn: () => api<{ items: Author[] }>('/authors') })
+  const genres = useQuery({ queryKey: ['genres'], queryFn: () => api<{ items: Genre[] }>('/genres') })
+  const bookQuery = useQuery({ queryKey: ['book', slug], queryFn: () => api<Book>(`/books/${slug}`), enabled: edit && !!slug })
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [authorId, setAuthorId] = useState('')
+  const [genreId, setGenreId] = useState('')
+  const book = bookQuery.data
+
+  useEffect(() => {
+    if (edit && book) {
+      setAuthorId((current) => current || book.authors[0]?.id || '')
+      setGenreId((current) => current || book.genres[0]?.id || '')
+      return
+    }
+    if (!authorId && authors.data?.items[0]) setAuthorId(authors.data.items[0].id)
+    if (!genreId && genres.data?.items[0]) setGenreId(genres.data.items[0].id)
+  }, [authorId, authors.data, book, edit, genreId, genres.data])
+
   if (user?.role !== 'admin') return <Navigate to="/" />
-  async function submit(e: FormEvent<HTMLFormElement>) { e.preventDefault(); const f = new FormData(e.currentTarget); setBusy(true); setError(''); try { let cover = String(f.get('cover') || ''); const file = f.get('cover_file'); if (file instanceof File && file.size) { const upload = new FormData(); upload.set('file', file); const asset = await api<{ url: string }>('/admin/media', { method: 'POST', body: upload }); cover = asset.url } if (!cover) throw new Error('Upload a cover or provide a cover URL'); await api('/admin/books', { method: 'POST', body: JSON.stringify({ title: f.get('title'), slug: f.get('slug'), isbn: f.get('isbn'), description: f.get('description'), publication_year: Number(f.get('year')), price_cents: Math.round(Number(f.get('price')) * 100), stock_qty: Number(f.get('stock')), cover_url: cover, video_url: f.get('video') || null, featured: f.get('featured') === 'on', active: true, author_ids: [f.get('author')], genre_ids: [f.get('genre')] }) }); navigate('/admin') } catch (err) { setError((err as Error).message); setBusy(false) } }
+  if (edit && bookQuery.isLoading) return <State title="Opening the catalog record…" loading />
+  if (edit && bookQuery.error) return <ErrorState error={bookQuery.error} retry={() => void bookQuery.refetch()} />
+
+  async function upload(file: FormDataEntryValue | null) {
+    if (!(file instanceof File) || !file.size) return ''
+    const payload = new FormData()
+    payload.set('file', file)
+    return (await api<{ url: string }>('/admin/media', { method: 'POST', body: payload })).url
+  }
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const form = new FormData(event.currentTarget)
+    setBusy(true)
+    setError('')
+    try {
+      const uploadedCover = await upload(form.get('cover_file'))
+      const cover = uploadedCover || String(form.get('cover') || '') || book?.cover_url || ''
+      if (!cover) throw new Error('Upload a cover or provide a cover URL')
+
+      const uploadedInterior = await upload(form.get('interior_file'))
+      const interiorImage = uploadedInterior || String(form.get('interior_image_url') || '')
+      const interiorAlt = String(form.get('interior_image_alt') || '').trim()
+      if (interiorImage && !interiorAlt) throw new Error('Describe the interior artwork for screen-reader users')
+
+      const payload = {
+        title: form.get('title'),
+        slug: form.get('slug'),
+        isbn: form.get('isbn'),
+        description: form.get('description'),
+        publication_year: Number(form.get('year')),
+        price_cents: Math.round(Number(form.get('price')) * 100),
+        stock_qty: Number(form.get('stock')),
+        cover_url: cover,
+        interior_image_url: interiorImage || null,
+        interior_image_alt: interiorImage ? interiorAlt : null,
+        pull_quote: String(form.get('pull_quote') || '').trim() || null,
+        video_url: form.get('video') || null,
+        featured: form.get('featured') === 'on',
+        active: form.get('active') === 'on',
+        author_ids: [form.get('author')],
+        genre_ids: [form.get('genre')],
+      }
+      await api(edit && book ? `/admin/books/${book.id}` : '/admin/books', { method: edit ? 'PUT' : 'POST', body: JSON.stringify(payload) })
+      navigate('/admin')
+    } catch (caught) {
+      setError((caught as Error).message)
+      setBusy(false)
+    }
+  }
+
   const authorOptions = authors.data?.items.map((item) => ({ value: item.id, label: item.name })) ?? []
   const genreOptions = genres.data?.items.map((item) => ({ value: item.id, label: item.name })) ?? []
-  return <section className={s.narrowPage}><span className={s.eyebrow}>KEEPER’S DESK</span><h1>Add a book</h1><form className={s.stackForm} aria-busy={busy || undefined} onSubmit={submit}><label>Title<input name="title" required /></label><label>Slug<input name="slug" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" required /></label><label>ISBN<input name="isbn" required /></label><label>Description<textarea name="description" minLength={20} required /></label><div className={s.formColumns}><label>Publication year<input name="year" type="number" min="1450" max="2100" required /></label><label>Price in EUR<input name="price" type="number" min="0" step="0.01" required /></label><label>Stock<input name="stock" type="number" min="0" required /></label></div><label>Upload cover<input name="cover_file" type="file" accept="image/png,image/jpeg,image/webp" /></label><label>Or use a cover URL<input name="cover" /></label><label>Video URL<input name="video" type="url" /></label><SelectControl label="Author" labelMode="stacked" name="author" value={authorId} options={authorOptions} busy={authors.isLoading} onChange={setAuthorId} /><SelectControl label="Genre" labelMode="stacked" name="genre" value={genreId} options={genreOptions} busy={genres.isLoading} onChange={setGenreId} /><label className={s.check}><input name="featured" type="checkbox" /> Feature on home</label><button className={s.primaryButton} disabled={busy || !authorId || !genreId}>{busy ? 'Publishing…' : 'Publish book'}</button>{error && <p className={s.formError} role="alert">{error}</p>}</form></section>
+  const title = edit ? `Edit ${book?.title}` : 'Add a book'
+  return <section className={s.narrowPage}>
+    <span className={s.eyebrow}>KEEPER’S DESK</span>
+    <h1>{title}</h1>
+    <form key={book?.id || 'new-book'} className={s.stackForm} aria-busy={busy || undefined} onSubmit={submit}>
+      <label>Title<input name="title" defaultValue={book?.title} required /></label>
+      <label>Slug<input name="slug" defaultValue={book?.slug} pattern="[a-z0-9]+(?:-[a-z0-9]+)*" required /></label>
+      <label>ISBN<input name="isbn" defaultValue={book?.isbn} required /></label>
+      <label>Description<textarea name="description" defaultValue={book?.description} minLength={20} required /></label>
+      <div className={s.formColumns}>
+        <label>Publication year<input name="year" type="number" defaultValue={book?.publication_year} min="1450" max="2100" required /></label>
+        <label>Price in EUR<input name="price" type="number" defaultValue={book ? book.price_cents / 100 : undefined} min="0" step="0.01" required /></label>
+        <label>Stock<input name="stock" type="number" defaultValue={book?.stock_qty} min="0" required /></label>
+      </div>
+      <label>Upload cover<input name="cover_file" type="file" accept="image/png,image/jpeg,image/webp" /></label>
+      <label>Or use a cover URL<input name="cover" defaultValue={book?.cover_url} /></label>
+      <fieldset className={s.editorialFields}>
+        <legend>Interactive book spread</legend>
+        <p>Add optional artwork and a short phrase for the inside page. The cover and first description sentence are used when these are blank.</p>
+        <label>Upload interior artwork<input name="interior_file" type="file" accept="image/png,image/jpeg,image/webp" /></label>
+        <label>Or use an interior artwork URL<input name="interior_image_url" defaultValue={book?.interior_image_url} /></label>
+        <label>Interior artwork description<input name="interior_image_alt" defaultValue={book?.interior_image_alt} maxLength={300} placeholder="A watercolor night sky over a small asteroid" /></label>
+        <label>Pull quote<textarea name="pull_quote" defaultValue={book?.pull_quote} maxLength={280} placeholder="A brief, spoiler-free line for the illustrated page" /></label>
+      </fieldset>
+      <label>Video URL<input name="video" type="url" defaultValue={book?.video_url} /></label>
+      <SelectControl label="Author" labelMode="stacked" name="author" value={authorId} options={authorOptions} busy={authors.isLoading} onChange={setAuthorId} />
+      <SelectControl label="Genre" labelMode="stacked" name="genre" value={genreId} options={genreOptions} busy={genres.isLoading} onChange={setGenreId} />
+      <label className={s.check}><input name="featured" type="checkbox" defaultChecked={book?.featured} /> Feature on home</label>
+      <label className={s.check}><input name="active" type="checkbox" defaultChecked={book?.active ?? true} /> Visible in catalog</label>
+      <button className={s.primaryButton} disabled={busy || !authorId || !genreId}>{busy ? 'Saving…' : edit ? 'Save changes' : 'Publish book'}</button>
+      {error && <p className={s.formError} role="alert">{error}</p>}
+    </form>
+  </section>
 }
 
 function NotFound() { return <section className={s.narrowPage}><div className={s.seal}>404</div><h1>This island is not on the chart.</h1><p>The page may have moved, or the route was copied incorrectly.</p><Link className={s.primaryButton} to="/">Return home</Link></section> }
@@ -727,6 +919,6 @@ export default function App() {
     <Route path="/genres" element={<Directory kind="genres" />} /><Route path="/genres/:slug" element={<Shelf kind="genres" />} /><Route path="/authors" element={<Directory kind="authors" />} /><Route path="/authors/:slug" element={<Shelf kind="authors" />} /><Route path="/rankings" element={<Rankings />} />
     <Route path="/sign-in" element={<AuthPage />} /><Route path="/register" element={<AuthPage register />} /><Route path="/verify" element={<TokenPage mode="verify" />} /><Route path="/forgot-password" element={<TokenPage mode="forgot" />} /><Route path="/reset-password" element={<TokenPage mode="reset" />} />
     <Route path="/cart" element={<RequireUser><CartPage /></RequireUser>} /><Route path="/checkout" element={<RequireUser><Checkout /></RequireUser>} /><Route path="/payment/return" element={<PaymentReturn />} /><Route path="/account" element={<RequireUser><Account /></RequireUser>} />
-    <Route path="/admin" element={<RequireUser admin><Admin /></RequireUser>} /><Route path="/admin/books/new" element={<RequireUser admin><NewBook /></RequireUser>} /><Route path="*" element={<NotFound />} />
+    <Route path="/admin" element={<RequireUser admin><Admin /></RequireUser>} /><Route path="/admin/books/new" element={<RequireUser admin><BookEditor /></RequireUser>} /><Route path="/admin/books/:slug/edit" element={<RequireUser admin><BookEditor edit /></RequireUser>} /><Route path="*" element={<NotFound />} />
   </Routes></Layout></AuthProvider>
 }

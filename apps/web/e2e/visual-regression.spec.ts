@@ -32,7 +32,7 @@ test.beforeEach(async ({ page }, testInfo) => {
 
 test('home visual baseline', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: 'Ophelia, beyond the page.' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Books worth keeping close.' })).toBeVisible()
   await capture(page, 'home', false)
 })
 
@@ -92,8 +92,23 @@ test('catalog open-filter visual baseline', async ({ page }) => {
 
 test('book detail visual baseline', async ({ page }) => {
   await page.goto('/books/the-little-prince')
-  await expect(page.getByRole('heading', { name: 'The Little Prince' })).toBeVisible()
+  await expect(page.getByRole('region', { name: /Interactive preview of The Little Prince/i })).toBeVisible()
   await capture(page, 'book-detail')
+})
+
+test('book detail open-page visual baseline', async ({ page }) => {
+  await page.goto('/books/the-little-prince')
+  const experience = page.getByRole('region', { name: /Interactive preview of The Little Prince/i })
+  if ((page.viewportSize()?.width ?? 0) > 900) {
+    await page.getByRole('button', { name: 'Next spread' }).click()
+  } else {
+    await page.getByRole('button', { name: 'Next page' }).click()
+    await page.getByRole('button', { name: 'Next page' }).click()
+    await page.getByRole('button', { name: 'Next page' }).click()
+  }
+  await settle(page)
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
+  await expect(experience).toHaveScreenshot('book-detail-open.png', { animations: 'disabled', timeout: 15_000 })
 })
 
 test('authentication visual baselines', async ({ page }) => {

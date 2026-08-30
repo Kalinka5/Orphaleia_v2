@@ -1,6 +1,7 @@
 from datetime import datetime
+from typing import Literal
 
-from pydantic import BaseModel, EmailStr, Field, HttpUrl, field_validator
+from pydantic import BaseModel, EmailStr, Field, HttpUrl, field_validator, model_validator
 
 
 class RegisterInput(BaseModel):
@@ -74,6 +75,9 @@ class BookInput(BaseModel):
     price_cents: int = Field(ge=0)
     stock_qty: int = Field(ge=0)
     cover_url: str
+    interior_image_url: str | None = Field(default=None, max_length=500)
+    interior_image_alt: str | None = Field(default=None, max_length=300)
+    pull_quote: str | None = Field(default=None, max_length=280)
     video_url: HttpUrl | None = None
     featured: bool = False
     active: bool = True
@@ -86,6 +90,17 @@ class BookInput(BaseModel):
         if value and value.host not in {"youtube.com", "www.youtube.com", "youtu.be", "vimeo.com", "www.vimeo.com"}:
             raise ValueError("Only YouTube and Vimeo links are supported")
         return value
+
+    @model_validator(mode="after")
+    def validate_editorial_image(self):
+        self.interior_image_url = self.interior_image_url.strip() if self.interior_image_url else None
+        self.interior_image_alt = self.interior_image_alt.strip() if self.interior_image_alt else None
+        self.pull_quote = self.pull_quote.strip() if self.pull_quote else None
+        if self.interior_image_url and not self.interior_image_alt:
+            raise ValueError("Interior image alt text is required when an interior image is provided")
+        if not self.interior_image_url:
+            self.interior_image_alt = None
+        return self
 
 
 class OrderStatusInput(BaseModel):
@@ -133,6 +148,41 @@ class YearPoint(BaseModel):
     year: int
     average: float
     count: int
+
+
+class RankingFilterOption(BaseModel):
+    value: str
+    label: str
+
+
+class SalesRankingSource(BaseModel):
+    name: str
+    url: str
+    coverage_note: str
+    methodology_note: str
+
+
+class SalesRankingItem(BaseModel):
+    rank: int
+    title: str
+    authors: list[str]
+    genre: str
+    units_sold: int
+    isbn13: str | None = None
+    catalog_slug: str | None = None
+
+
+class SalesRankingResponse(BaseModel):
+    status: Literal["published", "unavailable"]
+    year: int | None = None
+    market: str | None = None
+    genre: str | None = None
+    scope_label: str | None = None
+    source: SalesRankingSource | None = None
+    available_years: list[int] = Field(default_factory=list)
+    available_markets: list[RankingFilterOption] = Field(default_factory=list)
+    available_genres: list[RankingFilterOption] = Field(default_factory=list)
+    items: list[SalesRankingItem] = Field(default_factory=list)
 
 
 class OrderSummary(BaseModel):

@@ -6,25 +6,23 @@ async function mockGuest(page: Page) {
 
 test('home exposes the discovery route', async ({ page }) => {
   await page.goto('/')
-  const hero = page.getByRole('region', { name: 'Ophelia, beyond the page.' })
-  await expect(hero.getByRole('heading', { name: 'Ophelia, beyond the page.' })).toBeVisible()
+  const hero = page.getByRole('region', { name: 'Books worth keeping close.' })
+  await expect(hero.getByRole('heading', { name: 'Books worth keeping close.' })).toBeVisible()
   await expect(hero.getByRole('link', { name: /Browse books/i })).toHaveAttribute('href', '/books')
-  await expect(hero.getByRole('link', { name: /Readers’ charts/i })).toHaveAttribute('href', '/rankings')
+  await expect(hero.getByRole('link', { name: /Bestseller charts/i })).toHaveAttribute('href', '/rankings')
 
-  const heroImage = hero.getByRole('img', { name: /Ophelia floating peacefully/i })
-  await expect(heroImage).toBeVisible()
-  await expect(heroImage).toHaveJSProperty('complete', true)
-  expect(await heroImage.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0)
-
-  const currentSource = await heroImage.evaluate((image: HTMLImageElement) => image.currentSrc)
-  expect(currentSource).toContain((page.viewportSize()?.width ?? 0) <= 760 ? 'ophelia-hero-mobile.webp' : 'ophelia-hero-desktop.webp')
-
-  const heroVideo = hero.locator('video')
-  await expect(heroVideo).toBeVisible()
-  await expect.poll(() => heroVideo.evaluate((video: HTMLVideoElement) => video.readyState)).toBeGreaterThanOrEqual(3)
-  expect(await heroVideo.evaluate((video: HTMLVideoElement) => video.muted)).toBe(true)
-  await expect(heroVideo).toHaveAttribute('playsinline', '')
-  expect(await heroVideo.evaluate((video: HTMLVideoElement) => video.currentSrc)).toMatch(/ophelia-hero\.(webm|mp4)$/)
+  const stage = hero.getByTestId('hero-book-stage')
+  await expect(stage).toHaveAttribute('aria-label', /hovering fan of three featured books/i)
+  await expect.poll(() => stage.getAttribute('data-scene-state')).toMatch(/ready|fallback/)
+  await expect(stage.locator('[data-hero-book-slug]')).toHaveCount(3)
+  expect(await stage.locator('[data-hero-book-slug]').evaluateAll((items) => items.map((item) => item.getAttribute('data-hero-book-slug')))).toEqual([
+    'romeo-and-juliet',
+    'the-adventures-of-sherlock-holmes',
+    'the-little-prince',
+  ])
+  await expect(stage.getByRole('link')).toHaveCount(0)
+  await expect(stage.getByRole('button')).toHaveCount(0)
+  await expect(hero.locator('video')).toHaveCount(0)
 
   const header = page.getByRole('banner')
   await expect(header).toBeVisible()
@@ -34,6 +32,136 @@ test('home exposes the discovery route', async ({ page }) => {
     await page.getByRole('button', { name: 'Open navigation' }).click()
     await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'All books' })).toBeVisible()
   }
+})
+
+test('annual bestseller chart uses sourced exact sales and URL-backed filters', async ({ page }) => {
+  await mockGuest(page)
+  await page.route('**/api/v1/rankings/sales**', async (route) => {
+    const url = new URL(route.request().url())
+    const genre = url.searchParams.get('genre')
+    const allItems = [
+      { rank: 1, title: 'The Test Passage', authors: ['Test Voyager'], genre: 'Adventure', units_sold: 1876543, isbn13: '9780000099999', catalog_slug: 'the-test-passage' },
+      { rank: 2, title: 'A Quiet Atlas', authors: ['Mara Sol'], genre: 'Fantasy', units_sold: 934221, isbn13: '9781111111113', catalog_slug: null },
+    ]
+    const items = genre === 'fantasy' ? [{ ...allItems[1], rank: 1 }] : allItems
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+      status: 'published', year: 2025, market: 'all-covered', genre, scope_label: 'BookScan covered markets',
+      source: { name: 'NielsenIQ BookScan', url: 'https://example.com/bookscan', coverage_note: 'Licensed print point-of-sale data across covered markets.', methodology_note: 'Calendar-year units grouped into provider-defined works.' },
+      available_years: [2025, 2024], available_markets: [{ value: 'all-covered', label: 'BookScan covered markets' }],
+      available_genres: [{ value: 'adventure', label: 'Adventure' }, { value: 'fantasy', label: 'Fantasy' }], items,
+    }) })
+  })
+
+  await page.goto('/rankings')
+  await expect(page.getByRole('heading', { name: 'Top-selling books' })).toBeVisible()
+  await expect(page).toHaveURL(/year=2025.*market=all-covered/)
+  await expect(page.getByRole('list', { name: /2025 top-selling print books/i })).toBeVisible()
+  await expect(page.getByText('1,876,543')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'The Test Passage' })).toHaveAttribute('href', '/books/the-test-passage')
+  await expect(page.getByRole('link', { name: 'A Quiet Atlas' })).toHaveCount(0)
+
+  await page.getByRole('button', { name: /Category Every category/i }).click()
+  await page.getByRole('option', { name: 'Fantasy' }).click()
+  await expect(page).toHaveURL(/genre=fantasy/)
+  await expect(page.getByText('934,221')).toBeVisible()
+  await expect(page.getByText('The Test Passage')).toHaveCount(0)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+})
+
+test('annual bestseller chart never substitutes sample sales for unavailable licensed data', async ({ page }) => {
+  await mockGuest(page)
+  await page.route('**/api/v1/rankings/sales**', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'unavailable', available_years: [], available_markets: [], available_genres: [], items: [] }) }))
+  await page.goto('/rankings')
+  await expect(page.getByRole('heading', { name: 'Verified annual data is not published yet' })).toBeVisible()
+  await expect(page.getByText(/public-display rights have been confirmed/i)).toBeVisible()
+  await expect(page.getByRole('list')).toHaveCount(0)
+})
+
+test('hero books react without becoming navigation targets', async ({ page }) => {
+  await page.goto('/')
+  const stage = page.getByTestId('hero-book-stage')
+  await expect.poll(() => stage.getAttribute('data-scene-state')).toMatch(/ready|fallback/)
+  const sceneState = await stage.getAttribute('data-scene-state')
+
+  const canvas = stage.locator('canvas')
+  const box = await canvas.boundingBox()
+  expect(box).not.toBeNull()
+  const originalUrl = page.url()
+
+  if ((page.viewportSize()?.width ?? 0) > 760) {
+    if (sceneState === 'ready') {
+      await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height * .56)
+      await expect.poll(() => stage.getAttribute('data-active-book')).not.toBe('')
+      const activeBook = await stage.getAttribute('data-active-book')
+      for (let sample = 0; sample < 8; sample += 1) {
+        await page.waitForTimeout(80)
+        expect(await stage.getAttribute('data-active-book')).toBe(activeBook)
+      }
+      await page.mouse.click(box!.x + box!.width / 2, box!.y + box!.height * .56)
+    } else {
+      const centerBook = stage.locator('[data-hero-book-slug="the-adventures-of-sherlock-holmes"]')
+      const frontCover = centerBook.locator(':scope > span').last()
+      const restTransform = await frontCover.evaluate((element) => getComputedStyle(element).transform)
+      await centerBook.hover({ position: { x: 160, y: 160 } })
+      await expect(stage).toHaveAttribute('data-active-book', 'the-adventures-of-sherlock-holmes')
+      await expect.poll(() => frontCover.evaluate((element) => getComputedStyle(element).transform)).not.toBe(restTransform)
+      for (let sample = 0; sample < 8; sample += 1) {
+        await page.waitForTimeout(80)
+        await expect(stage).toHaveAttribute('data-active-book', 'the-adventures-of-sherlock-holmes')
+      }
+      await centerBook.click({ position: { x: 160, y: 160 } })
+    }
+    await expect(page).toHaveURL(originalUrl)
+    await page.mouse.move(4, 4)
+    await expect(stage).toHaveAttribute('data-active-book', '')
+  } else {
+    await expect(canvas).toHaveCSS('touch-action', 'pan-y')
+    const startX = box!.x + box!.width / 2
+    const startY = box!.y + box!.height * .62
+    await canvas.dispatchEvent('pointerdown', { bubbles: true, pointerId: 7, pointerType: 'touch', clientX: startX, clientY: startY })
+    await expect(stage).toHaveAttribute('data-dragging', 'true')
+    await canvas.dispatchEvent('pointermove', { bubbles: true, pointerId: 7, pointerType: 'touch', clientX: startX + 70, clientY: startY + 4 })
+    await canvas.dispatchEvent('pointerup', { bubbles: true, pointerId: 7, pointerType: 'touch', clientX: startX + 70, clientY: startY + 4 })
+    await expect(stage).toHaveAttribute('data-dragging', 'false')
+    await expect(page).toHaveURL(originalUrl)
+  }
+})
+
+test('book detail turns pages responsively and keeps purchase accessible', async ({ page }) => {
+  await mockGuest(page)
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('/books/the-little-prince')
+
+  if ((page.viewportSize()?.width ?? 0) > 900) {
+    const stage = page.getByTestId('book-spread')
+    const leaf = page.getByTestId('turning-leaf')
+    const box = await leaf.boundingBox()
+    expect(box).not.toBeNull()
+    await leaf.dispatchEvent('pointerdown', { bubbles: true, pointerId: 17, pointerType: 'touch', clientX: box!.x + box!.width * .8, clientY: box!.y + box!.height * .5 })
+    await leaf.dispatchEvent('pointermove', { bubbles: true, pointerId: 17, pointerType: 'touch', clientX: box!.x + box!.width * .25, clientY: box!.y + box!.height * .5 + 3 })
+    await leaf.dispatchEvent('pointerup', { bubbles: true, pointerId: 17, pointerType: 'touch', clientX: box!.x + box!.width * .25, clientY: box!.y + box!.height * .5 + 3 })
+    await expect(stage).toHaveAttribute('data-spread', '2')
+    await expect(stage.getByRole('heading', { name: 'About the book' })).toBeVisible()
+
+    await stage.focus()
+    await page.keyboard.press('ArrowLeft')
+    await expect(stage).toHaveAttribute('data-spread', '1')
+  } else {
+    const pages = page.getByTestId('mobile-book-pages')
+    const box = await pages.boundingBox()
+    expect(box).not.toBeNull()
+    await expect(pages).toHaveCSS('touch-action', 'pan-y')
+    await pages.dispatchEvent('pointerdown', { bubbles: true, pointerId: 18, pointerType: 'touch', clientX: box!.x + box!.width * .8, clientY: box!.y + box!.height * .5 })
+    await pages.dispatchEvent('pointermove', { bubbles: true, pointerId: 18, pointerType: 'touch', clientX: box!.x + box!.width * .2, clientY: box!.y + box!.height * .5 + 3 })
+    await pages.dispatchEvent('pointerup', { bubbles: true, pointerId: 18, pointerType: 'touch', clientX: box!.x + box!.width * .2, clientY: box!.y + box!.height * .5 + 3 })
+    await expect(pages).toHaveAttribute('data-page', '2')
+    await expect(page.getByText('Page 2 of 4', { exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Add to bag/i }).locator('..')).toHaveCSS('position', 'sticky')
+  }
+
+  await page.getByRole('button', { name: /Add to bag/i }).click()
+  await expect(page).toHaveURL(/\/sign-in$/)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 })
 
 test('home presents the ordered classic collection with complete artwork', async ({ page }) => {
@@ -67,6 +195,63 @@ test('home presents the ordered classic collection with complete artwork', async
     expect(await image.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBeGreaterThan(0)
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+})
+
+test('seven storybook dwarfs peek from behind the featured bento', async ({ page }) => {
+  await page.goto('/')
+
+  const stage = page.getByTestId('featured-bento-stage')
+  const tableau = page.getByTestId('featured-dwarfs')
+  const bento = page.getByTestId('featured-bento')
+  const dwarfs = tableau.locator('[data-dwarf-id]')
+
+  await stage.scrollIntoViewIfNeeded()
+  await expect(tableau).toHaveAttribute('aria-hidden', 'true')
+  await expect(tableau).toHaveCSS('pointer-events', 'none')
+  await expect(dwarfs).toHaveCount(7)
+
+  expect(await dwarfs.evaluateAll((items) => items.filter((item) => item.getAttribute('data-dwarf-side') === 'left').length)).toBe(2)
+  expect(await dwarfs.evaluateAll((items) => items.filter((item) => item.getAttribute('data-dwarf-side') === 'top').length)).toBe(3)
+  expect(await dwarfs.evaluateAll((items) => items.filter((item) => item.getAttribute('data-dwarf-side') === 'right').length)).toBe(2)
+
+  const visibleDwarfs = dwarfs.filter({ visible: true })
+  for (const image of await visibleDwarfs.locator('img').all()) {
+    await expect(image).toHaveJSProperty('complete', true)
+    expect(await image.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBeGreaterThan(0)
+  }
+
+  const mobile = (page.viewportSize()?.width ?? 0) <= 760
+  await expect(visibleDwarfs).toHaveCount(mobile ? 3 : 7)
+  const visibleSides = await visibleDwarfs.evaluateAll((items) => items.map((item) => item.getAttribute('data-dwarf-side')))
+  expect(visibleSides.filter((side) => side === 'left')).toHaveLength(mobile ? 1 : 2)
+  expect(visibleSides.filter((side) => side === 'top')).toHaveLength(mobile ? 1 : 3)
+  expect(visibleSides.filter((side) => side === 'right')).toHaveLength(mobile ? 1 : 2)
+
+  const bentoBox = await bento.boundingBox()
+  expect(bentoBox).not.toBeNull()
+  for (const dwarf of await visibleDwarfs.all()) {
+    const side = await dwarf.getAttribute('data-dwarf-side')
+    const box = await dwarf.boundingBox()
+    expect(box).not.toBeNull()
+    if (side === 'left') {
+      expect(box!.x).toBeLessThan(bentoBox!.x)
+      expect(box!.x + box!.width).toBeGreaterThan(bentoBox!.x)
+      expect(box!.y + box!.height).toBeLessThanOrEqual(bentoBox!.y + bentoBox!.height + 1)
+    } else if (side === 'right') {
+      expect(box!.x).toBeLessThan(bentoBox!.x + bentoBox!.width)
+      expect(box!.x + box!.width).toBeGreaterThan(bentoBox!.x + bentoBox!.width)
+      expect(box!.y + box!.height).toBeLessThanOrEqual(bentoBox!.y + bentoBox!.height + 1)
+    } else {
+      expect(box!.y).toBeLessThan(bentoBox!.y)
+      expect(box!.y + box!.height).toBeGreaterThan(bentoBox!.y)
+    }
+  }
+
+  expect(Number(await bento.evaluate((element) => getComputedStyle(element).zIndex))).toBeGreaterThan(Number(await tableau.evaluate((element) => getComputedStyle(element).zIndex)))
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+
+  await bento.locator('[data-featured-slug]').first().click()
+  await expect(page).toHaveURL(/\/books\/romeo-and-juliet$/)
 })
 
 test('Cheshire cat stays centered directly above the genre guidance', async ({ page }) => {
@@ -254,11 +439,79 @@ test('hero remains complete with reduced motion', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto('/')
 
-  const hero = page.getByRole('region', { name: 'Ophelia, beyond the page.' })
-  await expect(hero.getByRole('heading', { name: 'Ophelia, beyond the page.' })).toBeVisible()
+  const hero = page.getByRole('region', { name: 'Books worth keeping close.' })
+  await expect(hero.getByRole('heading', { name: 'Books worth keeping close.' })).toBeVisible()
   await expect(hero.getByRole('link', { name: /Browse books/i })).toBeVisible()
-  await expect(hero.getByRole('img', { name: /Ophelia floating peacefully/i })).toBeVisible()
-  await expect(hero.locator('video')).toBeHidden()
+  const stage = hero.getByTestId('hero-book-stage')
+  await expect(stage).toHaveAttribute('data-scene-state', 'reduced-motion')
+  await expect(stage.getByTestId('hero-book-fallback')).toBeVisible()
+  await expect(stage.locator('canvas')).toBeHidden()
+  await expect(hero.locator('video')).toHaveCount(0)
+})
+
+test('hero keeps an interactive 3D fallback when WebGL is unavailable', async ({ page }) => {
+  await page.addInitScript(() => {
+    const getContext = HTMLCanvasElement.prototype.getContext
+    HTMLCanvasElement.prototype.getContext = function (type: string, ...args: unknown[]) {
+      if (type === 'webgl2') return null
+      return Reflect.apply(getContext, this, [type, ...args])
+    } as typeof HTMLCanvasElement.prototype.getContext
+  })
+  await page.goto('/')
+
+  const hero = page.getByRole('region', { name: 'Books worth keeping close.' })
+  const stage = hero.getByTestId('hero-book-stage')
+  await expect(stage).toHaveAttribute('data-scene-state', 'fallback')
+  await expect(stage).toHaveAttribute('data-fallback-reason', /webgl2-unavailable|initialization-failed/)
+  await expect(stage.getByTestId('hero-book-fallback')).toBeVisible()
+  const centerBook = stage.locator('[data-hero-book-slug="the-adventures-of-sherlock-holmes"]')
+  if ((page.viewportSize()?.width ?? 0) > 760) {
+    await page.waitForTimeout(1300)
+    const viewportHeight = page.viewportSize()!.height
+    const heroBox = await hero.boundingBox()
+    const restVisualBox = await centerBook.locator('[data-hero-book-visual]').boundingBox()
+    expect(heroBox).not.toBeNull()
+    expect(restVisualBox).not.toBeNull()
+    expect(heroBox!.height).toBeGreaterThanOrEqual(1000)
+    expect(heroBox!.height).toBeLessThanOrEqual(1220)
+    const visibleHeight = Math.min(restVisualBox!.y + restVisualBox!.height, viewportHeight) - Math.max(restVisualBox!.y, 0)
+    expect(visibleHeight / restVisualBox!.height).toBeGreaterThanOrEqual(.55)
+  }
+  await centerBook.hover({ position: { x: 140, y: 150 } })
+  await expect(stage).toHaveAttribute('data-active-book', 'the-adventures-of-sherlock-holmes')
+  for (let sample = 0; sample < 10; sample += 1) {
+    await page.waitForTimeout(80)
+    await expect(stage).toHaveAttribute('data-active-book', 'the-adventures-of-sherlock-holmes')
+  }
+  if ((page.viewportSize()?.width ?? 0) > 760) {
+    const visualBox = await centerBook.locator('[data-hero-book-visual]').boundingBox()
+    const stageBox = await stage.boundingBox()
+    const browseBox = await hero.getByRole('link', { name: /Browse books/i }).boundingBox()
+    const chartsBox = await hero.getByRole('link', { name: /Bestseller charts/i }).boundingBox()
+    const copy = hero.getByTestId('hero-copy')
+    expect(visualBox).not.toBeNull()
+    expect(stageBox).not.toBeNull()
+    expect(browseBox).not.toBeNull()
+    expect(chartsBox).not.toBeNull()
+    const ctaBottom = Math.max(browseBox!.y + browseBox!.height, chartsBox!.y + chartsBox!.height)
+    expect(visualBox!.y).toBeLessThan(stageBox!.y)
+    expect(visualBox!.y).toBeLessThan(ctaBottom)
+    expect(visualBox!.y + visualBox!.height).toBeGreaterThan(ctaBottom + 100)
+    expect(Number(await stage.evaluate((element) => getComputedStyle(element).zIndex))).toBeLessThan(
+      Number(await copy.evaluate((element) => getComputedStyle(element).zIndex)),
+    )
+    const presentation = await stage.getByTestId('hero-book-fallback').evaluate((element) => ({
+      maskImage: getComputedStyle(element).maskImage,
+      pointerEvents: getComputedStyle(element).pointerEvents,
+      stageOverflow: getComputedStyle(element.parentElement!).overflow,
+    }))
+    expect(presentation.maskImage).toBe('none')
+    expect(presentation.pointerEvents).toBe('auto')
+    expect(presentation.stageOverflow).toBe('visible')
+    expect(await copy.evaluate((element) => getComputedStyle(element, '::before').backgroundImage)).toContain('radial-gradient')
+  }
+  await expect(hero.getByRole('link', { name: /Browse books/i })).toBeVisible()
+  await expect(hero.getByRole('link', { name: /Bestseller charts/i })).toBeVisible()
 })
 
 test('genre artwork expands from a vertical crop to a complete square', async ({ page }) => {

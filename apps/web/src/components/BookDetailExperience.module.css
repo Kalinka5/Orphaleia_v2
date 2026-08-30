@@ -1,0 +1,175 @@
+.experience {
+  --paper: #f8f2e7;
+  --paper-deep: #eee4d3;
+  --ink: #18231f;
+  --muted: #67716c;
+  --green: #285f4c;
+  position: relative;
+  padding: clamp(3.5rem, 7vw, 7rem) clamp(1.5rem, 6vw, 6rem) clamp(4.5rem, 8vw, 8rem);
+  overflow: clip;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 50% 20%, rgba(255, 255, 255, .9), transparent 42%),
+    linear-gradient(115deg, rgba(40, 95, 76, .035) 1px, transparent 1px),
+    #e8e2d6;
+  background-size: auto, 18px 18px, auto;
+}
+
+.experience::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: .14;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.16'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+}
+
+.intro, .desktopExperience, .mobileExperience, .notice { position: relative; z-index: 1; }
+.intro { width: min(72rem, 100%); margin: 0 auto 1.25rem; display: flex; align-items: end; justify-content: space-between; gap: 2rem; }
+.intro p { margin: 0; font: italic clamp(1.35rem, 2.2vw, 2rem)/1.1 'Iowan Old Style', 'Baskerville', Georgia, serif; }
+.intro span { display: inline-flex; align-items: center; gap: .55rem; color: var(--muted); font-size: .74rem; font-weight: 600; letter-spacing: .02em; }
+.desktopExperience { width: min(72rem, 100%); margin: auto; perspective: 2200px; }
+
+.bookStage {
+  --turn-progress: 0;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1.58;
+  transform-style: preserve-3d;
+  filter: drop-shadow(0 2.2rem 2.3rem rgba(54, 60, 48, .22));
+  outline: none;
+}
+
+.bookStage::before {
+  content: '';
+  position: absolute;
+  inset: -.42rem;
+  z-index: -1;
+  border-radius: .55rem .8rem .8rem .55rem;
+  background: #183d35;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.14);
+}
+
+.bookStage:focus-visible::after { content: ''; position: absolute; inset: -.8rem; border: 2px solid var(--green); border-radius: .85rem; }
+.page { position: absolute; top: 0; width: 50%; height: 100%; overflow: hidden; background: var(--paper); }
+.page::after { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .25; background: radial-gradient(circle at 18% 12%, rgba(255,255,255,.9), transparent 38%), linear-gradient(90deg, transparent 88%, rgba(64,45,24,.08)); mix-blend-mode: multiply; }
+.coverPage { left: 0; border-radius: .32rem 0 0 .32rem; background: #102c25; }
+.coverPage img { width: 100%; height: 100%; object-fit: cover; }
+.coverPage > span { position: absolute; z-index: 2; top: 1.6rem; left: 0; padding: .65rem 1rem; color: white; background: var(--green); font-size: .63rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; }
+.detailsPage { right: 0; border-radius: 0 .32rem .32rem 0; box-shadow: inset .9rem 0 1.5rem rgba(74, 54, 28, .09); }
+
+.turningLeaf {
+  position: absolute;
+  z-index: 4;
+  top: 0;
+  left: 50%;
+  width: 50%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transform-origin: left center;
+  transform: rotateY(calc(var(--turn-progress) * -180deg));
+  cursor: grab;
+  touch-action: pan-y;
+}
+
+.bookStage[data-dragging='true'] .turningLeaf { cursor: grabbing; will-change: transform; }
+.leafFront, .leafBack { inset: 0; width: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.leafFront { border-radius: 0 .32rem .32rem 0; box-shadow: inset .9rem 0 1.5rem rgba(74, 54, 28, .09), 1rem .3rem 2rem rgba(60, 45, 28, calc((1 - var(--turn-progress)) * .13)); }
+.leafBack { transform: rotateY(180deg); border-radius: .32rem 0 0 .32rem; box-shadow: inset -.9rem 0 1.5rem rgba(74, 54, 28, .09); }
+.spine { position: absolute; z-index: 7; top: 0; bottom: 0; left: 50%; width: 1.6rem; transform: translateX(-50%); pointer-events: none; background: linear-gradient(90deg, rgba(50,38,22,.15), rgba(255,255,255,.5) 45%, rgba(50,38,22,.14)); filter: blur(4px); opacity: .72; }
+.pageCorner { position: absolute; z-index: 4; right: 0; bottom: 0; width: 4.5rem; height: 4.5rem; border-radius: 100% 0 0; background: linear-gradient(135deg, transparent 48%, rgba(40,95,76,.2) 49%, rgba(255,255,255,.75)); box-shadow: -.35rem -.35rem .8rem rgba(50,38,22,.08); }
+
+.titlePageContent, .detailsPageContent, .quotePageContent { position: relative; z-index: 1; height: 100%; }
+.titlePageContent { display: grid; grid-template-rows: auto 1fr auto auto; padding: clamp(2.2rem, 4.2vw, 4.5rem) clamp(2rem, 4vw, 4.25rem) clamp(2rem, 3.5vw, 3.5rem); text-align: center; }
+.kicker { margin: 0; color: var(--green); font-size: clamp(.57rem, .76vw, .72rem); font-weight: 600; letter-spacing: .18em; text-transform: uppercase; }
+.titlePageContent > div { align-self: center; }
+.titlePageContent h1 { max-width: 11ch; margin: 0 auto .85rem; font: 500 clamp(2.3rem, 4.25vw, 4.8rem)/.92 'Iowan Old Style', 'Baskerville', Georgia, serif; letter-spacing: -.045em; text-wrap: balance; }
+.byline { margin: 0; font: italic clamp(.95rem, 1.3vw, 1.15rem)/1.4 'Iowan Old Style', 'Baskerville', Georgia, serif; color: var(--muted); }
+.byline a { color: var(--ink); text-underline-offset: .22em; }
+.rating { display: flex; justify-content: center; align-items: center; gap: .55rem; margin-top: 1rem; color: var(--green); }
+.rating > span { display: inline-flex; }
+.rating small { color: var(--muted); font: 600 .67rem/1 'JetBrains Mono', monospace; }
+.vignette { width: min(11rem, 44%); aspect-ratio: 3/2; margin: 0 auto .85rem; overflow: hidden; clip-path: inset(0 round 50% 50% 46% 46%); filter: sepia(.25) saturate(.72) contrast(.93); }
+.vignette img { width: 100%; height: 100%; object-fit: cover; }
+.imprint { color: var(--muted); font: 500 .56rem/1 'JetBrains Mono', monospace; letter-spacing: .1em; text-transform: uppercase; }
+
+.quotePageContent { display: grid; grid-template-rows: minmax(0, 1fr) auto auto; padding: clamp(1.6rem, 3vw, 3rem) clamp(2rem, 4vw, 4rem) clamp(2rem, 3.6vw, 3.8rem); }
+.quotePageContent figure { min-height: 0; margin: 0 0 clamp(1rem, 2vw, 2rem); overflow: hidden; clip-path: inset(0 round 48% 48% 45% 45%); }
+.quotePageContent img { width: 100%; height: 100%; object-fit: cover; filter: sepia(.18) saturate(.82); }
+.quotePageContent blockquote { max-width: 22ch; margin: 0 auto; font: italic clamp(1.15rem, 2vw, 1.75rem)/1.3 'Iowan Old Style', 'Baskerville', Georgia, serif; text-align: center; text-wrap: balance; }
+.quotePageContent > p { margin: .8rem 0 0; color: var(--muted); font-size: .68rem; font-weight: 600; letter-spacing: .08em; text-align: center; text-transform: uppercase; }
+
+.detailsPageContent { display: flex; flex-direction: column; padding: clamp(2.3rem, 4.5vw, 4.8rem) clamp(2rem, 4.2vw, 4.4rem) clamp(2rem, 3.5vw, 3.7rem); }
+.detailsPageContent h2 { margin: clamp(1.7rem, 3.2vw, 3.2rem) 0 1rem; font: 500 clamp(2.4rem, 4vw, 4.3rem)/.95 'Iowan Old Style', 'Baskerville', Georgia, serif; letter-spacing: -.04em; }
+.description { max-width: 42ch; margin: 0; color: #3f4a45; font: clamp(1rem, 1.48vw, 1.3rem)/1.55 'Iowan Old Style', 'Baskerville', Georgia, serif; text-wrap: pretty; }
+.facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: auto 0 0; padding: 1.35rem 0; border-top: 1px solid rgba(40,95,76,.18); border-bottom: 1px solid rgba(40,95,76,.18); }
+.facts div { min-width: 0; }
+.facts dt { color: var(--muted); font: 600 .58rem/1.2 'JetBrains Mono', monospace; letter-spacing: .12em; text-transform: uppercase; }
+.facts dd { margin: .45rem 0 0; overflow-wrap: anywhere; font-size: clamp(.72rem, 1vw, .87rem); font-weight: 600; }
+.pagePrice { display: flex; align-items: baseline; gap: .75rem; padding-top: 1.25rem; }
+.pagePrice strong { font: 500 clamp(1.7rem, 2.5vw, 2.35rem)/1 'Iowan Old Style', 'Baskerville', Georgia, serif; font-variant-numeric: tabular-nums; }
+.pagePrice span { color: var(--muted); font-size: .68rem; }
+
+.desktopFooter { display: grid; grid-template-columns: 1fr 1fr; align-items: stretch; margin-top: 1.25rem; }
+.spreadControls { display: flex; align-items: center; gap: .8rem; padding-left: .25rem; }
+.spreadControls button, .mobileControls button { display: grid; width: 2.65rem; height: 2.65rem; padding: 0; place-items: center; color: var(--ink); border: 1px solid rgba(24,35,31,.2); border-radius: 50%; background: rgba(248,242,231,.8); transition: transform .2s ease, color .2s ease, background .2s ease; }
+.spreadControls button:not(:disabled):hover, .mobileControls button:not(:disabled):hover { color: white; background: var(--green); transform: translateY(-2px); }
+.spreadControls span, .mobileControls span { min-width: 7.5rem; color: var(--muted); font-size: .7rem; font-weight: 600; letter-spacing: .1em; text-align: center; text-transform: uppercase; }
+.purchaseDock, .mobilePurchase { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .8rem .8rem .8rem 1.3rem; border: 1px solid rgba(40,95,76,.18); border-radius: .55rem; background: rgba(248,242,231,.92); box-shadow: 0 .8rem 2rem rgba(54,60,48,.1); backdrop-filter: blur(12px); }
+.purchaseDock > div, .mobilePurchase > div { display: flex; min-width: 0; flex-direction: column; gap: .2rem; }
+.purchaseDock strong, .mobilePurchase strong { font: 600 1.25rem/1 'Iowan Old Style', 'Baskerville', Georgia, serif; font-variant-numeric: tabular-nums; }
+.purchaseDock span, .mobilePurchase span { overflow: hidden; color: var(--muted); font-size: .62rem; text-overflow: ellipsis; white-space: nowrap; }
+.purchaseButton { display: inline-flex; min-height: 3rem; padding: 0 1.1rem; align-items: center; justify-content: center; gap: .6rem; flex: 0 0 auto; color: white; border: 0; border-radius: .42rem; background: var(--green); font-size: .78rem; font-weight: 600; transition: transform .2s ease, background .2s ease; }
+.purchaseButton:not(:disabled):hover { background: #1e4b3d; transform: translateY(-2px); }
+.purchaseButton:not(:disabled):active { transform: translateY(1px) scale(.98); }
+.notice { width: min(36rem, calc(100% - 3rem)); margin: 1.25rem auto 0; padding: .8rem 1rem; color: #1f4b3b; border-radius: .4rem; background: #dcebe4; font-size: .78rem; text-align: center; }
+.mobileExperience { display: none; }
+.srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.mobileAnnouncement { display: none; }
+
+@media (max-width: 900px) {
+  .experience { padding-inline: 1rem; }
+  .intro { padding-inline: .5rem; }
+  .desktopExperience { display: none; }
+  .mobileExperience { display: block; width: min(31rem, 100%); margin: auto; }
+  .desktopAnnouncement { display: none; }
+  .mobileAnnouncement { display: block; }
+  .mobileViewport { --mobile-page: 0; --mobile-drag: 0px; position: relative; overflow: hidden; aspect-ratio: .78; touch-action: pan-y; border: .42rem solid #183d35; border-radius: .7rem; background: var(--paper); box-shadow: 0 2rem 3rem rgba(54,60,48,.22); }
+  .mobileTrack { display: flex; width: 100%; height: 100%; transform: translate3d(calc(var(--mobile-page) * -100% + var(--mobile-drag)), 0, 0); transition: transform .46s cubic-bezier(.22,.8,.3,1); }
+  .mobileViewport[data-dragging='true'] .mobileTrack { transition: none; will-change: transform; }
+  .mobilePage { position: relative; width: 100%; height: 100%; flex: 0 0 100%; overflow: hidden; background: var(--paper); }
+  .mobilePage::after { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .2; background: radial-gradient(circle at 18% 12%, rgba(255,255,255,.9), transparent 38%); mix-blend-mode: multiply; }
+  .mobileCover { background: #102c25; }
+  .mobileCover img { width: 100%; height: 100%; object-fit: cover; }
+  .titlePageContent { padding: clamp(2rem, 10vw, 3.4rem) clamp(1.5rem, 9vw, 3rem) 2rem; }
+  .titlePageContent h1 { font-size: clamp(2.8rem, 14vw, 4.5rem); }
+  .vignette { width: min(12rem, 52%); }
+  .quotePageContent { padding: 1.5rem clamp(1.5rem, 8vw, 2.8rem) 2.4rem; }
+  .quotePageContent blockquote { font-size: clamp(1.25rem, 5.3vw, 1.75rem); }
+  .detailsPageContent { padding: clamp(2rem, 9vw, 3.4rem) clamp(1.5rem, 8vw, 2.8rem) 2rem; }
+  .detailsPageContent h2 { margin-top: 1.7rem; font-size: clamp(2.8rem, 13vw, 4rem); }
+  .description { font-size: clamp(1rem, 4.3vw, 1.22rem); }
+  .facts { gap: .65rem; }
+  .mobileControls { display: flex; align-items: center; justify-content: center; gap: .7rem; margin: 1rem 0; }
+  .mobilePurchase { position: sticky; z-index: 8; bottom: max(.75rem, env(safe-area-inset-bottom)); }
+  .mobilePurchase .purchaseButton { padding-inline: .9rem; }
+  .intro { align-items: flex-start; flex-direction: column; gap: .6rem; }
+}
+
+@media (max-width: 430px) {
+  .experience { padding-top: 2.5rem; padding-bottom: 4.5rem; }
+  .mobileViewport { min-height: 35rem; aspect-ratio: auto; }
+  .facts { grid-template-columns: 1fr; margin-top: 1.4rem; padding-block: .8rem; gap: .6rem; }
+  .facts div { display: flex; justify-content: space-between; gap: 1rem; }
+  .facts dd { margin: 0; text-align: right; }
+  .pagePrice { padding-top: .85rem; }
+  .mobilePurchase { padding-left: .9rem; }
+  .mobilePurchase span { max-width: 9rem; }
+  .purchaseButton { min-height: 2.85rem; }
+  .purchaseButton svg:last-child { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .turningLeaf, .mobileTrack, .spreadControls button, .mobileControls button, .purchaseButton { transition: none !important; }
+}
