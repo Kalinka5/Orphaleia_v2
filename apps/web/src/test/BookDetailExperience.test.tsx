@@ -1,8 +1,36 @@
 import { fireEvent, render, screen } from '@testing-library/react'
+import type { ForwardedRef, ReactNode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { BookDetailExperience } from '../components/BookDetailExperience'
 import type { Book } from '../types'
+
+vi.mock('react-pageflip', async () => {
+  const React = await import('react')
+  const MockFlipBook = React.forwardRef(function MockFlipBook(
+    props: { children: ReactNode; className?: string; onFlip?: (event: { data: number }) => void; onChangeState?: (event: { data: string }) => void },
+    ref: ForwardedRef<unknown>,
+  ) {
+    const currentPage = React.useRef(0)
+    const changePage = (page: number) => {
+      props.onChangeState?.({ data: 'flipping' })
+      currentPage.current = page
+      props.onFlip?.({ data: page })
+      props.onChangeState?.({ data: 'read' })
+    }
+    React.useImperativeHandle(ref, () => ({
+      pageFlip: () => ({
+        flip: (page: number) => changePage(page),
+        flipNext: () => changePage(Math.min(3, currentPage.current + 2)),
+        flipPrev: () => changePage(Math.max(0, currentPage.current - 2)),
+        getCurrentPageIndex: () => currentPage.current,
+        turnToPage: (page: number) => changePage(page),
+      }),
+    }))
+    return React.createElement('div', { className: props.className }, props.children)
+  })
+  return { default: MockFlipBook }
+})
 
 const book: Book = {
   id: 'book-1',
@@ -61,7 +89,7 @@ function renderExperience(overrides: Partial<Book> = {}, onAdd = vi.fn()) {
 describe('BookDetailExperience', () => {
   it('uses legacy cover and description fallbacks', () => {
     renderExperience()
-    expect(screen.getAllByAltText('Cover of The Test Passage')).toHaveLength(6)
+    expect(screen.getAllByAltText('Cover of The Test Passage')).toHaveLength(2)
     expect(screen.getAllByText('“A traveler follows a lantern across a quiet and unfamiliar sea.”')).toHaveLength(2)
   })
 
@@ -78,21 +106,10 @@ describe('BookDetailExperience', () => {
     expect(stage).toHaveAttribute('data-spread', '1')
   })
 
-  it('commits a sufficiently long page drag and reverses it', () => {
+  it('provides four desktop pages to the physical page-turn surface', () => {
     renderExperience()
-    const stage = screen.getByTestId('book-spread')
     const leaf = screen.getByTestId('turning-leaf')
-    Object.defineProperty(stage, 'clientWidth', { configurable: true, value: 1000 })
-
-    fireEvent.pointerDown(leaf, { pointerId: 4, pointerType: 'touch', clientX: 900, clientY: 200 })
-    fireEvent.pointerMove(leaf, { pointerId: 4, pointerType: 'touch', clientX: 650, clientY: 204 })
-    fireEvent.pointerUp(leaf, { pointerId: 4, pointerType: 'touch', clientX: 650, clientY: 204 })
-    expect(stage).toHaveAttribute('data-spread', '2')
-
-    fireEvent.pointerDown(leaf, { pointerId: 5, pointerType: 'touch', clientX: 300, clientY: 200 })
-    fireEvent.pointerMove(leaf, { pointerId: 5, pointerType: 'touch', clientX: 550, clientY: 204 })
-    fireEvent.pointerUp(leaf, { pointerId: 5, pointerType: 'touch', clientX: 550, clientY: 204 })
-    expect(stage).toHaveAttribute('data-spread', '1')
+    expect(leaf.querySelectorAll('article')).toHaveLength(4)
   })
 
   it('exposes four mobile pages and preserves the purchase action', () => {

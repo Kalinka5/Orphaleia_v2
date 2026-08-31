@@ -1,8 +1,9 @@
 import { CSSProperties, PointerEvent as ReactPointerEvent, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowLeft, ArrowRight, HandSwipeLeft, ShoppingBag, Star } from '@phosphor-icons/react'
+import { ArrowLeft, ArrowRight, Feather, HandSwipeLeft, Sailboat, ShoppingBag, Star } from '@phosphor-icons/react'
 import { Link } from 'react-router-dom'
 import { money } from '../api'
 import type { Book } from '../types'
+import BookSlider, { type BookSliderHandle, type BookSliderState } from './ui/book-slider'
 import s from './BookDetailExperience.module.css'
 
 type Props = {
@@ -12,16 +13,13 @@ type Props = {
   onAdd: () => void
 }
 
-type DragState = {
+type MobileDragState = {
   pointerId: number
   startX: number
   startY: number
   startTime: number
-  startProgress: number
   horizontal: boolean
 }
-
-type MobileDragState = Omit<DragState, 'startProgress'>
 
 const clamp = (value: number, minimum: number, maximum: number) => Math.min(maximum, Math.max(minimum, value))
 
@@ -53,31 +51,31 @@ function BookFacts({ book }: { book: Book }) {
   </dl>
 }
 
-function TitlePage({ book, image, imageAlt, focusable = true }: { book: Book; image: string; imageAlt: string; focusable?: boolean }) {
-  return <div className={s.titlePageContent}>
+function TitlePage({ book, focusable = true }: { book: Book; focusable?: boolean }) {
+  return <div className={s.titlePageContent} data-page-copy>
     <p className={s.kicker}>{book.genres.map((genre) => genre.name).join(' · ')} · {book.publication_year}</p>
     <div>
       <h1>{book.title}</h1>
       <p className={s.byline}>by <Authors book={book} focusable={focusable} /></p>
       <Rating book={book} />
     </div>
-    <figure className={s.vignette}>
-      <img src={image} alt={imageAlt} width="360" height="240" decoding="async" />
-    </figure>
+    <div className={s.editionMark} aria-hidden="true">
+      <span><Sailboat size={54} weight="thin" /></span>
+    </div>
     <small className={s.imprint}>Orphaleia · Independent booksellers</small>
   </div>
 }
 
-function QuotePage({ book, image, imageAlt, quote }: { book: Book; image: string; imageAlt: string; quote: string }) {
-  return <div className={s.quotePageContent}>
-    <figure><img src={image} alt={imageAlt} width="720" height="900" decoding="async" /></figure>
+function QuotePage({ book, quote }: { book: Book; quote: string }) {
+  return <div className={s.quotePageContent} data-page-copy>
+    <div className={s.quoteMark} aria-hidden="true"><Feather size={82} weight="thin" /></div>
     <blockquote>“{quote}”</blockquote>
     <p>— {book.authors.map((author) => author.name).join(', ')}</p>
   </div>
 }
 
 function DetailsPage({ book }: { book: Book }) {
-  return <div className={s.detailsPageContent}>
+  return <div className={s.detailsPageContent} data-page-copy>
     <p className={s.kicker}>Inside this edition</p>
     <h2>About the book</h2>
     <p className={s.description}>{book.description}</p>
@@ -90,127 +88,68 @@ function DetailsPage({ book }: { book: Book }) {
 }
 
 export function BookDetailExperience({ book, adding, notice, onAdd }: Props) {
-  const stageRef = useRef<HTMLDivElement>(null)
-  const progressRef = useRef(0)
-  const frameRef = useRef<number | null>(null)
-  const dragRef = useRef<DragState | null>(null)
+  const flipBookRef = useRef<BookSliderHandle>(null)
+  const pendingFocusRef = useRef<(() => void) | null>(null)
   const mobileDragRef = useRef<MobileDragState | null>(null)
-  const aliveRef = useRef(true)
   const previousSpreadRef = useRef<HTMLButtonElement>(null)
   const nextSpreadRef = useRef<HTMLButtonElement>(null)
   const previousPageRef = useRef<HTMLButtonElement>(null)
   const nextPageRef = useRef<HTMLButtonElement>(null)
   const [spread, setSpread] = useState<0 | 1>(0)
+  const [pageTurning, setPageTurning] = useState(false)
   const [mobilePage, setMobilePage] = useState(0)
-  const [dragging, setDragging] = useState(false)
   const [mobileDragging, setMobileDragging] = useState(false)
   const [reducedMotion, setReducedMotion] = useState(false)
-  const editorialImage = book.interior_image_url || book.cover_url
-  const editorialAlt = book.interior_image_url ? (book.interior_image_alt || `Interior artwork for ${book.title}`) : `Cover of ${book.title}`
   const pullQuote = useMemo(() => book.pull_quote || firstSentence(book.description), [book.description, book.pull_quote])
 
   useEffect(() => {
-    aliveRef.current = true
     const query = window.matchMedia('(prefers-reduced-motion: reduce)')
     const update = () => setReducedMotion(query.matches)
     update()
     query.addEventListener('change', update)
     return () => {
-      aliveRef.current = false
       query.removeEventListener('change', update)
-      if (frameRef.current !== null) cancelAnimationFrame(frameRef.current)
     }
   }, [])
 
   useEffect(() => {
-    progressRef.current = 0
     setSpread(0)
     setMobilePage(0)
-    stageRef.current?.style.setProperty('--turn-progress', '0')
+    setPageTurning(false)
+    flipBookRef.current?.turnToPage(0)
   }, [book.id])
 
-  function applyProgress(progress: number) {
-    progressRef.current = clamp(progress, 0, 1)
-    if (frameRef.current !== null) cancelAnimationFrame(frameRef.current)
-    frameRef.current = requestAnimationFrame(() => {
-      stageRef.current?.style.setProperty('--turn-progress', String(progressRef.current))
-      frameRef.current = null
-    })
-  }
-
-  async function settleSpread(target: 0 | 1, focusAfter?: () => void) {
-    const stage = stageRef.current
-    if (!stage) return
-    dragRef.current = null
-    setDragging(false)
-    if (reducedMotion) {
-      applyProgress(target)
-      setSpread(target)
+  function settleSpread(target: 0 | 1, focusAfter?: () => void) {
+    if (target === spread) {
       requestAnimationFrame(() => focusAfter?.())
       return
     }
-    try {
-      const { default: gsap } = await import('gsap')
-      if (!aliveRef.current || !stageRef.current) return
-      gsap.killTweensOf(stage)
-      gsap.to(stage, {
-        '--turn-progress': target,
-        duration: 0.62,
-        ease: 'power3.out',
-        overwrite: true,
-        onUpdate: () => { progressRef.current = Number.parseFloat(stage.style.getPropertyValue('--turn-progress')) || target },
-        onComplete: () => {
-          progressRef.current = target
-          setSpread(target)
-          requestAnimationFrame(() => focusAfter?.())
-        },
-      })
-    } catch {
-      applyProgress(target)
+    pendingFocusRef.current = focusAfter ?? null
+    const bookApi = flipBookRef.current
+    if (!bookApi) {
       setSpread(target)
-      requestAnimationFrame(() => focusAfter?.())
+      requestAnimationFrame(() => pendingFocusRef.current?.())
+      pendingFocusRef.current = null
+      return
     }
-  }
-
-  function beginLeafDrag(event: ReactPointerEvent<HTMLDivElement>) {
-    if (event.pointerType === 'mouse' && event.button !== 0) return
-    const stage = stageRef.current
-    if (!stage) return
-    dragRef.current = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      startTime: performance.now(),
-      startProgress: progressRef.current,
-      horizontal: false,
+    if (reducedMotion) {
+      bookApi.turnToPage(target * 2)
+      setSpread(target)
+      requestAnimationFrame(() => pendingFocusRef.current?.())
+      pendingFocusRef.current = null
+      return
     }
-    setDragging(true)
-    try { event.currentTarget.setPointerCapture(event.pointerId) } catch { /* Synthetic pointer events may not own capture. */ }
+    bookApi.flipToPage(target * 2, 'bottom')
   }
 
-  function moveLeafDrag(event: ReactPointerEvent<HTMLDivElement>) {
-    const drag = dragRef.current
-    const stage = stageRef.current
-    if (!drag || drag.pointerId !== event.pointerId || !stage) return
-    const dx = event.clientX - drag.startX
-    const dy = event.clientY - drag.startY
-    if (!drag.horizontal && Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy) * 1.1) drag.horizontal = true
-    if (!drag.horizontal) return
-    event.preventDefault()
-    applyProgress(drag.startProgress - dx / Math.max(1, stage.clientWidth / 2))
+  function handlePageChange(page: number) {
+    setSpread(page >= 2 ? 1 : 0)
+    requestAnimationFrame(() => pendingFocusRef.current?.())
+    pendingFocusRef.current = null
   }
 
-  function endLeafDrag(event: ReactPointerEvent<HTMLDivElement>, cancelled = false) {
-    const drag = dragRef.current
-    if (!drag || drag.pointerId !== event.pointerId) return
-    const elapsed = Math.max(1, performance.now() - drag.startTime)
-    const velocity = (progressRef.current - drag.startProgress) / elapsed
-    const target = cancelled
-      ? (drag.startProgress >= 0.5 ? 1 : 0)
-      : drag.startProgress < 0.5
-        ? (progressRef.current >= 0.35 || velocity > 0.0012 ? 1 : 0)
-        : (progressRef.current <= 0.65 || velocity < -0.0012 ? 0 : 1)
-    void settleSpread(target)
+  function handlePageState(state: BookSliderState) {
+    setPageTurning(state !== 'read')
   }
 
   function goMobilePage(nextPage: number, focusAfter?: () => void) {
@@ -274,34 +213,34 @@ export function BookDetailExperience({ book, adding, notice, onAdd }: Props) {
 
     <div className={s.desktopExperience}>
       <div
-        ref={stageRef}
         className={s.bookStage}
         data-testid="book-spread"
         data-spread={spread + 1}
-        data-dragging={dragging}
-        style={{ '--turn-progress': 0 } as CSSProperties}
+        data-dragging={pageTurning}
         tabIndex={0}
         onKeyDown={handleKeyDown}
       >
-        <article className={`${s.page} ${s.coverPage}`} aria-hidden={spread === 1}>
-          <img src={book.cover_url} alt={`Cover of ${book.title}`} width="720" height="1080" fetchPriority="high" />
-          {book.featured && <span>Keeper’s choice</span>}
-        </article>
-        <article className={`${s.page} ${s.detailsPage}`} aria-hidden={spread === 0}><DetailsPage book={book} /></article>
-        <div
-          className={s.turningLeaf}
-          data-testid="turning-leaf"
-          onPointerDown={beginLeafDrag}
-          onPointerMove={moveLeafDrag}
-          onPointerUp={(event) => endLeafDrag(event)}
-          onPointerCancel={(event) => endLeafDrag(event, true)}
+        <span className={s.pageBlockRight} aria-hidden="true" />
+        <span className={s.pageBlockBottom} data-testid="book-page-block-bottom" aria-hidden="true" />
+        <BookSlider
+          key={book.id}
+          ref={flipBookRef}
+          className={s.flipBook}
+          testId="turning-leaf"
+          reducedMotion={reducedMotion}
+          onPageChange={handlePageChange}
+          onInteractionStateChange={handlePageState}
         >
-          <article className={`${s.page} ${s.leafFront}`} aria-hidden={spread === 1}>
-            <TitlePage book={book} image={editorialImage} imageAlt={editorialAlt} focusable={spread === 0} />
-            <span className={s.pageCorner} aria-hidden="true" />
+          <article className={`${s.flipPage} ${s.coverPage}`} aria-hidden={spread === 1}>
+            <img src={book.cover_url} alt={`Cover of ${book.title}`} width="720" height="1080" fetchPriority="high" />
+            {book.featured && <span>Keeper’s choice</span>}
           </article>
-          <article className={`${s.page} ${s.leafBack}`} aria-hidden={spread === 0}><QuotePage book={book} image={editorialImage} imageAlt={editorialAlt} quote={pullQuote} /></article>
-        </div>
+          <article className={`${s.flipPage} ${s.titleFlipPage}`} aria-hidden={spread === 1}>
+            <TitlePage book={book} focusable={spread === 0} />
+          </article>
+          <article className={`${s.flipPage} ${s.quoteFlipPage}`} aria-hidden={spread === 0}><QuotePage book={book} quote={pullQuote} /></article>
+          <article className={`${s.flipPage} ${s.detailsPage}`} aria-hidden={spread === 0}><DetailsPage book={book} /></article>
+        </BookSlider>
         <span className={s.spine} aria-hidden="true" />
       </div>
       <div className={s.desktopFooter}>
@@ -329,10 +268,14 @@ export function BookDetailExperience({ book, adding, notice, onAdd }: Props) {
         onPointerUp={(event) => endMobileDrag(event)}
         onPointerCancel={(event) => endMobileDrag(event, true)}
       >
+        <span className={s.mobilePageBlock} aria-hidden="true" />
         <div className={s.mobileTrack}>
           <article className={`${s.mobilePage} ${s.mobileCover}`} aria-hidden={mobilePage !== 0}><img src={book.cover_url} alt={`Cover of ${book.title}`} width="720" height="1080" /></article>
-          <article className={s.mobilePage} aria-hidden={mobilePage !== 1}><TitlePage book={book} image={editorialImage} imageAlt={editorialAlt} focusable={mobilePage === 1} /></article>
-          <article className={s.mobilePage} aria-hidden={mobilePage !== 2}><QuotePage book={book} image={editorialImage} imageAlt={editorialAlt} quote={pullQuote} /></article>
+          <article className={s.mobilePage} aria-hidden={mobilePage !== 1}>
+            <TitlePage book={book} focusable={mobilePage === 1} />
+            <span className={`${s.pageCorner} ${s.mobileCorner}`} aria-hidden="true" />
+          </article>
+          <article className={s.mobilePage} aria-hidden={mobilePage !== 2}><QuotePage book={book} quote={pullQuote} /></article>
           <article className={s.mobilePage} aria-hidden={mobilePage !== 3}><DetailsPage book={book} /></article>
         </div>
       </div>

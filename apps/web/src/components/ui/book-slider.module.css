@@ -1,0 +1,45 @@
+.root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  border-radius: .32rem;
+  clip-path: inset(-18% -1.5% 0 -1.5%);
+  isolation: isolate;
+}
+
+.book {
+  width: 100%;
+  height: 100%;
+}
+
+.book :global(.stf__block) {
+  touch-action: pan-y;
+}
+
+.book :global(.stf__item) {
+  background-clip: padding-box;
+  opacity: 1;
+}
+
+/* Keep the animated sheet physical and quiet. The destination copy appears
+   only after PageFlip reports its final read state. */
+.root:is([data-state='flipping'], [data-state='user_fold']) .book :global(.stf__item[style*='z-index: 13']) > [data-page-copy],
+.root:is([data-state='flipping'], [data-state='user_fold']) .book :global(.stf__item[style*='z-index: 15']) > [data-page-copy] {
+  opacity: 0;
+}
+
+/* PageFlip draws the inside of a soft fold as a transparent gradient. Give
+   that layer an opaque paper base so content underneath cannot show through. */
+.root:is([data-state='flipping'], [data-state='user_fold']) .book :global(.stf__innerShadow) {
+  background-color: var(--paper, #f8f2e7) !important;
+}
+
+.book [data-page-copy] {
+  opacity: 1;
+  transition: opacity 90ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .book [data-page-copy] { transition: none; }
+}
