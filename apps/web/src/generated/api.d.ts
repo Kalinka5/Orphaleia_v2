@@ -826,7 +826,7 @@ export interface components {
              */
             bio: string;
             /** Image Url */
-            image_url?: string | null;
+            image_url: string;
         };
         /** Body_upload_media_api_v1_admin_media_post */
         Body_upload_media_api_v1_admin_media_post: {

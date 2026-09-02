@@ -48,7 +48,7 @@ const book: Book = {
   active: true,
   rating_average: 4.2,
   rating_count: 7,
-  authors: [{ id: 'author-1', name: 'Mara Vale', slug: 'mara-vale', bio: '' }],
+  authors: [{ id: 'author-1', name: 'Mara Vale', slug: 'mara-vale', bio: '', image_url: '/assets/authors/mara-vale.webp' }],
   genres: [{ id: 'genre-1', name: 'Adventure', slug: 'adventure', description: '' }],
 }
 

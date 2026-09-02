@@ -16,6 +16,30 @@ test('catalog custom filters are keyboard accessible and URL driven', async ({ p
   await expect(page.getByRole('status').first()).toContainText(/book/i)
 })
 
+test('author portraits reveal color from synchronized pointer and focus states', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await page.goto('/authors')
+
+  const gallery = page.getByLabel('Author portrait gallery')
+  const portraitLink = gallery.getByRole('link').first()
+  const portrait = portraitLink.getByRole('img')
+  await expect(portrait).toBeVisible()
+  await expect.poll(() => portrait.evaluate((image) => getComputedStyle(image).filter)).toContain('grayscale(1)')
+
+  await portraitLink.hover()
+  await expect(portraitLink).toHaveAttribute('data-active', 'true')
+  await expect.poll(() => portrait.evaluate((image) => getComputedStyle(image).filter)).toContain('grayscale(0)')
+
+  await page.mouse.move(0, 0)
+  await portraitLink.focus()
+  await expect(portraitLink).toHaveAttribute('data-active', 'true')
+  await expect.poll(() => portrait.evaluate((image) => getComputedStyle(image).filter)).toContain('grayscale(0)')
+
+  const textLink = page.locator('ol').getByRole('link').first()
+  await textLink.dispatchEvent('pointerdown', { pointerType: 'touch' })
+  await expect(portraitLink).toHaveAttribute('data-active', 'true')
+})
+
 test('customer and admin route guards wait for auth and render stable states', async ({ page }) => {
   const user = { id: 'user-1', email: 'admin@orphaleia.local', full_name: 'Admin Reader', role: 'admin', is_verified: true }
   await page.route('**/api/v1/users/me', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(user) }))

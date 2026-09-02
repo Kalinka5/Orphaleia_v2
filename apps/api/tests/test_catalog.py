@@ -3,7 +3,7 @@ from sqlalchemy import func, select
 
 from app.database import SessionLocal
 from app.models import Author, Book, Genre, Rating, RatingEvent
-from app.seed import CATALOG, FEATURED_SLUGS, LEGACY_CATALOG_SLUGS, sync_catalog
+from app.seed import AUTHORS, CATALOG, FEATURED_SLUGS, LEGACY_CATALOG_SLUGS, sync_catalog
 
 
 def test_classic_catalog_definition_is_complete():
@@ -47,6 +47,9 @@ def test_catalog_sync_is_repeatable_and_deactivates_legacy_books():
         assert len(classics) == 13
         assert all(book.active for book in classics)
         assert {book.slug for book in classics if book.featured} == set(FEATURED_SLUGS)
+        seeded_authors = db.scalars(select(Author).where(Author.slug.in_(AUTHORS))).all()
+        assert len(seeded_authors) == 13
+        assert all(author.image_url == f"/assets/authors/{author.slug}.webp" for author in seeded_authors)
         oz = next(book for book in classics if book.slug == "the-wonderful-wizard-of-oz")
         assert [author.name for author in oz.authors] == ["L. Frank Baum"]
         assert {genre.slug for genre in oz.genres} == {"childrens-literature", "fantasy"}
@@ -125,6 +128,29 @@ def test_interior_artwork_requires_alt_text(client):
     response = client.put(f"/api/v1/admin/books/{book['id']}", json=payload, headers=headers)
     assert response.status_code == 422
     assert "Interior image alt text is required" in response.text
+
+
+def test_admin_author_requires_a_valid_portrait(client):
+    headers = login(client, "admin@orphaleia.local", "AdminPass!2026")
+    payload = {
+        "name": "Portrait Writer",
+        "slug": "portrait-writer",
+        "bio": "Writes stories shaped by portraiture and memory.",
+        "image_url": "/media/authors/portrait-writer.webp",
+    }
+
+    created = client.post("/api/v1/admin/authors", json=payload, headers=headers)
+    assert created.status_code == 200
+    assert created.json()["image_url"] == payload["image_url"]
+
+    for invalid in (None, "", "//example.com/portrait.webp", "ftp://example.com/portrait.webp"):
+        invalid_payload = {**payload, "slug": f"invalid-{len(str(invalid))}"}
+        if invalid is None:
+            invalid_payload.pop("image_url")
+        else:
+            invalid_payload["image_url"] = invalid
+        response = client.post("/api/v1/admin/authors", json=invalid_payload, headers=headers)
+        assert response.status_code == 422
 
 
 def test_author_and_genre_lists_hide_entries_without_active_books(client):

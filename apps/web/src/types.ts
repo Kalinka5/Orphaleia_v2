@@ -1,4 +1,4 @@
-export type Author = { id: string; name: string; slug: string; bio: string; image_url?: string }
+export type Author = { id: string; name: string; slug: string; bio: string; image_url: string | null }
 export type Genre = { id: string; name: string; slug: string; description: string }
 export type Comment = { id: string; body: string; created_at: string; author: string }
 export type Book = {

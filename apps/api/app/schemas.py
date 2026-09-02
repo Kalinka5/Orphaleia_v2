@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Literal
+from urllib.parse import urlsplit
 
 from pydantic import BaseModel, EmailStr, Field, HttpUrl, field_validator, model_validator
 
@@ -120,7 +121,18 @@ class AuthorInput(BaseModel):
     name: str = Field(min_length=2, max_length=160)
     slug: str = Field(pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
     bio: str = Field(default="", max_length=5000)
-    image_url: str | None = None
+    image_url: str = Field(min_length=1, max_length=500)
+
+    @field_validator("image_url")
+    @classmethod
+    def validate_image_url(cls, value: str) -> str:
+        cleaned = value.strip()
+        parsed = urlsplit(cleaned)
+        if cleaned.startswith("/") and not cleaned.startswith("//"):
+            return cleaned
+        if parsed.scheme in {"http", "https"} and parsed.netloc:
+            return cleaned
+        raise ValueError("Portrait must use a root-relative path or an HTTP(S) URL")
 
 
 class GenreInput(BaseModel):

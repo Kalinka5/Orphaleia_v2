@@ -5,6 +5,7 @@ import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate, usePa
 import { api, money } from './api'
 import { BookDetailExperience } from './components/BookDetailExperience'
 import { BookHeroScene, type HeroBook } from './components/BookHeroScene'
+import { AuthorShowcase } from './components/AuthorShowcase'
 import { PageMeta } from './components/PageMeta'
 import { ErrorState, RouteState as State } from './components/ui/RouteState'
 import { SelectControl, type SelectOption } from './components/ui/SelectControl'
@@ -20,6 +21,13 @@ import s from './styles.module.css'
 type AuthValue = { user: User | null; loading: boolean; signOut: () => Promise<void>; refresh: () => Promise<void> }
 const AuthContext = createContext<AuthValue>({ user: null, loading: true, signOut: async () => {}, refresh: async () => {} })
 const useAuth = () => useContext(AuthContext)
+
+async function uploadImage(file: FormDataEntryValue | null) {
+  if (!(file instanceof File) || !file.size) return ''
+  const payload = new FormData()
+  payload.set('file', file)
+  return (await api<{ url: string }>('/admin/media', { method: 'POST', body: payload })).url
+}
 
 function AuthProvider({ children }: { children: ReactNode }) {
   const client = useQueryClient()
@@ -529,7 +537,16 @@ function BookPage() {
 
 function Directory({ kind }: { kind: 'genres' | 'authors' }) {
   const query = useQuery({ queryKey: [kind], queryFn: () => api<{ items: Array<Genre | Author> }>(`/${kind}`) })
-  return <section className={s.page}><div className={s.pageHeading}><span className={s.eyebrow}>{kind === 'genres' ? 'SHELVES BY MOOD' : 'THE WRITERS’ ROOM'}</span><h1>{kind === 'genres' ? 'Choose a current' : 'Follow a voice'}</h1><p>{kind === 'genres' ? 'A shelf is a direction, never a boundary.' : 'Meet the people behind the passages.'}</p></div>{query.isLoading ? <State title="Consulting the catalogue…" loading /> : query.error ? <ErrorState error={query.error} retry={() => void query.refetch()} /> : query.data?.items.length ? <div className={s.directory}>{query.data.items.map((item) => <Link key={item.id} to={`/${kind}/${item.slug}`}><span className={s.directoryMark}>{kind === 'genres' ? <Sparkle size={22} aria-hidden="true" /> : item.name.charAt(0)}</span><h2>{item.name}</h2><p>{'description' in item ? item.description : item.bio}</p><b>Open shelf <ArrowRight size={14} aria-hidden="true" /></b></Link>)}</div> : <State title={`No ${kind} available`} text="The shelves are being prepared." />}</section>
+  const content = query.isLoading
+    ? <State title="Consulting the catalogue…" loading />
+    : query.error
+      ? <ErrorState error={query.error} retry={() => void query.refetch()} />
+      : query.data?.items.length
+        ? kind === 'authors'
+          ? <AuthorShowcase authors={query.data.items as Author[]} />
+          : <div className={s.directory}>{(query.data.items as Genre[]).map((item) => <Link key={item.id} to={`/genres/${item.slug}`}><span className={s.directoryMark}><Sparkle size={22} aria-hidden="true" /></span><h2>{item.name}</h2><p>{item.description}</p><b>Open shelf <ArrowRight size={14} aria-hidden="true" /></b></Link>)}</div>
+        : <State title={`No ${kind} available`} text="The shelves are being prepared." />
+  return <section className={s.page}><div className={s.pageHeading}><span className={s.eyebrow}>{kind === 'genres' ? 'SHELVES BY MOOD' : 'THE WRITERS’ ROOM'}</span><h1>{kind === 'genres' ? 'Choose a current' : 'Follow a voice'}</h1><p>{kind === 'genres' ? 'A shelf is a direction, never a boundary.' : 'Meet the people behind the passages.'}</p></div>{content}</section>
 }
 
 function Shelf({ kind }: { kind: 'genres' | 'authors' }) {
@@ -779,7 +796,7 @@ function Account() {
 }
 
 function Admin() {
-  const { user, loading } = useAuth(); const client = useQueryClient(); const [tab, setTab] = useState('overview'); const [message, setMessage] = useState('')
+  const { user, loading } = useAuth(); const client = useQueryClient(); const [tab, setTab] = useState('overview'); const [message, setMessage] = useState(''); const [taxonomyBusy, setTaxonomyBusy] = useState(false)
   const overview = useQuery({ queryKey: ['admin-overview'], queryFn: () => api<Record<string, number>>('/admin/overview'), enabled: user?.role === 'admin' })
   const books = useQuery({ queryKey: ['admin-books'], queryFn: () => api<{ items: Book[] }>('/admin/books'), enabled: user?.role === 'admin' && tab === 'books' })
   const orders = useQuery({ queryKey: ['admin-orders'], queryFn: () => api<{ items: Order[] }>('/admin/orders'), enabled: user?.role === 'admin' && tab === 'orders' })
@@ -790,13 +807,33 @@ function Admin() {
   const zones = useQuery({ queryKey: ['admin-zones'], queryFn: () => api<{ items: Zone[] }>('/admin/shipping-zones'), enabled: user?.role === 'admin' && tab === 'shipping' })
   const updateOrder = useMutation({ mutationFn: ({ id, status }: { id: string; status: string }) => api(`/admin/orders/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) }), onSuccess: () => client.invalidateQueries({ queryKey: ['admin-orders'] }) })
   const moderate = useMutation({ mutationFn: ({ id, visible }: { id: string; visible: boolean }) => api(`/admin/comments/${id}`, { method: 'PATCH', body: JSON.stringify({ visible }) }), onSuccess: () => client.invalidateQueries({ queryKey: ['admin-comments'] }) })
-  async function createTaxonomy(e: FormEvent<HTMLFormElement>, kind: 'authors' | 'genres') { e.preventDefault(); const f = new FormData(e.currentTarget); try { await api(`/admin/${kind}`, { method: 'POST', body: JSON.stringify(kind === 'authors' ? { name: f.get('name'), slug: f.get('slug'), bio: f.get('description') } : { name: f.get('name'), slug: f.get('slug'), description: f.get('description') }) }); e.currentTarget.reset(); client.invalidateQueries({ queryKey: [kind] }); setMessage(`${kind === 'authors' ? 'Author' : 'Genre'} added`) } catch (err) { setMessage((err as Error).message) } }
+  async function createAuthor(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const form = e.currentTarget
+    const data = new FormData(form)
+    setTaxonomyBusy(true)
+    setMessage('')
+    try {
+      const uploadedPortrait = await uploadImage(data.get('portrait_file'))
+      const imageUrl = uploadedPortrait || String(data.get('image_url') || '').trim()
+      if (!imageUrl) throw new Error('Upload a portrait or provide a portrait URL')
+      await api('/admin/authors', { method: 'POST', body: JSON.stringify({ name: data.get('name'), slug: data.get('slug'), bio: data.get('description'), image_url: imageUrl }) })
+      form.reset()
+      await client.invalidateQueries({ queryKey: ['authors'] })
+      setMessage('Author added')
+    } catch (err) {
+      setMessage((err as Error).message)
+    } finally {
+      setTaxonomyBusy(false)
+    }
+  }
+  async function createGenre(e: FormEvent<HTMLFormElement>) { e.preventDefault(); const form = e.currentTarget; const f = new FormData(form); setTaxonomyBusy(true); setMessage(''); try { await api('/admin/genres', { method: 'POST', body: JSON.stringify({ name: f.get('name'), slug: f.get('slug'), description: f.get('description') }) }); form.reset(); await client.invalidateQueries({ queryKey: ['genres'] }); setMessage('Genre added') } catch (err) { setMessage((err as Error).message) } finally { setTaxonomyBusy(false) } }
   async function createZone(e: FormEvent<HTMLFormElement>) { e.preventDefault(); const f = new FormData(e.currentTarget); try { await api('/admin/shipping-zones', { method: 'POST', body: JSON.stringify({ name: f.get('name'), country_codes: String(f.get('countries')).split(',').map((x) => x.trim()), rate_cents: Math.round(Number(f.get('rate')) * 100), free_over_cents: f.get('free') ? Math.round(Number(f.get('free')) * 100) : null, active: true }) }); e.currentTarget.reset(); client.invalidateQueries({ queryKey: ['admin-zones'] }); setMessage('Shipping zone added') } catch (err) { setMessage((err as Error).message) } }
   if (loading) return <State title="Checking the keeper’s seal…" loading />; if (user?.role !== 'admin') return <Navigate to="/" />
   return <section className={s.adminPage}><aside className={s.adminNav}><span className={s.eyebrow}>KEEPER’S DESK</span><h1>Shop admin</h1>{['overview','books','taxonomy','shipping','orders','comments'].map((x) => <button type="button" className={tab === x ? s.activeTab : ''} aria-current={tab === x ? 'page' : undefined} key={x} onClick={() => setTab(x)}>{x}</button>)}</aside><div className={s.adminContent}>{message && <p className={s.notice} role="status" aria-live="polite">{message}</p>}
     {tab === 'overview' && <><h2>Today at Orphaleia</h2>{overview.isLoading ? <State title="Loading the overview…" loading compact /> : overview.error ? <ErrorState error={overview.error} retry={() => void overview.refetch()} compact /> : <><div className={s.stats}>{overview.data && Object.entries(overview.data).map(([key,value]) => <article key={key}><span>{key.replace('_',' ')}</span><b>{value}</b></article>)}</div><div className={s.adminNote}><h3>Operations note</h3><p>Payment events are replay-safe, stock reservations expire after 30 minutes, and outbound messages are handled by the worker.</p></div></>}</>}
     {tab === 'books' && <><div className={s.adminTitle}><h2>Catalog</h2><Link className={s.secondaryButton} to="/admin/books/new">Add book</Link></div>{books.isLoading ? <State title="Loading the catalog…" loading compact /> : books.error ? <ErrorState error={books.error} retry={() => void books.refetch()} compact /> : books.data?.items.length ? <div className={s.table}>{books.data.items.map((book) => <div className={s.tableRow} key={book.id}><img src={book.cover_url} alt={`Cover of ${book.title}`} width="42" height="64" loading="lazy" /><div><b>{book.title}</b><small>{book.authors.map((x) => x.name).join(', ')} · <Link to={`/admin/books/${book.slug}/edit`}>Edit</Link></small></div><span>{money(book.price_cents)}</span><span>{book.stock_qty} in stock</span><span className={book.active ? s.live : s.draft}>{book.active ? 'Live' : 'Hidden'}</span></div>)}</div> : <State title="No catalog books" compact />}</>}
-    {tab === 'taxonomy' && <><h2>Authors and shelves</h2>{authors.isLoading || genres.isLoading ? <State title="Loading taxonomy…" loading compact /> : authors.error || genres.error ? <ErrorState error={authors.error || genres.error} retry={() => { void authors.refetch(); void genres.refetch() }} compact /> : <div className={s.adminForms}><form className={s.stackForm} onSubmit={(e) => void createTaxonomy(e, 'authors')}><h3>Add author</h3><label>Name<input name="name" required /></label><label>Slug<input name="slug" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" /></label><label>Biography<textarea name="description" /></label><button className={s.secondaryButton}>Add author</button><small>{authors.data?.items.length ?? 0} authors currently available</small></form><form className={s.stackForm} onSubmit={(e) => void createTaxonomy(e, 'genres')}><h3>Add genre</h3><label>Name<input name="name" required /></label><label>Slug<input name="slug" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" /></label><label>Description<textarea name="description" /></label><button className={s.secondaryButton}>Add genre</button><small>{genres.data?.items.length ?? 0} shelves currently available</small></form></div>}</>}
+    {tab === 'taxonomy' && <><h2>Authors and shelves</h2>{authors.isLoading || genres.isLoading ? <State title="Loading taxonomy…" loading compact /> : authors.error || genres.error ? <ErrorState error={authors.error || genres.error} retry={() => { void authors.refetch(); void genres.refetch() }} compact /> : <div className={s.adminForms}><form className={s.stackForm} aria-busy={taxonomyBusy || undefined} onSubmit={(e) => void createAuthor(e)}><h3>Add author</h3><label>Name<input name="name" required /></label><label>Slug<input name="slug" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" /></label><label>Biography<textarea name="description" /></label><label>Upload portrait<input name="portrait_file" type="file" accept="image/png,image/jpeg,image/webp" /></label><label>Or use a portrait URL<input name="image_url" placeholder="https://… or /media/…" /></label><button className={s.secondaryButton} disabled={taxonomyBusy}>{taxonomyBusy ? 'Adding…' : 'Add author'}</button><small>{authors.data?.items.length ?? 0} authors currently available</small></form><form className={s.stackForm} aria-busy={taxonomyBusy || undefined} onSubmit={(e) => void createGenre(e)}><h3>Add genre</h3><label>Name<input name="name" required /></label><label>Slug<input name="slug" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" /></label><label>Description<textarea name="description" /></label><button className={s.secondaryButton} disabled={taxonomyBusy}>{taxonomyBusy ? 'Adding…' : 'Add genre'}</button><small>{genres.data?.items.length ?? 0} shelves currently available</small></form></div>}</>}
     {tab === 'shipping' && <><h2>Shipping zones</h2>{zones.isLoading ? <State title="Loading shipping zones…" loading compact /> : zones.error ? <ErrorState error={zones.error} retry={() => void zones.refetch()} compact /> : <><div className={s.shippingList}>{zones.data?.items.length ? zones.data.items.map((zone) => <article key={zone.id}><div><b>{zone.name}</b><small>{zone.country_codes.join(', ')}</small></div><span>{money(zone.rate_cents)} delivery</span><span>{zone.free_over_cents ? `Free over ${money(zone.free_over_cents)}` : 'No free threshold'}</span></article>) : <State title="No shipping zones" compact />}</div><form className={s.inlineForm} onSubmit={(e) => void createZone(e)}><label>Zone name<input name="name" required /></label><label>Country codes<input name="countries" placeholder="ES, PT" required /></label><label>Rate in EUR<input name="rate" type="number" min="0" step="0.01" required /></label><label>Free over EUR<input name="free" type="number" min="0" step="0.01" /></label><button className={s.primaryButton}>Add zone</button></form></>}</>}
     {tab === 'orders' && <><h2>Orders</h2>{orders.isLoading ? <State title="Loading orders…" loading compact /> : orders.error ? <ErrorState error={orders.error} retry={() => void orders.refetch()} compact /> : orders.data?.items.length ? <div className={s.table}>{orders.data.items.map((order) => <div className={s.tableRow} key={order.id}><div><b>{order.number}</b><small>{new Date(order.created_at).toLocaleDateString()}</small></div><span>{money(order.total_cents)}</span><SelectControl label={`Status for ${order.number}`} value={order.status} options={['pending_payment','paid','processing','shipped','cancelled','refunded'].map((value) => ({ value, label: value.replace('_', ' ') }))} disabled={updateOrder.isPending} onChange={(status) => updateOrder.mutate({ id: order.id, status })} /></div>)}</div> : <State title="No orders yet" compact />}{updateOrder.error && <p className={s.formError} role="alert">{updateOrder.error.message}</p>}</>}
     {tab === 'comments' && <><h2>Reader comments</h2>{comments.isLoading ? <State title="Loading comments…" loading compact /> : comments.error ? <ErrorState error={comments.error} retry={() => void comments.refetch()} compact /> : comments.data?.items.length ? <div className={s.moderation}>{comments.data.items.map((item) => <article key={item.id}><div><b>{item.author} on {item.book}</b><p>{item.body}</p></div><button className={s.secondaryButton} disabled={moderate.isPending} onClick={() => moderate.mutate({ id: item.id, visible: !item.visible })}>{moderate.isPending ? 'Saving…' : item.visible ? 'Hide' : 'Publish'}</button></article>)}</div> : <State title="No comments to moderate" compact />}{moderate.error && <p className={s.formError} role="alert">{moderate.error.message}</p>}</>}
@@ -830,24 +867,17 @@ function BookEditor({ edit = false }: { edit?: boolean }) {
   if (edit && bookQuery.isLoading) return <State title="Opening the catalog record…" loading />
   if (edit && bookQuery.error) return <ErrorState error={bookQuery.error} retry={() => void bookQuery.refetch()} />
 
-  async function upload(file: FormDataEntryValue | null) {
-    if (!(file instanceof File) || !file.size) return ''
-    const payload = new FormData()
-    payload.set('file', file)
-    return (await api<{ url: string }>('/admin/media', { method: 'POST', body: payload })).url
-  }
-
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
     setBusy(true)
     setError('')
     try {
-      const uploadedCover = await upload(form.get('cover_file'))
+      const uploadedCover = await uploadImage(form.get('cover_file'))
       const cover = uploadedCover || String(form.get('cover') || '') || book?.cover_url || ''
       if (!cover) throw new Error('Upload a cover or provide a cover URL')
 
-      const uploadedInterior = await upload(form.get('interior_file'))
+      const uploadedInterior = await uploadImage(form.get('interior_file'))
       const interiorImage = uploadedInterior || String(form.get('interior_image_url') || '')
       const interiorAlt = String(form.get('interior_image_alt') || '').trim()
       if (interiorImage && !interiorAlt) throw new Error('Describe the interior artwork for screen-reader users')

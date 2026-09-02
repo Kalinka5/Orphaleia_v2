@@ -204,13 +204,15 @@ def sync_catalog(db: Session) -> list[Book]:
 
     authors: dict[str, Author] = {}
     for slug, payload in AUTHORS.items():
+        image_url = f"/assets/authors/{slug}.webp"
         author = db.scalar(select(Author).where(Author.slug == slug))
         if author is None:
-            author = Author(slug=slug, name=payload["name"], bio=payload["bio"])
+            author = Author(slug=slug, name=payload["name"], bio=payload["bio"], image_url=image_url)
             db.add(author)
         else:
             author.name = payload["name"]
             author.bio = payload["bio"]
+            author.image_url = image_url
         authors[slug] = author
 
     genres: dict[str, Genre] = {}
