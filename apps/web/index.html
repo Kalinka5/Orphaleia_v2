@@ -11,6 +11,24 @@
     <meta property="og:image" content="/brand/orphaleia-brand-board.png" />
     <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <style>
+      .skip-link {
+        position: fixed;
+        top: -60px;
+        left: 16px;
+        z-index: 100;
+        padding: 12px 18px;
+        opacity: 0;
+        pointer-events: none;
+        background: white;
+        color: #111827;
+      }
+      .skip-link:focus {
+        top: 16px;
+        opacity: 1;
+        pointer-events: auto;
+      }
+    </style>
     <title>Orphaleia Book Shop</title>
   </head>
   <body>
