@@ -546,7 +546,16 @@ function Directory({ kind }: { kind: 'genres' | 'authors' }) {
           ? <AuthorShowcase authors={query.data.items as Author[]} />
           : <div className={s.directory}>{(query.data.items as Genre[]).map((item) => <Link key={item.id} to={`/genres/${item.slug}`}><span className={s.directoryMark}><Sparkle size={22} aria-hidden="true" /></span><h2>{item.name}</h2><p>{item.description}</p><b>Open shelf <ArrowRight size={14} aria-hidden="true" /></b></Link>)}</div>
         : <State title={`No ${kind} available`} text="The shelves are being prepared." />
-  return <section className={s.page}><div className={s.pageHeading}><span className={s.eyebrow}>{kind === 'genres' ? 'SHELVES BY MOOD' : 'THE WRITERS’ ROOM'}</span><h1>{kind === 'genres' ? 'Choose a current' : 'Follow a voice'}</h1><p>{kind === 'genres' ? 'A shelf is a direction, never a boundary.' : 'Meet the people behind the passages.'}</p></div>{content}</section>
+  return <section className={`${s.page} ${kind === 'authors' ? s.authorsPage : ''}`}>
+    {kind === 'authors' ? <div className={s.authorsHero}>
+      <div className={s.pageHeading}><span className={s.eyebrow}>THE WRITERS’ ROOM</span><h1>Follow a voice</h1><p>Meet the people behind the passages.</p></div>
+      <figure className={s.authorsCharacter}>
+        <span className={s.sleepMarks} aria-hidden="true"><i>Z</i><i>Z</i><i>Z</i></span>
+        <img src="/assets/authors/puss-in-boots-sleeping.png" alt="A three-dimensional storybook cat in boots sleeping with his feathered hat tipped over his eyes." width="1774" height="887" loading="eager" fetchPriority="high" decoding="async" />
+      </figure>
+    </div> : <div className={s.pageHeading}><span className={s.eyebrow}>SHELVES BY MOOD</span><h1>Choose a current</h1><p>A shelf is a direction, never a boundary.</p></div>}
+    {content}
+  </section>
 }
 
 function Shelf({ kind }: { kind: 'genres' | 'authors' }) {

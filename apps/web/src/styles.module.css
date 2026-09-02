@@ -78,6 +78,16 @@
 .pageHeading { max-width: 850px; margin-bottom: 54px; }
 .pageHeading h1 { color: var(--night); font-size: clamp(54px, 7vw, 90px); }
 .pageHeading p { max-width: 650px; color: var(--ink-muted); line-height: 1.7; font-size: 17px; }
+.authorsPage { padding-top: clamp(4.5rem, 7vw, 7rem); }
+.authorsHero { min-height: clamp(20rem, 29vw, 30rem); display: grid; grid-template-columns: minmax(27rem, .88fr) minmax(34rem, 1.12fr); gap: clamp(1rem, 3vw, 4rem); align-items: center; margin-bottom: clamp(2.5rem, 5vw, 5.5rem); }
+.authorsHero .pageHeading { margin: 0; position: relative; z-index: 2; }
+.authorsCharacter { min-width: 0; margin: 0; position: relative; align-self: end; }
+.authorsCharacter img { display: block; width: min(100%, 58rem); height: auto; filter: drop-shadow(0 1.15rem 1.25rem rgba(35, 32, 24, .16)); transform: translateY(.35rem); }
+.sleepMarks { position: absolute; left: 26%; top: 5%; z-index: 1; display: flex; align-items: end; gap: .35rem; color: var(--bronze); font: 600 clamp(.8rem, 1.2vw, 1.15rem)/1 'IBM Plex Mono', monospace; transform: rotate(-12deg); }
+.sleepMarks i { display: block; font-style: normal; animation: sleepMark 2.8s ease-in-out infinite; }
+.sleepMarks i:nth-child(2) { font-size: 1.25em; animation-delay: .28s; }
+.sleepMarks i:nth-child(3) { font-size: 1.55em; animation-delay: .56s; }
+@keyframes sleepMark { 0%, 100% { opacity: .38; transform: translateY(.2rem); } 50% { opacity: 1; transform: translateY(-.25rem); } }
 .catalogHero { max-width: 1700px; min-height: 410px; margin: 0 auto 24px; display: grid; grid-template-columns: minmax(520px, .94fr) minmax(480px, 1.06fr); align-items: end; gap: clamp(24px, 3vw, 58px); position: relative; }
 .catalogHeading { max-width: 780px; margin: 0; align-self: center; position: relative; z-index: 8; }
 .catalogHeading h1 { font-size: clamp(54px, 6.2vw, 90px); text-wrap: balance; }
@@ -145,6 +155,7 @@
 @media (max-width: 1050px) {
   .header { grid-template-columns: auto auto 1fr; gap: 18px; }.menuButton { display: block; }.nav { display: none; position: absolute; top: 88px; left: 0; right: 0; padding: 22px; background: var(--night); border-top: 1px solid rgba(255,255,255,.1); }.navOpen { display: flex; }.actions { justify-self: end; }.actions > a:not(.cartLink), .actions > button { display: none; }
   .hero { grid-template-columns: 1fr .7fr; }.heroChart { opacity: .7; }.routeShelf, .bookGrid { grid-template-columns: repeat(2, 1fr); }.routeLine { display: none; }.genreBand { grid-template-columns: 1fr; }.filters { grid-template-columns: 1fr 1fr 1fr; }.search { grid-column: span 2; }.bookHero { grid-template-columns: 330px 1fr; gap: 45px; }.community { gap: 50px; }.stats { grid-template-columns: repeat(2, 1fr); }
+  .authorsHero { min-height: 0; grid-template-columns: minmax(22rem, .9fr) minmax(25rem, 1.1fr); }
 }
 
 @media (max-width: 760px) {
@@ -153,6 +164,11 @@
   .marbleSection, .page, .related { padding: 72px 22px; }.sectionHeading { grid-template-columns: 1fr; gap: 15px; margin-bottom: 38px; }.routeShelf, .bookGrid { gap: 35px 16px; }.cardBody h3 { font-size: 21px; }.cardMeta { align-items: start; flex-direction: column; }.coverWrap { box-shadow: 0 9px 20px rgba(11,31,51,.12); }
   .genreBand { padding: 65px 22px; gap: 35px; }.genreLinks { grid-template-columns: 1fr; }.genreLinks a:nth-child(odd), .genreLinks a:nth-child(even) { border-right: 0; padding: 0; }.genreLinks a:nth-child(even):hover, .genreLinks a:hover { padding-left: 10px; }.promise blockquote { font-size: 32px; }
   .pageHeading h1 { font-size: 56px; }.filters { grid-template-columns: 1fr; }.search { grid-column: auto; }.bookHero { grid-template-columns: 1fr; padding: 45px 24px 65px; }.detailCover { max-width: 330px; margin: auto; }.bookInfo h1 { font-size: 58px; }.description { font-size: 21px; }.bookFacts { grid-template-columns: 1fr; }.bookFacts div { border-bottom: 1px solid var(--line); }.buyRow { grid-template-columns: 1fr auto; }.buyRow .primaryButton { grid-column: 1/-1; }.videoSection, .community { grid-template-columns: 1fr; padding: 70px 22px; }.trend { height: 200px; padding-left: 10px; padding-right: 10px; }.rateBox { align-items: flex-start; flex-direction: column; }
+  .authorsPage { padding-top: 4.5rem; }
+  .authorsHero { display: flex; flex-direction: column; align-items: stretch; gap: 1rem; margin-bottom: 3.5rem; }
+  .authorsCharacter { width: min(100%, 36rem); margin: .5rem auto 0; }
+  .authorsCharacter img { width: 100%; }
+  .sleepMarks { left: 27%; top: 1%; font-size: .75rem; }
   .directory { grid-template-columns: 1fr; }.directory > a { min-height: 240px; }.yearPicker { align-items: stretch; flex-direction: column; }.yearPicker label { justify-content: space-between; }.rankingList li { grid-template-columns: 38px 55px 1fr; gap: 12px; padding: 15px 0; }.rankingList img { width: 50px; height: 75px; }.rankingList h2 { font-size: 25px; }.rankingList .stars, .rankingList > li > b { grid-column: 3; text-align: left; }
   .authPage { grid-template-columns: 1fr; }.authAside { min-height: 400px; padding: 65px 25px; }.authAside h1 { font-size: 60px; }.authAside .seal { display: none; }.authForm { padding: 60px 0; }.formColumns { grid-template-columns: 1fr; }
   .cartLayout, .checkoutPage { grid-template-columns: 1fr; }.cartItems article { grid-template-columns: 70px 1fr; }.cartItems img { width: 65px; height: 98px; }.cartItems article > b { grid-column: 2; }.orderCard { position: static; }.checkoutPage { padding: 65px 22px; }.checkoutPage h1 { font-size: 55px; }.checkoutForm { grid-template-columns: 1fr; }.checkoutForm label:nth-child(2), .checkoutForm label:nth-child(3), .checkoutForm .secondaryButton { grid-column: auto; }.orders article { grid-template-columns: 1fr auto; }.orders > article > b { grid-column: 2; }
@@ -428,6 +444,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .heroWord, .stackCard, .genreArt img, .genreCopy, .wonderlandTeaParty { transform: none !important; opacity: 1 !important; transition: none !important; }
+  .sleepMarks i { animation: none; opacity: 1; }
   .cheshireCat img { animation: none; }
 }
 
