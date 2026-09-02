@@ -73,6 +73,10 @@ AUTHORS = {
         "name": "J. K. Rowling",
         "bio": "British author best known for the Harry Potter novels about friendship, courage, and a hidden magical world.",
     },
+    "l-frank-baum": {
+        "name": "L. Frank Baum",
+        "bio": "American author whose Oz stories joined homespun adventure, inventive fantasy, and an enduring belief in found courage.",
+    },
 }
 
 GENRES = {
@@ -170,6 +174,13 @@ CATALOG = [
         "cover": "/covers/harry-potter-and-the-philosophers-stone.webp", "author": "jk-rowling",
         "genres": ["young-adult", "fantasy"],
         "description": "An overlooked boy discovers that he belongs to a hidden magical world, beginning a first year of friendship, wonder, danger, and hard-won belonging.",
+    },
+    {
+        "title": "The Wonderful Wizard of Oz", "slug": "the-wonderful-wizard-of-oz",
+        "isbn": "9780000002013", "year": 1900, "price": 1690, "stock": 20,
+        "cover": "/covers/the-wonderful-wizard-of-oz.webp", "author": "l-frank-baum",
+        "genres": ["childrens-literature", "fantasy"],
+        "description": "Carried from Kansas by a cyclone, Dorothy and Toto follow the yellow-brick road toward the Emerald City, gathering unlikely companions who are searching for courage, wisdom, heart, and a way home.",
     },
 ]
 

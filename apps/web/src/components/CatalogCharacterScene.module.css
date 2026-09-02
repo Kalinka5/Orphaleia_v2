@@ -1,0 +1,48 @@
+.scene {
+  width: min(112%, 1200px);
+  margin: 0 0 8px -8%;
+  align-self: end;
+  position: relative;
+  z-index: 2;
+  opacity: 0;
+  pointer-events: none;
+  filter: drop-shadow(0 24px 20px rgba(40, 95, 76, .16));
+  animation: sceneEntrance .82s cubic-bezier(.22, 1, .36, 1) .08s forwards;
+}
+
+.scene img {
+  width: 100%;
+  height: auto;
+  display: block;
+  animation: sceneDrift 7.2s ease-in-out -1.4s infinite;
+}
+
+@keyframes sceneEntrance {
+  from { opacity: 0; transform: translateY(18px) scale(.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes sceneDrift {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+@media (max-width: 1050px) {
+  .scene {
+    width: min(100%, 900px);
+    margin: 20px auto 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .scene {
+    width: calc(100% + 12px);
+    margin: 18px -6px 0;
+    filter: drop-shadow(0 14px 12px rgba(40, 95, 76, .13));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scene { opacity: 1; animation: none; }
+  .scene img { animation: none; }
+}

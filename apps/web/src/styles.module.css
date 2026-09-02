@@ -78,6 +78,10 @@
 .pageHeading { max-width: 850px; margin-bottom: 54px; }
 .pageHeading h1 { color: var(--night); font-size: clamp(54px, 7vw, 90px); }
 .pageHeading p { max-width: 650px; color: var(--ink-muted); line-height: 1.7; font-size: 17px; }
+.catalogHero { max-width: 1700px; min-height: 410px; margin: 0 auto 24px; display: grid; grid-template-columns: minmax(520px, .94fr) minmax(480px, 1.06fr); align-items: end; gap: clamp(24px, 3vw, 58px); position: relative; }
+.catalogHeading { max-width: 780px; margin: 0; align-self: center; position: relative; z-index: 8; }
+.catalogHeading h1 { font-size: clamp(54px, 6.2vw, 90px); text-wrap: balance; }
+.catalogHeading p { text-wrap: pretty; }
 .filters { display: grid; grid-template-columns: minmax(260px, 1.7fr) repeat(3, minmax(135px, .7fr)) auto; gap: 10px; padding: 14px; border: 1px solid var(--line); background: white; margin-bottom: 28px; }
 .filters input, .filters select, .checkoutForm input, .checkoutForm select, .authForm input, .stackForm input, .stackForm textarea, .stackForm select, .commentForm textarea, .yearPicker select { min-height: 46px; width: 100%; padding: 0 13px; border: 1px solid var(--line); color: var(--night); background: var(--paper); border-radius: 0; }
 .search { display: flex; align-items: center; border: 1px solid var(--line); background: var(--paper); }
@@ -1173,6 +1177,8 @@
 .siteMain:focus { outline: 0; }
 
 @media (max-width: 1050px) {
+  .catalogHero { min-height: 0; grid-template-columns: 1fr; gap: 8px; }
+  .catalogHeading { max-width: 760px; }
   .filters { grid-template-columns: minmax(0, 1.35fr) repeat(2, minmax(0, 1fr)); }
   .filterSelect { min-width: 0; }
   .clearFilters { justify-self: start; }
@@ -1180,6 +1186,9 @@
 }
 
 @media (max-width: 760px) {
+  .catalogHero { margin-bottom: 18px; gap: 0; }
+  .catalogHeading h1 { font-size: clamp(48px, 15vw, 68px); }
+  .catalogHeading p { font-size: 15px; line-height: 1.6; }
   .filters { grid-template-columns: 1fr; padding: 10px; gap: 9px; }
   .filterSelect, .filters > * { width: 100%; }
   .check { min-height: 44px; padding-inline: 8px; }

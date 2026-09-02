@@ -7,9 +7,9 @@ from app.seed import CATALOG, FEATURED_SLUGS, LEGACY_CATALOG_SLUGS, sync_catalog
 
 
 def test_classic_catalog_definition_is_complete():
-    assert len(CATALOG) == 12
-    assert len({item["slug"] for item in CATALOG}) == 12
-    assert len({item["isbn"] for item in CATALOG}) == 12
+    assert len(CATALOG) == 13
+    assert len({item["slug"] for item in CATALOG}) == 13
+    assert len({item["isbn"] for item in CATALOG}) == 13
     assert tuple(item["slug"] for item in CATALOG if item["slug"] in FEATURED_SLUGS) == FEATURED_SLUGS
 
 
@@ -44,9 +44,12 @@ def test_catalog_sync_is_repeatable_and_deactivates_legacy_books():
         classics = db.scalars(select(Book).where(Book.slug.in_(classic_slugs))).all()
         legacy = db.scalar(select(Book).where(Book.slug == legacy_slug))
 
-        assert len(classics) == 12
+        assert len(classics) == 13
         assert all(book.active for book in classics)
         assert {book.slug for book in classics if book.featured} == set(FEATURED_SLUGS)
+        oz = next(book for book in classics if book.slug == "the-wonderful-wizard-of-oz")
+        assert [author.name for author in oz.authors] == ["L. Frank Baum"]
+        assert {genre.slug for genre in oz.genres} == {"childrens-literature", "fantasy"}
         assert legacy is not None and not legacy.active and not legacy.featured
         assert db.scalar(select(func.count(RatingEvent.id))) == first_event_count
         assert db.scalar(select(func.count(Rating.id))) == first_rating_count

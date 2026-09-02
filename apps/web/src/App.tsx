@@ -9,6 +9,7 @@ import { PageMeta } from './components/PageMeta'
 import { ErrorState, RouteState as State } from './components/ui/RouteState'
 import { SelectControl, type SelectOption } from './components/ui/SelectControl'
 import { CtaWithMarquee } from './components/ui/cta-with-marquee'
+import { CatalogCharacterScene } from './components/CatalogCharacterScene'
 import { TestimonialsColumn, type Testimonial } from './components/ui/testimonials-columns-1'
 import { getGenreIllustration, homepageGenreSlugs } from './genreIllustrations'
 import { getLandingIllustration, orderHomepageBooks } from './landingIllustrations'
@@ -471,7 +472,10 @@ function Catalog() {
     setParams(new URLSearchParams(), { replace: true })
   }
   return <section className={s.page}>
-    <div className={s.pageHeading}><span className={s.eyebrow}>THE COMPLETE CATALOGUE</span><h1>Find your next passage</h1><p>Search by a remembered phrase, a beloved author, or simply the mood of the shelf.</p></div>
+    <div className={s.catalogHero}>
+      <div className={`${s.pageHeading} ${s.catalogHeading}`}><span className={s.eyebrow}>THE COMPLETE CATALOGUE</span><h1>Find your next passage</h1><p>Search by a remembered phrase, a beloved author, or simply the mood of the shelf.</p></div>
+      <CatalogCharacterScene />
+    </div>
     <div className={s.filters} aria-busy={books.isFetching || undefined}>
       <label className={s.search}><span><MagnifyingGlass size={19} aria-hidden="true" /></span><input aria-label="Search books" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search titles and descriptions" /></label>
       <SelectControl className={s.filterSelect} label="Genre" value={params.get('genre') || ''} options={genreOptions} busy={genres.isLoading} onChange={(value) => update('genre', value)} />
