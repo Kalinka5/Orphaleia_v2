@@ -12,6 +12,10 @@ class Settings(BaseSettings):
     smtp_host: str = "localhost"
     smtp_port: int = 1025
     smtp_from: str = "hello@orphaleia.local"
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_starttls: bool = False
+    mail_preview_url: str = "http://localhost:8025"
     payments_mock: bool = True
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""

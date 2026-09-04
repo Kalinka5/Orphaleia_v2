@@ -151,8 +151,8 @@ def register(data: RegisterInput, db: Session = Depends(get_db)):
     queue_email(db, user.email, "Verify your Orphaleia account", f"<h1>Welcome aboard</h1><p><a href=\"{url}\">Verify your email</a> to rate books and place orders.</p>")
     db.commit()
     result = {"message": "Check your email to verify your account"}
-    if settings.app_env == "development":
-        result["verification_token"] = raw
+    if settings.app_env == "development" and settings.mail_preview_url:
+        result["email_preview_url"] = settings.mail_preview_url
     return result
 
 

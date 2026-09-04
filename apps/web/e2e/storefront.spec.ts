@@ -696,7 +696,7 @@ test('registration confirms passwords and submits the unchanged API payload', as
     requests += 1
     submittedBody = route.request().postDataJSON() as Record<string, unknown>
     await new Promise((resolve) => setTimeout(resolve, 150))
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ message: 'Check your email to verify your account.' }) })
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ message: 'Check your email to verify your account', email_preview_url: 'http://localhost:8025' }) })
   })
 
   await page.goto('/register')
@@ -723,9 +723,22 @@ test('registration confirms passwords and submits the unchanged API payload', as
   await page.getByRole('button', { name: 'Create account' }).click()
   await expect(page.getByRole('button', { name: 'Creating account…' })).toBeDisabled()
   await expect(page.getByRole('status')).toContainText('Check your email')
+  await expect(page.getByRole('status')).toContainText('marina@example.com')
+  await expect(page.getByRole('link', { name: 'Open development inbox' })).toHaveAttribute('href', 'http://localhost:8025')
+  const shellBox = await page.getByTestId('auth-shell').boundingBox()
+  const headingBox = await page.getByRole('heading', { name: 'Register' }).boundingBox()
+  expect(shellBox).not.toBeNull()
+  expect(headingBox).not.toBeNull()
+  expect(headingBox!.y).toBeGreaterThanOrEqual(shellBox!.y)
   expect(requests).toBe(1)
   expect(submittedBody).toEqual({ email: 'marina@example.com', full_name: 'Marina Soler', password: 'longpassword123' })
   expect(submittedBody).not.toHaveProperty('confirmPassword')
+
+  await page.getByRole('link', { name: 'Sign in' }).click()
+  await expect(page).toHaveURL(/\/sign-in$/)
+  await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible()
+  await expect(page.getByLabel('Email address')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Open development inbox' })).toHaveCount(0)
 })
 
 test('auth routes keep account recovery and cross-navigation links', async ({ page }) => {
@@ -736,4 +749,34 @@ test('auth routes keep account recovery and cross-navigation links', async ({ pa
 
   await page.goto('/register')
   await expect(page.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/sign-in')
+})
+
+test('registration server errors float without shifting the form', async ({ page }) => {
+  await mockGuest(page)
+  await page.route('**/api/v1/auth/register', (route) => route.fulfill({
+    status: 409,
+    contentType: 'application/json',
+    body: JSON.stringify({ message: 'An account already uses this email' }),
+  }))
+  await page.goto('/register')
+  await page.getByLabel('Your name').fill('Marina Soler')
+  await page.getByLabel('Email address').fill('marina@example.com')
+  await page.locator('input[name="password"]').fill('longpassword123')
+  await page.locator('input[name="confirmPassword"]').fill('longpassword123')
+  const headingBefore = await page.getByRole('heading', { name: 'Register' }).boundingBox()
+
+  await page.getByRole('button', { name: 'Create account' }).click()
+
+  const alert = page.getByRole('alert')
+  await expect(alert).toContainText('Account not created')
+  await expect(alert).toContainText('An account already uses this email')
+  await expect(page.getByRole('link', { name: 'Sign in instead' })).toHaveAttribute('href', '/sign-in')
+  await expect(page.getByLabel('Email address')).toHaveAttribute('aria-invalid', 'true')
+  const headingAfter = await page.getByRole('heading', { name: 'Register' }).boundingBox()
+  expect(headingBefore).not.toBeNull()
+  expect(headingAfter).not.toBeNull()
+  expect(Math.abs(headingAfter!.y - headingBefore!.y)).toBeLessThan(1)
+
+  await page.getByRole('button', { name: 'Dismiss notification' }).click()
+  await expect(alert).toBeHidden()
 })

@@ -53,7 +53,9 @@ Use HTTPS and `COOKIE_SECURE=true` in deployed environments. Refunds are made in
 
 ## Media, email, and deployment
 
-Development images are stored in the `media_data` Docker volume. For production, set the S3-compatible variables; uploads automatically switch to object storage. Email is written through an SMTP outbox and retried by the worker. Replace Mailpit with the SMTP server of your transactional email provider.
+Development images are stored in the `media_data` Docker volume. For production, set the S3-compatible variables; uploads automatically switch to object storage. Email is written through an SMTP outbox and retried by the worker. Local email is captured at <http://localhost:8025> and is not forwarded to real inboxes.
+
+For real delivery, replace the Mailpit defaults with the SMTP server of your transactional email provider. Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, `SMTP_USERNAME`, and `SMTP_PASSWORD`; set `SMTP_STARTTLS=true` when the provider uses STARTTLS (commonly port 587). Set `MAIL_PREVIEW_URL=` outside development so the storefront does not offer a local-inbox link.
 
 The production web image is an Nginx-served static build that proxies API and media paths to the FastAPI service. Run migrations as a release step, run one or more API containers, and keep exactly one reservation/email worker active unless adding worker-level locking.
 

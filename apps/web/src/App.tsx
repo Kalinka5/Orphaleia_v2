@@ -1,5 +1,5 @@
 import { createContext, FormEvent, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowLeft, ArrowRight, ArrowUpRight, CaretRight, Check, Eye, EyeSlash, MagnifyingGlass, Pause, Play, Star } from '@phosphor-icons/react'
+import { ArrowLeft, ArrowRight, ArrowUpRight, CaretRight, Check, EnvelopeSimple, Eye, EyeSlash, MagnifyingGlass, Pause, Play, Star, WarningCircle, X } from '@phosphor-icons/react'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { api, money } from './api'
@@ -680,24 +680,26 @@ function Rankings() {
 }
 
 function AuthPage({ register = false }: { register?: boolean }) {
-  const { user, refresh } = useAuth(); const navigate = useNavigate(); const location = useLocation(); const [error, setError] = useState(''); const [sent, setSent] = useState(''); const [submitting, setSubmitting] = useState(false); const [showPassword, setShowPassword] = useState(false); const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const { user, refresh } = useAuth(); const navigate = useNavigate(); const location = useLocation(); const [error, setError] = useState(''); const [fieldError, setFieldError] = useState(''); const [sent, setSent] = useState<{ message: string; email: string; previewUrl?: string } | null>(null); const [submitting, setSubmitting] = useState(false); const [showPassword, setShowPassword] = useState(false); const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   if (user) return <Navigate to="/account" />
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (submitting) return
     setError('')
-    setSent('')
+    setFieldError('')
+    setSent(null)
     const form = new FormData(e.currentTarget)
     const password = String(form.get('password') || '')
     if (register && password !== String(form.get('confirmPassword') || '')) {
-      setError('Passwords do not match.')
+      setFieldError('Passwords do not match.')
       return
     }
     setSubmitting(true)
     try {
       if (register) {
-        const result = await api<{ message: string; verification_token?: string }>('/auth/register', { method: 'POST', body: JSON.stringify({ email: form.get('email'), full_name: form.get('name'), password }) })
-        setSent(result.message + (result.verification_token ? ` Development token: ${result.verification_token}` : ''))
+        const email = String(form.get('email') || '')
+        const result = await api<{ message: string; email_preview_url?: string }>('/auth/register', { method: 'POST', body: JSON.stringify({ email, full_name: form.get('name'), password }) })
+        setSent({ message: result.message, email, previewUrl: result.email_preview_url })
       } else {
         await api('/auth/login', { method: 'POST', body: JSON.stringify({ email: form.get('email'), password }) })
         await refresh()
@@ -709,6 +711,7 @@ function AuthPage({ register = false }: { register?: boolean }) {
       setSubmitting(false)
     }
   }
+  const existingAccount = error === 'An account already uses this email'
   const title = register ? 'Register' : 'Login'
   const description = register ? 'Keep your orders, ratings, and notes together in one quiet harbor.' : 'Your saved journey continues where you left it.'
   const artwork = register ? {
@@ -721,6 +724,11 @@ function AuthPage({ register = false }: { register?: boolean }) {
     alt: 'A stylized three-dimensional Sherlock Holmes reading with a magnifying glass beside a stack of books.',
   }
   return <section className={`${s.authPage} ${register ? s.authRegister : s.authLogin}`} aria-labelledby="auth-title" data-testid="auth-shell">
+    {error && <aside className={s.authToast} role="alert" aria-live="assertive" aria-atomic="true">
+      <span className={s.authToastIcon}><WarningCircle size={23} weight="fill" aria-hidden="true" /></span>
+      <div><h2>{register ? 'Account not created' : 'Sign-in failed'}</h2><p id="auth-toast-message">{error}</p>{existingAccount && <Link className={s.authToastAction} to="/sign-in">Sign in instead</Link>}</div>
+      <button type="button" onClick={() => setError('')} aria-label="Dismiss notification"><X size={18} aria-hidden="true" /></button>
+    </aside>}
     <div className={s.authFormPanel} data-testid="auth-form-panel">
       <form className={s.authForm} onSubmit={submit} aria-busy={submitting}>
         <div className={s.authHeading}>
@@ -728,15 +736,21 @@ function AuthPage({ register = false }: { register?: boolean }) {
           <h1 id="auth-title">{title}</h1>
           <p>{description}</p>
         </div>
-        {register && <label>Your name<input name="name" placeholder="Your name" required minLength={2} autoComplete="name" /></label>}
-        <label>Email address<input name="email" type="email" placeholder="reader@orphaleia.com" required autoComplete="email" /></label>
-        <label>Password<span className={s.passwordField}><input id="auth-password" name="password" type={showPassword ? 'text' : 'password'} placeholder="Enter your password" required minLength={10} autoComplete={register ? 'new-password' : 'current-password'} /><button type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? 'Hide password' : 'Show password'} aria-controls="auth-password">{showPassword ? <EyeSlash size={19} aria-hidden="true" /> : <Eye size={19} aria-hidden="true" />}</button></span></label>
-        {!register && <Link className={s.authForgot} to="/forgot-password">Forgot your password?</Link>}
-        {register && <label>Confirm password<span className={s.passwordField}><input id="auth-confirm-password" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} placeholder="Repeat your password" required minLength={10} autoComplete="new-password" aria-invalid={error === 'Passwords do not match.' || undefined} aria-describedby={error === 'Passwords do not match.' ? 'auth-error' : undefined} /><button type="button" onClick={() => setShowConfirmPassword((visible) => !visible)} aria-label={showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'} aria-controls="auth-confirm-password">{showConfirmPassword ? <EyeSlash size={19} aria-hidden="true" /> : <Eye size={19} aria-hidden="true" />}</button></span></label>}
-        {error && <p id="auth-error" className={s.formError} role="alert">{error}</p>}
-        {sent && <p className={s.notice} role="status" aria-live="polite">{sent}</p>}
-        <button className={`${s.primaryButton} ${s.authSubmit}`} disabled={submitting}>{submitting ? register ? 'Creating account…' : 'Signing in…' : register ? 'Create account' : 'Sign in'} {!submitting && <ArrowRight size={16} aria-hidden="true" />}</button>
-        <p className={s.authSwitch}>{register ? <>Already aboard? <Link to="/sign-in">Sign in</Link></> : <>New to Orphaleia? <Link to="/register">Create an account</Link></>}</p>
+        {sent ? <div className={s.authSuccess} role="status" aria-live="polite">
+          <span className={s.authSuccessIcon}><EnvelopeSimple size={26} weight="duotone" aria-hidden="true" /></span>
+          <div><h2>Email sent</h2><p>{sent.message}. We sent the link to <strong>{sent.email}</strong>.</p></div>
+          {sent.previewUrl && <a className={`${s.primaryButton} ${s.authSubmit}`} href={sent.previewUrl} target="_blank" rel="noreferrer">Open development inbox <ArrowUpRight size={16} aria-hidden="true" /></a>}
+          <p className={s.authSwitch}>Already verified? <Link to="/sign-in">Sign in</Link></p>
+        </div> : <>
+          {register && <label>Your name<input name="name" placeholder="Your name" required minLength={2} autoComplete="name" /></label>}
+          <label>Email address<input name="email" type="email" placeholder="reader@orphaleia.com" required autoComplete="email" aria-invalid={Boolean(error) || undefined} aria-describedby={error ? 'auth-toast-message' : undefined} /></label>
+          <label>Password<span className={s.passwordField}><input id="auth-password" name="password" type={showPassword ? 'text' : 'password'} placeholder="Enter your password" required minLength={10} autoComplete={register ? 'new-password' : 'current-password'} /><button type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? 'Hide password' : 'Show password'} aria-controls="auth-password">{showPassword ? <EyeSlash size={19} aria-hidden="true" /> : <Eye size={19} aria-hidden="true" />}</button></span></label>
+          {!register && <Link className={s.authForgot} to="/forgot-password">Forgot your password?</Link>}
+          {register && <label>Confirm password<span className={s.passwordField}><input id="auth-confirm-password" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} placeholder="Repeat your password" required minLength={10} autoComplete="new-password" aria-invalid={Boolean(fieldError) || undefined} aria-describedby={fieldError ? 'auth-field-error' : undefined} /><button type="button" onClick={() => setShowConfirmPassword((visible) => !visible)} aria-label={showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'} aria-controls="auth-confirm-password">{showConfirmPassword ? <EyeSlash size={19} aria-hidden="true" /> : <Eye size={19} aria-hidden="true" />}</button></span></label>}
+          {fieldError && <p id="auth-field-error" className={s.formError} role="alert">{fieldError}</p>}
+          <button className={`${s.primaryButton} ${s.authSubmit}`} disabled={submitting}>{submitting ? register ? 'Creating account…' : 'Signing in…' : register ? 'Create account' : 'Sign in'} {!submitting && <ArrowRight size={16} aria-hidden="true" />}</button>
+          <p className={s.authSwitch}>{register ? <>Already aboard? <Link to="/sign-in">Sign in</Link></> : <>New to Orphaleia? <Link to="/register">Create an account</Link></>}</p>
+        </>}
       </form>
     </div>
     <figure className={s.authArtwork} data-testid="auth-artwork">
@@ -977,7 +991,7 @@ export default function App() {
   return <AuthProvider><Layout><Routes>
     <Route path="/" element={<Home />} /><Route path="/books" element={<Catalog />} /><Route path="/books/:slug" element={<BookPage />} />
     <Route path="/genres" element={<Directory kind="genres" />} /><Route path="/genres/:slug" element={<Shelf kind="genres" />} /><Route path="/authors" element={<Directory kind="authors" />} /><Route path="/authors/:slug" element={<Shelf kind="authors" />} /><Route path="/rankings" element={<Rankings />} />
-    <Route path="/sign-in" element={<AuthPage />} /><Route path="/register" element={<AuthPage register />} /><Route path="/verify" element={<TokenPage mode="verify" />} /><Route path="/forgot-password" element={<TokenPage mode="forgot" />} /><Route path="/reset-password" element={<TokenPage mode="reset" />} />
+    <Route path="/sign-in" element={<AuthPage key="sign-in" />} /><Route path="/register" element={<AuthPage key="register" register />} /><Route path="/verify" element={<TokenPage mode="verify" />} /><Route path="/forgot-password" element={<TokenPage mode="forgot" />} /><Route path="/reset-password" element={<TokenPage mode="reset" />} />
     <Route path="/cart" element={<RequireUser><CartPage /></RequireUser>} /><Route path="/checkout" element={<RequireUser><Checkout /></RequireUser>} /><Route path="/payment/return" element={<PaymentReturn />} /><Route path="/account" element={<RequireUser><Account /></RequireUser>} />
     <Route path="/admin" element={<RequireUser admin><Admin /></RequireUser>} /><Route path="/admin/books/new" element={<RequireUser admin><BookEditor /></RequireUser>} /><Route path="/admin/books/:slug/edit" element={<RequireUser admin><BookEditor edit /></RequireUser>} /><Route path="*" element={<NotFound />} />
   </Routes></Layout></AuthProvider>

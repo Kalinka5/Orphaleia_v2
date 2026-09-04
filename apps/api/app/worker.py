@@ -1,4 +1,5 @@
 import smtplib
+import ssl
 import time
 from datetime import UTC, datetime, timedelta
 from email.message import EmailMessage
@@ -24,6 +25,10 @@ def send_pending_mail(db):
         message.add_alternative(item.html_body, subtype="html")
         try:
             with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10) as smtp:
+                if settings.smtp_starttls:
+                    smtp.starttls(context=ssl.create_default_context())
+                if settings.smtp_username:
+                    smtp.login(settings.smtp_username, settings.smtp_password)
                 smtp.send_message(message)
             item.sent_at = datetime.now(UTC)
         except Exception as exc:
@@ -44,4 +49,3 @@ def run():
 
 if __name__ == "__main__":
     run()
-
