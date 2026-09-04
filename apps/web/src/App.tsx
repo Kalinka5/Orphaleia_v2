@@ -18,6 +18,7 @@ import { getLandingIllustration, orderHomepageBooks } from './landingIllustratio
 import { formatSalesUnits, salesBarRatio } from './rankingUtils'
 import { getRankingPreview } from './rankingPreview'
 import { MarketGlobe } from './components/MarketGlobe'
+import { AccountEmptyState } from './components/AccountEmptyState'
 import type { Address, Author, Book, Cart, Genre, Order, Page, SalesRankingResponse, User } from './types'
 import s from './styles.module.css'
 
@@ -108,7 +109,7 @@ function Layout({ children }: { children: ReactNode }) {
 
 function getRouteMeta(pathname: string) {
   if (pathname === '/') return { title: 'Independent bookshop', description: 'Books for curious voyages, chosen with care by Orphaleia.' }
-  if (pathname === '/books') return { title: 'All books', description: 'Search Orphaleia’s complete catalogue by title, author, genre, rating, and availability.' }
+  if (pathname === '/books' || pathname === '/all-books') return { title: 'All books', description: 'Search Orphaleia’s complete catalogue by title, author, genre, rating, and availability.' }
   if (pathname.startsWith('/books/')) return { title: 'Book details', description: 'Read about this Orphaleia edition, reader ratings, and related books.' }
   if (pathname === '/genres') return { title: 'Genres', description: 'Explore literary collections and follow a new reading current.' }
   if (pathname.startsWith('/genres/')) return { title: 'Genre collection', description: 'Browse books from this Orphaleia collection.' }
@@ -832,7 +833,7 @@ function PaymentReturn() {
 function Account() {
   const { user, loading } = useAuth(); const orders = useQuery({ queryKey: ['orders'], queryFn: () => api<{ items: Order[] }>('/orders'), enabled: !!user })
   if (loading) return <State title="Opening your account…" loading />; if (!user) return <Navigate to="/sign-in" />
-  return <section className={s.page}><div className={s.pageHeading}><span className={s.eyebrow}>READER’S ACCOUNT</span><h1>Welcome, {user.full_name.split(' ')[0]}</h1><p>{user.email} · {user.is_verified ? 'Verified reader' : 'Email verification pending'}</p></div><h2 className={s.sectionTitle}>Your orders</h2>{orders.isLoading ? <State title="Loading your orders…" loading /> : orders.error ? <ErrorState error={orders.error} retry={() => void orders.refetch()} /> : orders.data?.items.length ? <div className={s.orders}>{orders.data.items.map((order) => <article key={order.id}><div><span className={s.eyebrow}>{new Date(order.created_at).toLocaleDateString()}</span><h3>{order.number}</h3><p>{order.items.map((x) => x.title).join(', ')}</p></div><span className={s.status}>{order.status.replace('_',' ')}</span><b>{money(order.total_cents)}</b></article>)}</div> : <State title="No orders yet" text="Your completed voyages will appear here." />}</section>
+  return <section className={s.page}><div className={s.pageHeading}><span className={s.eyebrow}>READER’S ACCOUNT</span><h1>Welcome, {user.full_name.split(' ')[0]}</h1><p>{user.email} · {user.is_verified ? 'Verified reader' : 'Email verification pending'}</p></div><h2 className={s.sectionTitle}>Your orders</h2>{orders.isLoading ? <State title="Loading your orders…" loading /> : orders.error ? <ErrorState error={orders.error} retry={() => void orders.refetch()} /> : orders.data?.items.length ? <div className={s.orders}>{orders.data.items.map((order) => <article key={order.id}><div><span className={s.eyebrow}>{new Date(order.created_at).toLocaleDateString()}</span><h3>{order.number}</h3><p>{order.items.map((x) => x.title).join(', ')}</p></div><span className={s.status}>{order.status.replace('_',' ')}</span><b>{money(order.total_cents)}</b></article>)}</div> : <AccountEmptyState />}</section>
 }
 
 function Admin() {
@@ -989,7 +990,7 @@ function NotFound() { return <section className={s.narrowPage}><div className={s
 
 export default function App() {
   return <AuthProvider><Layout><Routes>
-    <Route path="/" element={<Home />} /><Route path="/books" element={<Catalog />} /><Route path="/books/:slug" element={<BookPage />} />
+    <Route path="/" element={<Home />} /><Route path="/books" element={<Catalog />} /><Route path="/all-books" element={<Catalog />} /><Route path="/books/:slug" element={<BookPage />} />
     <Route path="/genres" element={<Directory kind="genres" />} /><Route path="/genres/:slug" element={<Shelf kind="genres" />} /><Route path="/authors" element={<Directory kind="authors" />} /><Route path="/authors/:slug" element={<Shelf kind="authors" />} /><Route path="/rankings" element={<Rankings />} />
     <Route path="/sign-in" element={<AuthPage key="sign-in" />} /><Route path="/register" element={<AuthPage key="register" register />} /><Route path="/verify" element={<TokenPage mode="verify" />} /><Route path="/forgot-password" element={<TokenPage mode="forgot" />} /><Route path="/reset-password" element={<TokenPage mode="reset" />} />
     <Route path="/cart" element={<RequireUser><CartPage /></RequireUser>} /><Route path="/checkout" element={<RequireUser><Checkout /></RequireUser>} /><Route path="/payment/return" element={<PaymentReturn />} /><Route path="/account" element={<RequireUser><Account /></RequireUser>} />

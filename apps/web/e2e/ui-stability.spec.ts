@@ -90,6 +90,9 @@ test('customer and admin route guards wait for auth and render stable states', a
 
   await page.goto('/account')
   await expect(page.getByRole('heading', { name: 'Welcome, Admin' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'No orders yet' })).toBeVisible()
+  await expect(page.locator('img[src="/assets/account/little-prince-empty-orders.png"]')).toHaveJSProperty('naturalWidth', 1234)
+  await expect(page.getByRole('link', { name: /browse the catalog/i })).toHaveAttribute('href', '/all-books')
   await expect(page).toHaveURL('/account')
 
   await page.goto('/admin')
