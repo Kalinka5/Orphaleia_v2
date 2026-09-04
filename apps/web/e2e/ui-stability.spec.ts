@@ -88,6 +88,11 @@ test('customer and admin route guards wait for auth and render stable states', a
   await page.route('**/api/v1/admin/orders', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [] }) }))
   await page.route('**/api/v1/admin/comments', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [] }) }))
 
+  await page.goto('/cart')
+  await expect(page.getByRole('heading', { name: 'Your bag is waiting' })).toBeVisible()
+  await expect(page.locator('img[src="/assets/cart/paddington-empty-bag.png"]')).toHaveJSProperty('naturalWidth', 1216)
+  await expect(page.getByRole('link', { name: /browse the catalog/i })).toHaveAttribute('href', '/all-books')
+
   await page.goto('/account')
   await expect(page.getByRole('heading', { name: 'Welcome, Admin' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'No orders yet' })).toBeVisible()
