@@ -40,6 +40,41 @@ test('author portraits reveal color from synchronized pointer and focus states',
   await expect(portraitLink).toHaveAttribute('data-active', 'true')
 })
 
+test('genre rows reveal their cover and description on desktop hover and focus', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium', 'Desktop interaction geometry is sampled once in Chromium.')
+  await page.goto('/genres')
+
+  const directory = page.getByTestId('genre-directory')
+  const row = directory.getByRole('link').first()
+  const image = row.getByRole('img')
+  const collapsedHeight = await row.evaluate((element) => element.getBoundingClientRect().height)
+
+  await row.hover()
+  await expect.poll(() => row.evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThan(collapsedHeight + 100)
+  await expect.poll(() => image.evaluate((element) => getComputedStyle(element.parentElement!).opacity)).toBe('1')
+  await expect(row.getByText('Open shelf', { exact: true })).toBeVisible()
+
+  await page.mouse.move(0, 0)
+  await row.focus()
+  await expect.poll(() => row.evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThan(collapsedHeight + 100)
+})
+
+test('genre rows preview on the first touch and open on the second', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile-chromium', 'Touch behavior is sampled once in mobile Chromium.')
+  await page.goto('/genres')
+
+  const row = page.getByTestId('genre-directory').getByRole('link').first()
+  const destination = await row.getAttribute('href')
+  await row.tap()
+
+  await expect(page).toHaveURL(/\/genres$/)
+  await expect(row).toHaveAttribute('aria-expanded', 'true')
+  await expect(row.getByText('Tap again to open shelf')).toBeVisible()
+
+  await row.tap()
+  await expect(page).toHaveURL(destination!)
+})
+
 test('customer and admin route guards wait for auth and render stable states', async ({ page }) => {
   const user = { id: 'user-1', email: 'admin@orphaleia.local', full_name: 'Admin Reader', role: 'admin', is_verified: true }
   await page.route('**/api/v1/users/me', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(user) }))

@@ -1,0 +1,237 @@
+.list {
+  list-style: none;
+  max-width: 94rem;
+  margin: 0 auto;
+  padding: 0;
+  border-top: 1px solid var(--line);
+}
+
+.item { border-bottom: 1px solid var(--line); }
+
+.row {
+  --expanded-height: 20rem;
+  position: relative;
+  display: block;
+  height: 7rem;
+  overflow: hidden;
+  color: var(--night);
+  background: var(--paper);
+  text-decoration: none;
+  isolation: isolate;
+  transition: height .68s cubic-bezier(.25, 1, .5, 1), color .34s ease;
+}
+
+.hasImage:focus-visible {
+  z-index: 3;
+  height: var(--expanded-height);
+}
+
+.art,
+.scrim {
+  position: absolute;
+  inset: 0;
+}
+
+.art {
+  z-index: -2;
+  opacity: 0;
+  transition: opacity .48s ease;
+}
+
+.art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.07);
+  transition: transform .9s cubic-bezier(.25, 1, .5, 1);
+}
+
+.art img[data-genre='romance'],
+.art img[data-genre='young-adult'] { object-position: 50% 43%; }
+.art img[data-genre='tragedy'],
+.art img[data-genre='dark-fantasy'],
+.art img[data-genre='dystopian-fiction'] { object-position: 50% 58%; }
+.art img[data-genre='literary-fiction'] { object-position: 50% 48%; }
+.art img[data-genre='gothic-fiction'] { object-position: 50% 45%; }
+.art img[data-genre='mystery-crime'],
+.art img[data-genre='childrens-literature'],
+.art img[data-genre='science-fiction'] { object-position: 50% 44%; }
+.art img[data-genre='philosophical-fiction'],
+.art img[data-genre='psychological-thriller'] { object-position: 50% 42%; }
+.art img[data-genre='fantasy'],
+.art img[data-genre='adventure'] { object-position: 50% 47%; }
+
+.scrim {
+  background:
+    linear-gradient(90deg, var(--night) 0%, rgba(17, 24, 39, .84) 46%, rgba(17, 24, 39, .5) 100%),
+    linear-gradient(0deg, rgba(17, 24, 39, .78), transparent 70%);
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 4rem minmax(0, 1fr) 3.75rem;
+  align-items: center;
+  gap: clamp(1rem, 2.8vw, 3rem);
+  height: 100%;
+  padding: 0 clamp(1rem, 3vw, 3rem);
+}
+
+.ordinal {
+  align-self: center;
+  color: var(--bronze);
+  font: 500 .72rem/1 'IBM Plex Mono', monospace;
+  letter-spacing: .1em;
+  transition: color .34s ease, align-self .68s cubic-bezier(.25, 1, .5, 1);
+}
+
+.copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.title {
+  display: block;
+  font: 400 clamp(2.15rem, 4.6vw, 4.75rem)/.92 'GFS Didot', serif;
+  letter-spacing: -.04em;
+  text-wrap: balance;
+  transition: transform .68s cubic-bezier(.25, 1, .5, 1);
+}
+
+.description {
+  max-width: 42rem;
+  max-height: 0;
+  margin-top: 0;
+  overflow: hidden;
+  color: rgba(247, 244, 235, .82);
+  font-size: .92rem;
+  line-height: 1.6;
+  opacity: 0;
+  transform: translateY(.75rem);
+  transition: max-height .5s ease, margin .5s ease, opacity .35s ease .12s, transform .5s cubic-bezier(.25, 1, .5, 1);
+}
+
+.action {
+  max-height: 0;
+  margin-top: 0;
+  overflow: hidden;
+  color: var(--marble);
+  font: 500 .64rem/1.3 'IBM Plex Mono', monospace;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  opacity: 0;
+  transition: max-height .4s ease, margin .4s ease, opacity .3s ease .18s;
+}
+
+.touchLabel { display: none; }
+
+.arrow {
+  display: grid;
+  place-items: center;
+  width: 3.75rem;
+  height: 3.75rem;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--bronze);
+  transition: color .4s ease, background .4s ease, border-color .4s ease, transform .5s cubic-bezier(.25, 1, .5, 1);
+}
+
+.hasImage:focus-visible,
+.hasImage[data-active='true'] { color: var(--marble); }
+
+.hasImage:focus-visible .art,
+.hasImage[data-active='true'] .art { opacity: 1; }
+
+.hasImage:focus-visible .art img,
+.hasImage[data-active='true'] .art img { transform: scale(1); }
+
+.hasImage:focus-visible .title,
+.hasImage[data-active='true'] .title { transform: translateY(-.35rem); }
+
+.hasImage:focus-visible .description,
+.hasImage[data-active='true'] .description {
+  max-height: 6rem;
+  margin-top: 1.1rem;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.hasImage:focus-visible .action,
+.hasImage[data-active='true'] .action {
+  max-height: 2rem;
+  margin-top: .9rem;
+  opacity: 1;
+}
+
+.hasImage:focus-visible .ordinal,
+.hasImage[data-active='true'] .ordinal { color: var(--laurel); }
+
+.hasImage:focus-visible .arrow,
+.hasImage[data-active='true'] .arrow {
+  color: var(--night);
+  background: var(--marble);
+  border-color: var(--marble);
+  transform: rotate(-45deg);
+}
+
+.textOnly {
+  height: auto;
+  min-height: 7rem;
+}
+
+.textOnly .description {
+  max-height: none;
+  margin-top: .45rem;
+  color: var(--ink-muted);
+  opacity: 1;
+  transform: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hasImage:hover {
+    height: var(--expanded-height);
+    color: var(--marble);
+  }
+
+  .hasImage:hover .art { opacity: 1; }
+  .hasImage:hover .art img { transform: scale(1); }
+  .hasImage:hover .title { transform: translateY(-.35rem); }
+  .hasImage:hover .description { max-height: 6rem; margin-top: 1.1rem; opacity: 1; transform: translateY(0); }
+  .hasImage:hover .action { max-height: 2rem; margin-top: .9rem; opacity: 1; }
+  .hasImage:hover .ordinal { color: var(--laurel); }
+  .hasImage:hover .arrow { color: var(--night); background: var(--marble); border-color: var(--marble); transform: rotate(-45deg); }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .hasImage[data-active='true'] { height: 15rem; }
+  .hasImage[data-active='true'] .openLabel { display: none; }
+  .hasImage[data-active='true'] .touchLabel { display: inline; }
+}
+
+@media (max-width: 47.5rem) {
+  .row { height: 6.75rem; }
+  .content {
+    grid-template-columns: 2rem minmax(0, 1fr) 2.75rem;
+    gap: .75rem;
+    padding: 0 .5rem 0 .25rem;
+  }
+  .title { font-size: clamp(1.8rem, 9vw, 3rem); }
+  .description { font-size: .8rem; line-height: 1.48; }
+  .arrow { width: 2.75rem; height: 2.75rem; }
+  .textOnly { min-height: 8rem; }
+  .textOnly .content { padding-block: 1rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row,
+  .art,
+  .art img,
+  .ordinal,
+  .title,
+  .description,
+  .action,
+  .arrow { transition: none; }
+}
