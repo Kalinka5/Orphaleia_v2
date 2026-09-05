@@ -13,6 +13,7 @@ const user: User = {
   avatar_url: null,
   role: 'customer',
   is_verified: true,
+  default_shipping_address: null,
 }
 
 function renderHub(path = '/account', currentUser = user, refresh = vi.fn(async () => {})) {
@@ -55,6 +56,26 @@ describe('AccountHub', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancel request' }))
     await screen.findByText('Pending email change cancelled.')
     expect(fetchMock).toHaveBeenCalledOnce()
+  })
+
+  it('saves and removes a private default delivery address', async () => {
+    const savedAddress = { name: 'Test Reader', line1: '14 Library Lane', line2: '', city: 'Madrid', postal_code: '28001', country: 'ES' }
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => new Response(JSON.stringify({
+      ...user,
+      default_shipping_address: init?.method === 'DELETE' ? null : savedAddress,
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    vi.stubGlobal('fetch', fetchMock)
+    renderHub('/account?section=delivery')
+    fireEvent.change(screen.getByLabelText('Address'), { target: { value: savedAddress.line1 } })
+    fireEvent.change(screen.getByLabelText('City'), { target: { value: savedAddress.city } })
+    fireEvent.change(screen.getByLabelText('Postal code'), { target: { value: savedAddress.postal_code } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save delivery address' }))
+    await screen.findByText('Default delivery address saved.')
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual(savedAddress)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove saved address' }))
+    await screen.findByText('Default delivery address removed.')
+    expect(fetchMock.mock.calls[1][1]?.method).toBe('DELETE')
   })
 
   it('catches password confirmation mismatch before making a request', async () => {

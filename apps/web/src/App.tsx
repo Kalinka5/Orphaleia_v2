@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight, ArrowUpRight, CaretRight, Check, EnvelopeSimple,
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { api, money } from './api'
+import { addressFields, countryOptions, emptyAddress } from './address'
 import { BookDetailExperience } from './components/BookDetailExperience'
 import { BookHeroScene, type HeroBook } from './components/BookHeroScene'
 import { AuthorShowcase } from './components/AuthorShowcase'
@@ -797,19 +798,17 @@ function CartPage() {
   const cart = query.data!; return <section className={s.page}><div className={s.pageHeading}><span className={s.eyebrow}>YOUR BOOK BAG</span><h1>Books for the crossing</h1></div>{cart.items.length ? <div className={s.cartLayout}><div className={s.cartItems}>{cart.items.map((item) => <article key={item.id}><img src={item.book.cover_url} alt={`Cover of ${item.book.title}`} width="80" height="120" /><div><h2><Link to={`/books/${item.book.slug}`}>{item.book.title}</Link></h2><p>Quantity: {item.quantity}</p><button className={s.textButton} disabled={remove.isPending} onClick={() => remove.mutate(item.id)}>{remove.isPending ? 'Removing…' : 'Remove'}</button></div><b>{money(item.book.price_cents * item.quantity)}</b></article>)}</div><aside className={s.orderCard}><h2>Order summary</h2><div><span>Books</span><b>{money(cart.subtotal_cents)}</b></div><div><span>Shipping</span><span>Calculated next</span></div><hr /><div className={s.total}><span>Subtotal</span><b>{money(cart.subtotal_cents)}</b></div><Link className={s.primaryButton} to="/checkout">Continue to delivery <ArrowRight size={16} aria-hidden="true" /></Link><small>VAT included · Secure checkout</small>{remove.error && <p className={s.formError} role="alert">{remove.error.message}</p>}</aside></div> : <CartEmptyState />}</section>
 }
 
-const emptyAddress: Address = { name: '', line1: '', line2: '', city: '', postal_code: '', country: 'ES' }
 function Checkout() {
-  const { user } = useAuth(); const navigate = useNavigate(); const [address, setAddress] = useState(emptyAddress); const [quote, setQuote] = useState<{ subtotal_cents: number; shipping_cents: number; total_cents: number } | null>(null); const [error, setError] = useState(''); const [busy, setBusy] = useState(false)
+  const { user } = useAuth(); const navigate = useNavigate(); const client = useQueryClient(); const [address, setAddress] = useState<Address>(() => user?.default_shipping_address ?? emptyAddress(user?.full_name)); const [saveAsDefault, setSaveAsDefault] = useState(false); const [quote, setQuote] = useState<{ subtotal_cents: number; shipping_cents: number; total_cents: number } | null>(null); const [error, setError] = useState(''); const [busy, setBusy] = useState(false)
   if (!user) return <Navigate to="/sign-in" state={{ from: '/checkout' }} />
   async function quoteOrder(e: FormEvent) { e.preventDefault(); setBusy(true); setError(''); try { setQuote(await api('/checkout/quote', { method: 'POST', body: JSON.stringify({ address }) })) } catch (err) { setError((err as Error).message) } finally { setBusy(false) } }
-  async function pay(provider: string) { setBusy(true); try { const order = await api<Order>('/orders', { method: 'POST', body: JSON.stringify({ address }) }); const payment = await api<{ redirect_url: string }>(`/payments/${provider}/start?order_id=${order.id}`, { method: 'POST' }); window.location.assign(payment.redirect_url) } catch (err) { setError((err as Error).message); setBusy(false) } }
-  const fields: Array<[keyof Address, string, boolean]> = [['name','Full name',true],['line1','Address',true],['line2','Apartment, suite, etc.',false],['city','City',true],['postal_code','Postal code',true]]
-  const countryOptions: SelectOption[] = [['ES','Spain'],['FR','France'],['DE','Germany'],['IT','Italy'],['PT','Portugal'],['NL','Netherlands']].map(([value, label]) => ({ value, label }))
+  async function pay(provider: string) { setBusy(true); setError(''); try { if (saveAsDefault) { const nextUser = await api<User>('/users/me/delivery-address', { method: 'PUT', body: JSON.stringify(address) }); client.setQueryData(['me'], nextUser) } const order = await api<Order>('/orders', { method: 'POST', body: JSON.stringify({ address }) }); const payment = await api<{ redirect_url: string }>(`/payments/${provider}/start?order_id=${order.id}`, { method: 'POST' }); window.location.assign(payment.redirect_url) } catch (err) { setError((err as Error).message); setBusy(false) } }
   return <section className={s.checkoutPage}>
     <div><span className={s.eyebrow}>DELIVERY</span><h1>Where should these stories find you?</h1>
       <form className={s.checkoutForm} onSubmit={quoteOrder} aria-busy={busy || undefined}>
-        {fields.map(([key,label,required]) => <label key={key}>{label}<input value={address[key]} required={required} onChange={(e) => { setAddress({ ...address, [key]: e.target.value }); setQuote(null) }} /></label>)}
+        {addressFields.map(({ key, label, required, autoComplete }) => <label key={key}>{label}<input value={address[key]} required={required} autoComplete={autoComplete} onChange={(e) => { setAddress({ ...address, [key]: e.target.value }); setQuote(null) }} /></label>)}
         <SelectControl label="Country" labelMode="stacked" value={address.country} options={countryOptions} onChange={(value) => { setAddress({ ...address, country: value }); setQuote(null) }} />
+        <label className={s.checkoutSaveAddress}><input type="checkbox" checked={saveAsDefault} onChange={(event) => setSaveAsDefault(event.target.checked)} /> <span><b>Save as my default delivery address</b><small>Use these details to prefill future checkouts.</small></span></label>
         <button className={s.secondaryButton} disabled={busy}>{busy ? 'Calculating…' : 'Calculate delivery'}</button>
       </form>
     </div>

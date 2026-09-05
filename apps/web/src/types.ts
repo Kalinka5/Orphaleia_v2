@@ -8,7 +8,7 @@ export type Book = {
   video_url?: string; featured: boolean; active: boolean; rating_average: number; rating_count: number
   authors: Author[]; genres: Genre[]; comments?: Comment[]; related?: Book[]
 }
-export type User = { id: string; email: string; pending_email: string | null; full_name: string; avatar_url: string | null; role: 'customer' | 'admin'; is_verified: boolean }
+export type User = { id: string; email: string; pending_email: string | null; full_name: string; avatar_url: string | null; role: 'customer' | 'admin'; is_verified: boolean; default_shipping_address: Address | null }
 export type CartItem = { id: string; book_id: string; quantity: number; book: Pick<Book, 'title' | 'slug' | 'cover_url' | 'price_cents' | 'stock_qty'> }
 export type Cart = { id: string; items: CartItem[]; subtotal_cents: number; currency: string }
 export type Address = { name: string; line1: string; line2: string; city: string; postal_code: string; country: string }

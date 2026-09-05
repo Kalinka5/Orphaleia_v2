@@ -12,8 +12,11 @@ async function mockAuthenticatedReader(page: Page, admin = false) {
     id: 'visual-user',
     email: admin ? 'keeper@orphaleia.local' : 'reader@orphaleia.local',
     full_name: admin ? 'Ada Keeper' : 'Mina Reader',
+    pending_email: null,
+    avatar_url: null,
     role: admin ? 'admin' : 'customer',
     is_verified: true,
+    default_shipping_address: null,
   }
   await page.route('**/api/v1/users/me', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(user) }))
   await page.route('**/api/v1/orders', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [] }) }))

@@ -40,10 +40,12 @@ from .models import (
     Rating,
     RatingEvent,
     RefreshSession,
+    SavedAddress,
     ShippingZone,
     User,
 )
 from .schemas import (
+    AddressInput,
     AuthorInput,
     BookInput,
     CartItemInput,
@@ -136,6 +138,7 @@ def health(db: Session = Depends(get_db)):
 
 
 def user_out(user: User):
+    address = user.default_shipping_address
     return {
         "id": user.id,
         "email": user.email,
@@ -144,6 +147,16 @@ def user_out(user: User):
         "avatar_url": user.avatar_url,
         "role": user.role,
         "is_verified": user.is_verified,
+        "default_shipping_address": {
+            "name": address.name,
+            "line1": address.line1,
+            "line2": address.line2,
+            "city": address.city,
+            "postal_code": address.postal_code,
+            "country": address.country,
+        }
+        if address
+        else None,
     }
 
 
@@ -289,6 +302,26 @@ def me(user: User = Depends(current_user)):
 def update_profile(data: ProfileInput, user: User = Depends(current_user), db: Session = Depends(get_db)):
     user.full_name = data.full_name
     db.commit()
+    return user_out(user)
+
+
+@app.put("/api/v1/users/me/delivery-address", dependencies=[Depends(require_csrf)])
+def update_delivery_address(data: AddressInput, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    address = user.default_shipping_address
+    if address is None:
+        address = SavedAddress(user_id=user.id)
+        user.default_shipping_address = address
+    for field, value in data.model_dump().items():
+        setattr(address, field, value)
+    db.commit()
+    return user_out(user)
+
+
+@app.delete("/api/v1/users/me/delivery-address", dependencies=[Depends(require_csrf)])
+def remove_delivery_address(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    if user.default_shipping_address is not None:
+        user.default_shipping_address = None
+        db.commit()
     return user_out(user)
 
 

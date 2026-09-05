@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 const avatarPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64')
-const user = { id: 'reader-1', email: 'reader@example.com', pending_email: null, full_name: 'Ariadne Reader', avatar_url: null, role: 'customer', is_verified: true }
+const user = { id: 'reader-1', email: 'reader@example.com', pending_email: null, full_name: 'Ariadne Reader', avatar_url: null, role: 'customer', is_verified: true, default_shipping_address: null }
 
 async function mockSession(page: Page) {
   await page.route('**/api/v1/users/me', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(user) }))
@@ -25,6 +25,28 @@ test('account hub deep links to profile and saves name and portrait', async ({ p
   await page.locator('input[name="avatar"]').setInputFiles({ name: 'portrait.png', mimeType: 'image/png', buffer: avatarPng })
   await page.getByRole('button', { name: 'Save portrait' }).click()
   await expect(page.getByRole('status')).toContainText('Reader portrait updated')
+})
+
+test('account delivery section saves and removes a private default address', async ({ page }) => {
+  await mockSession(page)
+  const address = { name: 'Ariadne Reader', line1: '14 Library Lane', line2: '', city: 'Madrid', postal_code: '28001', country: 'ES' }
+  let saved = false
+  await page.route('**/api/v1/users/me/delivery-address', async (route) => {
+    saved = route.request().method() !== 'DELETE'
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ...user, default_shipping_address: saved ? address : null }) })
+  })
+
+  await page.goto('/account?section=delivery')
+  await page.getByLabel('Address').fill(address.line1)
+  await page.getByLabel('City').fill(address.city)
+  await page.getByLabel('Postal code').fill(address.postal_code)
+  await page.getByRole('button', { name: 'Save delivery address' }).click()
+  await expect(page.getByRole('status')).toContainText('Default delivery address saved')
+  expect(saved).toBe(true)
+
+  await page.getByRole('button', { name: 'Remove saved address' }).click()
+  await expect(page.getByRole('status')).toContainText('Default delivery address removed')
+  expect(saved).toBe(false)
 })
 
 test('comments show the reader portrait and retain an initials fallback', async ({ page }) => {

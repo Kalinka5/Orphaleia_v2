@@ -43,6 +43,21 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(20), default="customer")
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    default_shipping_address: Mapped[SavedAddress | None] = relationship(
+        back_populates="user", cascade="all, delete-orphan", uselist=False
+    )
+
+
+class SavedAddress(Base):
+    __tablename__ = "saved_addresses"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    name: Mapped[str] = mapped_column(String(160))
+    line1: Mapped[str] = mapped_column(String(240))
+    line2: Mapped[str] = mapped_column(String(240), default="")
+    city: Mapped[str] = mapped_column(String(120))
+    postal_code: Mapped[str] = mapped_column(String(24))
+    country: Mapped[str] = mapped_column(String(2))
+    user: Mapped[User] = relationship(back_populates="default_shipping_address")
 
 
 class RefreshSession(Base):

@@ -1,18 +1,21 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
-import { BookOpenText, Camera, LockKey, ShieldCheck, Trash, UserCircle } from '@phosphor-icons/react'
+import { BookOpenText, Camera, LockKey, MapPin, ShieldCheck, Trash, UserCircle } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { ApiRequestError, api, money } from '../api'
-import type { Order, User } from '../types'
+import { addressFields, countryOptions, emptyAddress } from '../address'
+import type { Address, Order, User } from '../types'
 import { AccountEmptyState } from './AccountEmptyState'
 import { ReaderAvatar } from './ReaderAvatar'
 import { ErrorState, RouteState as State } from './ui/RouteState'
+import { SelectControl } from './ui/SelectControl'
 import s from './AccountHub.module.css'
 
-type AccountSection = 'orders' | 'profile' | 'security'
+type AccountSection = 'orders' | 'profile' | 'delivery' | 'security'
 const sections: Array<{ id: AccountSection; label: string; description: string }> = [
   { id: 'orders', label: 'Orders', description: 'Purchases and delivery progress' },
   { id: 'profile', label: 'Profile', description: 'Public name and reader portrait' },
+  { id: 'delivery', label: 'Delivery', description: 'Private default shipping address' },
   { id: 'security', label: 'Security', description: 'Sign-in email and password' },
 ]
 
@@ -23,19 +26,25 @@ function fieldError(error: unknown, field: string) {
 function SectionIcon({ section }: { section: AccountSection }) {
   if (section === 'orders') return <BookOpenText size={21} aria-hidden="true" />
   if (section === 'profile') return <UserCircle size={21} aria-hidden="true" />
+  if (section === 'delivery') return <MapPin size={21} aria-hidden="true" />
   return <ShieldCheck size={21} aria-hidden="true" />
 }
 
 export function AccountHub({ user, refresh }: { user: User; refresh: () => Promise<void> }) {
   const [params] = useSearchParams()
   const requestedSection = params.get('section')
-  const section: AccountSection = requestedSection === 'profile' || requestedSection === 'security' ? requestedSection : 'orders'
+  const section: AccountSection = requestedSection === 'profile' || requestedSection === 'delivery' || requestedSection === 'security' ? requestedSection : 'orders'
   const client = useQueryClient()
   const orders = useQuery({ queryKey: ['orders'], queryFn: () => api<{ items: Order[] }>('/orders'), enabled: section === 'orders' })
   const [profileNotice, setProfileNotice] = useState('')
   const [profileError, setProfileError] = useState<unknown>(null)
   const [profileBusy, setProfileBusy] = useState(false)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [deliveryAddress, setDeliveryAddress] = useState<Address>(() => user.default_shipping_address ?? emptyAddress(user.full_name))
+  const [hasSavedDeliveryAddress, setHasSavedDeliveryAddress] = useState(Boolean(user.default_shipping_address))
+  const [deliveryNotice, setDeliveryNotice] = useState('')
+  const [deliveryError, setDeliveryError] = useState<unknown>(null)
+  const [deliveryBusy, setDeliveryBusy] = useState(false)
   const [emailNotice, setEmailNotice] = useState('')
   const [emailError, setEmailError] = useState<unknown>(null)
   const [emailBusy, setEmailBusy] = useState(false)
@@ -87,6 +96,29 @@ export function AccountHub({ user, refresh }: { user: User; refresh: () => Promi
       setAvatarFile(null)
       setProfileNotice('Reader portrait removed. Your initials will be shown instead.')
     } catch (error) { setProfileError(error) } finally { setProfileBusy(false) }
+  }
+
+  async function saveDeliveryAddress(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setDeliveryBusy(true); setDeliveryNotice(''); setDeliveryError(null)
+    try {
+      const nextUser = await api<User>('/users/me/delivery-address', { method: 'PUT', body: JSON.stringify(deliveryAddress) })
+      rememberUser(nextUser)
+      setDeliveryAddress(nextUser.default_shipping_address ?? emptyAddress(nextUser.full_name))
+      setHasSavedDeliveryAddress(true)
+      setDeliveryNotice('Default delivery address saved.')
+    } catch (error) { setDeliveryError(error) } finally { setDeliveryBusy(false) }
+  }
+
+  async function removeDeliveryAddress() {
+    setDeliveryBusy(true); setDeliveryNotice(''); setDeliveryError(null)
+    try {
+      const nextUser = await api<User>('/users/me/delivery-address', { method: 'DELETE' })
+      rememberUser(nextUser)
+      setDeliveryAddress(emptyAddress(nextUser.full_name))
+      setHasSavedDeliveryAddress(false)
+      setDeliveryNotice('Default delivery address removed.')
+    } catch (error) { setDeliveryError(error) } finally { setDeliveryBusy(false) }
   }
 
   async function requestEmailChange(event: FormEvent<HTMLFormElement>) {
@@ -152,6 +184,14 @@ export function AccountHub({ user, refresh }: { user: User; refresh: () => Promi
             </form>
           </div>
           {profileNotice && <p className={s.notice} role="status" aria-live="polite">{profileNotice}</p>}{profileError ? <p className={s.error} role="alert">{(profileError as Error).message}</p> : null}
+        </section>}
+        {section === 'delivery' && <section aria-labelledby="delivery-title"><div className={s.sectionHeading}><span>Private delivery details</span><h2 id="delivery-title">Where your books usually find you</h2><p>Save one default address to prefill checkout. You can still change it for any individual order.</p></div>
+          <form className={`${s.form} ${s.deliveryForm}`} onSubmit={(event) => void saveDeliveryAddress(event)} aria-busy={deliveryBusy || undefined}>
+            {addressFields.map(({ key, label, required, autoComplete }) => <label key={key} htmlFor={`delivery-${key}`}>{label}<input id={`delivery-${key}`} value={deliveryAddress[key]} required={required} autoComplete={autoComplete} onChange={(event) => setDeliveryAddress({ ...deliveryAddress, [key]: event.target.value })} aria-invalid={Boolean(fieldError(deliveryError, key)) || undefined} />{fieldError(deliveryError, key) && <span className={s.fieldError}>{fieldError(deliveryError, key)}</span>}</label>)}
+            <SelectControl label="Country" labelMode="stacked" value={deliveryAddress.country} options={countryOptions} onChange={(country) => setDeliveryAddress({ ...deliveryAddress, country })} />
+            <div className={s.deliveryActions}><button className={s.primaryButton} disabled={deliveryBusy}>{deliveryBusy ? 'Saving…' : 'Save delivery address'}</button>{hasSavedDeliveryAddress && <button className={s.textButton} type="button" disabled={deliveryBusy} onClick={() => void removeDeliveryAddress()}><Trash size={16} aria-hidden="true" /> Remove saved address</button>}</div>
+          </form>
+          {deliveryNotice && <p className={s.notice} role="status" aria-live="polite">{deliveryNotice}</p>}{deliveryError ? <p className={s.error} role="alert">{(deliveryError as Error).message}</p> : null}
         </section>}
         {section === 'security' && <section aria-labelledby="security-title"><div className={s.sectionHeading}><span>Account security</span><h2 id="security-title">Your sign-in details</h2><p>Sensitive changes ask for your current password and notify you by email.</p></div>
           <div className={s.securityStack}>

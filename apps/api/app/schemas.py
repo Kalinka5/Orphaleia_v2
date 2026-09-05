@@ -79,10 +79,15 @@ class AddressInput(BaseModel):
     postal_code: str = Field(min_length=3, max_length=24)
     country: str = Field(min_length=2, max_length=2)
 
-    @field_validator("country")
+    @field_validator("name", "line1", "line2", "city", "postal_code", mode="before")
+    @classmethod
+    def normalize_address_text(cls, value: str) -> str:
+        return " ".join(value.split())
+
+    @field_validator("country", mode="before")
     @classmethod
     def uppercase_country(cls, value: str) -> str:
-        return value.upper()
+        return value.strip().upper()
 
 
 class CheckoutInput(BaseModel):
