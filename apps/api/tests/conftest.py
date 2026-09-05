@@ -12,10 +12,12 @@ from app.database import Base, SessionLocal, engine
 from app.main import app
 from app.models import Author, Book, Genre, ShippingZone, User
 from app.security import hash_password
+from app.throttle import _hits
 
 
 @pytest.fixture(autouse=True)
 def database():
+    _hits.clear()
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
     with SessionLocal() as db:

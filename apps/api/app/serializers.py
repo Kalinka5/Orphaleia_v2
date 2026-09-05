@@ -1,5 +1,5 @@
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from .models import Book, Comment, Order, Rating
 
@@ -41,10 +41,10 @@ def book_out(db: Session, book: Book, detailed: bool = False):
     }
     if detailed:
         comments = db.scalars(
-            select(Comment).where(Comment.book_id == book.id, Comment.visible.is_(True)).order_by(Comment.created_at.desc())
+            select(Comment).options(selectinload(Comment.user)).where(Comment.book_id == book.id, Comment.visible.is_(True)).order_by(Comment.created_at.desc())
         ).all()
         data["comments"] = [
-            {"id": c.id, "body": c.body, "created_at": c.created_at, "author": c.user.full_name}
+            {"id": c.id, "body": c.body, "created_at": c.created_at, "author": c.user.full_name, "author_avatar_url": c.user.avatar_url}
             for c in comments
         ]
     return data

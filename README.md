@@ -64,3 +64,5 @@ Prices are stored in integer euro cents and displayed VAT-inclusive. Shipping zo
 ## API conventions
 
 All application routes are under `/api/v1`. Collection responses use `items`, `page`, `page_size`, and `total`; errors use `code`, `message`, optional `field_errors`, and `request_id`. Cookie-authenticated state-changing requests require the readable `csrf_token` cookie to be echoed in the `X-CSRF-Token` header—the web client does this automatically.
+
+Reader account controls live at `/account`: Orders remains the default view, while Profile manages the public display name and avatar and Security manages email and password changes. Avatar uploads are normalized to 256×256 WebP files in the configured media store. Email changes remain pending until the new address is confirmed; confirmed email changes sign out every device, while password changes keep only the requesting device signed in.

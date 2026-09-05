@@ -36,6 +36,28 @@ class ResetInput(TokenInput):
     password: str = Field(min_length=10, max_length=128)
 
 
+class ProfileInput(BaseModel):
+    full_name: str = Field(min_length=2, max_length=120)
+
+    @field_validator("full_name")
+    @classmethod
+    def normalize_full_name(cls, value: str) -> str:
+        normalized = " ".join(value.split())
+        if len(normalized) < 2:
+            raise ValueError("Display name must contain at least 2 characters")
+        return normalized
+
+
+class EmailChangeInput(BaseModel):
+    email: EmailStr
+    current_password: str
+
+
+class PasswordChangeInput(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=10, max_length=128)
+
+
 class RatingInput(BaseModel):
     value: int = Field(ge=1, le=5)
 

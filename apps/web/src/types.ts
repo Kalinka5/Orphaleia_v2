@@ -1,6 +1,6 @@
 export type Author = { id: string; name: string; slug: string; bio: string; image_url: string | null }
 export type Genre = { id: string; name: string; slug: string; description: string }
-export type Comment = { id: string; body: string; created_at: string; author: string }
+export type Comment = { id: string; body: string; created_at: string; author: string; author_avatar_url?: string | null }
 export type Book = {
   id: string; title: string; slug: string; isbn: string; description: string; publication_year: number
   price_cents: number; currency: string; stock_qty: number; available: boolean; cover_url: string
@@ -8,7 +8,7 @@ export type Book = {
   video_url?: string; featured: boolean; active: boolean; rating_average: number; rating_count: number
   authors: Author[]; genres: Genre[]; comments?: Comment[]; related?: Book[]
 }
-export type User = { id: string; email: string; full_name: string; role: 'customer' | 'admin'; is_verified: boolean }
+export type User = { id: string; email: string; pending_email: string | null; full_name: string; avatar_url: string | null; role: 'customer' | 'admin'; is_verified: boolean }
 export type CartItem = { id: string; book_id: string; quantity: number; book: Pick<Book, 'title' | 'slug' | 'cover_url' | 'price_cents' | 'stock_qty'> }
 export type Cart = { id: string; items: CartItem[]; subtotal_cents: number; currency: string }
 export type Address = { name: string; line1: string; line2: string; city: string; postal_code: string; country: string }

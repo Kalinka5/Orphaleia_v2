@@ -32,7 +32,7 @@ def token_hash(token: str) -> str:
 def create_access_token(user: User) -> str:
     now = datetime.now(UTC)
     return jwt.encode(
-        {"sub": user.id, "role": user.role, "iat": now, "exp": now + timedelta(minutes=settings.access_minutes)},
+        {"sub": user.id, "role": user.role, "ver": user.auth_version, "iat": now, "exp": now + timedelta(minutes=settings.access_minutes)},
         settings.secret_key,
         algorithm="HS256",
     )
@@ -69,12 +69,15 @@ def current_user(request: Request, db: Session = Depends(get_db)) -> User:
     if not token:
         raise HTTPException(401, "Sign in required")
     try:
-        user_id = jwt.decode(token, settings.secret_key, algorithms=["HS256"])["sub"]
+        payload = jwt.decode(token, settings.secret_key, algorithms=["HS256"])
+        user_id = payload["sub"]
     except jwt.PyJWTError as exc:
         raise HTTPException(401, "Session expired") from exc
     user = db.get(User, user_id)
     if not user:
         raise HTTPException(401, "Account not found")
+    if payload.get("ver", 0) != user.auth_version:
+        raise HTTPException(401, "Session expired")
     return user
 
 
@@ -96,4 +99,3 @@ def require_csrf(request: Request) -> None:
         header = request.headers.get("X-CSRF-Token")
         if not cookie or not header or not secrets.compare_digest(cookie, header):
             raise HTTPException(403, "Invalid CSRF token")
-

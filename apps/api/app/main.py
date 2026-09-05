@@ -1,4 +1,5 @@
 import json
+import logging
 import re
 import secrets
 import unicodedata
@@ -49,10 +50,13 @@ from .schemas import (
     CheckoutInput,
     CommentInput,
     CommentVisibilityInput,
+    EmailChangeInput,
     EmailInput,
     GenreInput,
     LoginInput,
     OrderStatusInput,
+    PasswordChangeInput,
+    ProfileInput,
     RatingInput,
     RegisterInput,
     ResetInput,
@@ -75,8 +79,10 @@ from .security import (
 )
 from .serializers import author_out, book_out, genre_out, order_out
 from .services import PROVIDERS, finalize_payment, queue_email, reserved_quantity, shipping_quote
-from .storage import save_image
+from .storage import delete_avatar, save_avatar, save_image
 from .throttle import throttle
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -130,13 +136,55 @@ def health(db: Session = Depends(get_db)):
 
 
 def user_out(user: User):
-    return {"id": user.id, "email": user.email, "full_name": user.full_name, "role": user.role, "is_verified": user.is_verified}
+    return {
+        "id": user.id,
+        "email": user.email,
+        "pending_email": user.pending_email,
+        "full_name": user.full_name,
+        "avatar_url": user.avatar_url,
+        "role": user.role,
+        "is_verified": user.is_verified,
+    }
 
 
 def issue_action_token(db: Session, user: User, kind: str, hours: int) -> str:
     raw = secrets.token_urlsafe(36)
     db.add(ActionToken(user_id=user.id, kind=kind, token_hash=token_hash(raw), expires_at=datetime.now(UTC) + timedelta(hours=hours)))
     return raw
+
+
+def invalidate_action_tokens(db: Session, user: User, kind: str) -> None:
+    timestamp = datetime.now(UTC)
+    for record in db.scalars(select(ActionToken).where(ActionToken.user_id == user.id, ActionToken.kind == kind, ActionToken.used_at.is_(None))):
+        record.used_at = timestamp
+
+
+def revoke_user_sessions(db: Session, user: User) -> None:
+    timestamp = datetime.now(UTC)
+    for session in db.scalars(select(RefreshSession).where(RefreshSession.user_id == user.id, RefreshSession.revoked_at.is_(None))):
+        session.revoked_at = timestamp
+
+
+def cleanup_avatar(db: Session, url: str | None) -> None:
+    if not url:
+        return
+    try:
+        delete_avatar(url)
+        asset = db.scalar(select(MediaAsset).where(MediaAsset.url == url))
+        if asset:
+            db.delete(asset)
+            db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Could not clean up replaced avatar")
+
+
+def clear_user_avatar(db: Session, user: User):
+    previous = user.avatar_url
+    user.avatar_url = None
+    db.commit()
+    cleanup_avatar(db, previous)
+    return user_out(user)
 
 
 @app.post("/api/v1/auth/register", dependencies=[Depends(throttle(5, 60))])
@@ -224,9 +272,10 @@ def reset_password(data: ResetInput, db: Session = Depends(get_db)):
         raise HTTPException(400, "Reset link is invalid or expired")
     user = db.get(User, record.user_id)
     user.password_hash = hash_password(data.password)
+    user.auth_version += 1
     record.used_at = datetime.now(UTC)
-    for session in db.scalars(select(RefreshSession).where(RefreshSession.user_id == user.id, RefreshSession.revoked_at.is_(None))):
-        session.revoked_at = datetime.now(UTC)
+    revoke_user_sessions(db, user)
+    queue_email(db, user.email, "Your Orphaleia password was changed", "<p>Your password was changed and all signed-in devices were logged out. If this was not you, request another password reset immediately.</p>")
     db.commit()
     return {"message": "Password updated"}
 
@@ -234,6 +283,113 @@ def reset_password(data: ResetInput, db: Session = Depends(get_db)):
 @app.get("/api/v1/users/me")
 def me(user: User = Depends(current_user)):
     return user_out(user)
+
+
+@app.patch("/api/v1/users/me/profile", dependencies=[Depends(require_csrf)])
+def update_profile(data: ProfileInput, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    user.full_name = data.full_name
+    db.commit()
+    return user_out(user)
+
+
+@app.put("/api/v1/users/me/avatar", dependencies=[Depends(require_csrf), Depends(throttle(10, 600))])
+async def update_avatar(file: UploadFile = File(...), user: User = Depends(current_user), db: Session = Depends(get_db)):
+    content = await file.read()
+    try:
+        url, size = save_avatar(content, file.content_type or "", user.id)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    previous = user.avatar_url
+    asset = MediaAsset(url=url, content_type="image/webp", size_bytes=size)
+    db.add(asset)
+    user.avatar_url = url
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        try:
+            delete_avatar(url)
+        except Exception:
+            logger.exception("Could not delete avatar after a failed profile update")
+        raise
+    cleanup_avatar(db, previous)
+    return user_out(user)
+
+
+@app.delete("/api/v1/users/me/avatar", dependencies=[Depends(require_csrf)])
+def remove_avatar(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    return clear_user_avatar(db, user)
+
+
+@app.post("/api/v1/users/me/email-change", status_code=202, dependencies=[Depends(require_csrf), Depends(throttle(5, 300))])
+def request_email_change(data: EmailChangeInput, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    if not verify_password(data.current_password, user.password_hash):
+        raise HTTPException(401, "Current password is incorrect")
+    next_email = str(data.email).lower()
+    if next_email == user.email:
+        raise HTTPException(409, "Choose a different email address")
+    existing = db.scalar(select(User).where(func.lower(User.email) == next_email, User.id != user.id))
+    if existing:
+        raise HTTPException(409, "An account already uses this email")
+    invalidate_action_tokens(db, user, "email_change")
+    user.pending_email = next_email
+    raw = issue_action_token(db, user, "email_change", 2)
+    url = f"{settings.frontend_url}/confirm-email-change?token={raw}"
+    queue_email(db, next_email, "Confirm your new Orphaleia email", f'<p><a href="{url}">Confirm this email address</a>. This link expires in two hours.</p>')
+    queue_email(db, user.email, "An email change was requested", "<p>A change to your Orphaleia sign-in email was requested. Your current address remains active until the new address is confirmed. If this was not you, change your password immediately.</p>")
+    db.commit()
+    result = {"message": "Check the new address to confirm the change"}
+    if settings.app_env == "development" and settings.mail_preview_url:
+        result["email_preview_url"] = settings.mail_preview_url
+    return result
+
+
+@app.delete("/api/v1/users/me/email-change", dependencies=[Depends(require_csrf)])
+def cancel_email_change(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    invalidate_action_tokens(db, user, "email_change")
+    user.pending_email = None
+    db.commit()
+    return user_out(user)
+
+
+@app.post("/api/v1/auth/confirm-email-change")
+def confirm_email_change(data: TokenInput, response: Response, db: Session = Depends(get_db)):
+    record = db.scalar(select(ActionToken).where(ActionToken.kind == "email_change", ActionToken.token_hash == token_hash(data.token)))
+    if not record or record.used_at or record.expires_at.replace(tzinfo=UTC) < datetime.now(UTC):
+        raise HTTPException(400, "Email change link is invalid or expired")
+    user = db.get(User, record.user_id)
+    if not user or not user.pending_email:
+        raise HTTPException(400, "Email change is no longer pending")
+    existing = db.scalar(select(User).where(func.lower(User.email) == user.pending_email, User.id != user.id))
+    if existing:
+        raise HTTPException(409, "An account already uses this email")
+    user.email = user.pending_email
+    user.pending_email = None
+    user.is_verified = True
+    user.auth_version += 1
+    record.used_at = datetime.now(UTC)
+    revoke_user_sessions(db, user)
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(409, "An account already uses this email") from exc
+    clear_auth_cookies(response)
+    return {"message": "Email updated. Sign in again with your new address."}
+
+
+@app.post("/api/v1/users/me/password", dependencies=[Depends(require_csrf), Depends(throttle(5, 300))])
+def change_password(data: PasswordChangeInput, response: Response, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    if not verify_password(data.current_password, user.password_hash):
+        raise HTTPException(401, "Current password is incorrect")
+    user.password_hash = hash_password(data.new_password)
+    user.auth_version += 1
+    revoke_user_sessions(db, user)
+    queue_email(db, user.email, "Your Orphaleia password was changed", "<p>Your password was changed and other signed-in devices were logged out. If this was not you, request a password reset immediately.</p>")
+    db.commit()
+    access, refresh_token, csrf = create_session(db, user)
+    set_auth_cookies(response, access, refresh_token, csrf)
+    return {"message": "Password updated. Other devices were signed out."}
 
 
 def get_book_or_404(db: Session, identifier: str) -> Book:
@@ -457,7 +613,7 @@ def comment(book_id: str, data: CommentInput, user: User = Depends(verified_user
     db.add(item)
     db.commit()
     db.refresh(item)
-    return {"id": item.id, "body": item.body, "created_at": item.created_at, "author": user.full_name}
+    return {"id": item.id, "body": item.body, "created_at": item.created_at, "author": user.full_name, "author_avatar_url": user.avatar_url}
 
 
 def get_cart(db: Session, user: User) -> Cart:
@@ -865,6 +1021,14 @@ def admin_role(user_id: str, data: RoleInput, current: User = Depends(admin_user
     user.role = data.role
     db.commit()
     return user_out(user)
+
+
+@app.delete("/api/v1/admin/users/{user_id}/avatar", dependencies=[Depends(require_csrf)])
+def admin_remove_avatar(user_id: str, _: User = Depends(admin_user), db: Session = Depends(get_db)):
+    user = db.get(User, user_id)
+    if not user:
+        raise HTTPException(404, "User not found")
+    return clear_user_avatar(db, user)
 
 
 @app.post("/api/v1/admin/media", dependencies=[Depends(require_csrf)])
