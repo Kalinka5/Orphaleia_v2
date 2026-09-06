@@ -234,9 +234,27 @@ class Order(Base):
     shipping_postal_code: Mapped[str] = mapped_column(String(24))
     shipping_country: Mapped[str] = mapped_column(String(2))
     tracking_reference: Mapped[str | None] = mapped_column(String(120))
+    tracking_carrier: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    tracking_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     items: Mapped[list[OrderItem]] = relationship(cascade="all, delete-orphan", back_populates="order")
+    status_events: Mapped[list[OrderStatusEvent]] = relationship(
+        cascade="all, delete-orphan", back_populates="order", order_by="OrderStatusEvent.occurred_at"
+    )
     user: Mapped[User] = relationship()
+
+
+class OrderStatusEvent(Base):
+    __tablename__ = "order_status_events"
+    __table_args__ = (UniqueConstraint("order_id", "status", name="uq_order_status_event_order_status"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    order_id: Mapped[str] = mapped_column(ForeignKey("orders.id", ondelete="CASCADE"), index=True)
+    status: Mapped[str] = mapped_column(String(30))
+    source: Mapped[str] = mapped_column(String(20))
+    actor_user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
+    order: Mapped[Order] = relationship(back_populates="status_events")
+    actor: Mapped[User | None] = relationship(foreign_keys=[actor_user_id])
 
 
 class OrderItem(Base):

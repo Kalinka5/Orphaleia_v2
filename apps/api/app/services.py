@@ -1,12 +1,13 @@
 import json
 import secrets
 from datetime import UTC, datetime
+from html import escape
 
 import httpx
 import stripe
 from fastapi import HTTPException
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from .config import settings
 from .models import (
@@ -14,15 +15,82 @@ from .models import (
     Cart,
     InventoryReservation,
     Order,
+    OrderStatusEvent,
     OutboxMessage,
     PaymentAttempt,
     PaymentEvent,
     ShippingZone,
 )
 
+PAID_ORDER_STATUSES = {"paid", "processing", "shipped", "out_for_delivery", "delivered", "refunded"}
+
 
 def queue_email(db: Session, to_email: str, subject: str, html_body: str) -> None:
     db.add(OutboxMessage(to_email=to_email, subject=subject, html_body=html_body))
+
+
+def add_order_status_event(
+    db: Session, order: Order, status: str, source: str, actor_user_id: str | None = None
+) -> None:
+    order.status_events.append(
+        OrderStatusEvent(status=status, source=source, actor_user_id=actor_user_id)
+    )
+
+
+def queue_order_status_email(db: Session, order: Order, status: str) -> None:
+    if status not in {"paid", "shipped", "delivered", "cancelled", "refunded"}:
+        return
+
+    number = escape(order.number)
+    account_url = escape(f"{settings.frontend_url}/account?section=orders&order={order.id}", quote=True)
+    tracking = ""
+    if status == "shipped" and order.tracking_carrier and order.tracking_reference:
+        carrier = escape(order.tracking_carrier)
+        reference = escape(order.tracking_reference)
+        tracking_link = ""
+        if order.tracking_url:
+            url = escape(order.tracking_url, quote=True)
+            tracking_link = f'<p><a href="{url}">Track this parcel with {carrier}</a></p>'
+        tracking = f"<p><strong>{carrier}</strong><br>Tracking reference: {reference}</p>{tracking_link}"
+
+    content = {
+        "paid": (
+            f"Order {number} confirmed",
+            "Your books are reserved",
+            f"We received €{order.total_cents / 100:.2f}. We will write again when your parcel leaves our shelves.",
+        ),
+        "shipped": (
+            f"Order {number} is on its way",
+            "Your books have left our shelves",
+            "The parcel is now with the carrier.",
+        ),
+        "delivered": (
+            f"Order {number} delivered",
+            "Your order has been delivered",
+            "Our delivery record now shows this parcel as delivered.",
+        ),
+        "cancelled": (
+            f"Order {number} cancelled",
+            "Your order was cancelled",
+            "This unpaid order will not be prepared or dispatched.",
+        ),
+        "refunded": (
+            f"Order {number} marked as refunded",
+            "Your order was marked as refunded",
+            "The shop has updated the order record. Contact us if you need payment details.",
+        ),
+    }
+    subject, heading, message = content[status]
+    html_body = (
+        '<div style="max-width:600px;margin:auto;padding:32px;color:#173f31;background:#fdfbf7;'
+        'font-family:Arial,sans-serif;line-height:1.6">'
+        '<p style="font-size:12px;letter-spacing:.14em;text-transform:uppercase">Orphaleia · Order update</p>'
+        f'<h1 style="font-family:Georgia,serif;font-weight:400">{heading}</h1>'
+        f"<p>{message}</p>{tracking}"
+        f'<p><a href="{account_url}">View order {number}</a></p>'
+        "</div>"
+    )
+    queue_email(db, order.user.email, subject, html_body)
 
 
 def shipping_quote(db: Session, cart: Cart, country: str) -> dict:
@@ -42,13 +110,21 @@ def shipping_quote(db: Session, cart: Cart, country: str) -> dict:
 
 
 def finalize_payment(db: Session, order: Order, provider: str, external_event_id: str, payload: dict) -> Order:
+    order = db.execute(
+        select(Order)
+        .options(selectinload(Order.user), selectinload(Order.status_events))
+        .where(Order.id == order.id)
+        .with_for_update()
+    ).scalar_one()
     existing = db.scalar(select(PaymentEvent).where(PaymentEvent.external_id == external_event_id))
     if existing:
         return order
     db.add(PaymentEvent(provider=provider, external_id=external_event_id, payload=json.dumps(payload)))
-    if order.status == "paid":
+    if order.status in PAID_ORDER_STATUSES:
         db.commit()
         return order
+    if order.status == "cancelled":
+        raise HTTPException(409, "This order was cancelled before payment completed")
     reservations = db.scalars(
         select(InventoryReservation).where(
             InventoryReservation.order_id == order.id,
@@ -65,15 +141,11 @@ def finalize_payment(db: Session, order: Order, provider: str, external_event_id
         book.stock_qty -= reservation.quantity
         reservation.consumed_at = datetime.now(UTC)
     order.status = "paid"
+    add_order_status_event(db, order, "paid", "payment")
     attempt = db.scalar(select(PaymentAttempt).where(PaymentAttempt.order_id == order.id, PaymentAttempt.provider == provider))
     if attempt:
         attempt.status = "paid"
-    queue_email(
-        db,
-        order.user.email,
-        f"Order {order.number} confirmed",
-        f"<h1>Your books are reserved</h1><p>We received €{order.total_cents / 100:.2f}. We will send another note when your order leaves our shelves.</p>",
-    )
+    queue_order_status_email(db, order, "paid")
     db.commit()
     return order
 
@@ -178,6 +250,8 @@ def release_expired_reservations(db: Session) -> int:
         order = db.get(Order, order_id)
         if order and order.status == "pending_payment":
             order.status = "cancelled"
+            add_order_status_event(db, order, "cancelled", "payment")
+            queue_order_status_email(db, order, "cancelled")
     db.commit()
     return len(reservations)
 

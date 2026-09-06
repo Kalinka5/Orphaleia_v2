@@ -80,7 +80,16 @@ from .security import (
     verify_password,
 )
 from .serializers import author_out, book_out, genre_out, order_out
-from .services import PROVIDERS, finalize_payment, queue_email, reserved_quantity, shipping_quote
+from .services import (
+    PAID_ORDER_STATUSES,
+    PROVIDERS,
+    add_order_status_event,
+    finalize_payment,
+    queue_email,
+    queue_order_status_email,
+    reserved_quantity,
+    shipping_quote,
+)
 from .storage import delete_avatar, save_avatar, save_image
 from .throttle import throttle
 
@@ -748,18 +757,33 @@ def create_order(data: CheckoutInput, user: User = Depends(verified_user), db: S
         db.add(OrderItem(order_id=order.id, book_id=item.book_id, title=item.book.title, isbn=item.book.isbn, cover_url=item.book.cover_url, unit_price_cents=item.book.price_cents, quantity=item.quantity))
         db.add(InventoryReservation(order_id=order.id, book_id=item.book_id, quantity=item.quantity, expires_at=expires))
     db.commit()
-    return order_out(db.scalar(select(Order).options(selectinload(Order.items)).where(Order.id == order.id)))
+    return order_out(
+        db.scalar(
+            select(Order)
+            .options(selectinload(Order.items), selectinload(Order.status_events))
+            .where(Order.id == order.id)
+        )
+    )
 
 
 @app.get("/api/v1/orders")
 def orders_for_user(user: User = Depends(current_user), db: Session = Depends(get_db)):
-    rows = db.scalars(select(Order).options(selectinload(Order.items)).where(Order.user_id == user.id).order_by(Order.created_at.desc())).all()
+    rows = db.scalars(
+        select(Order)
+        .options(selectinload(Order.items), selectinload(Order.status_events))
+        .where(Order.user_id == user.id)
+        .order_by(Order.created_at.desc())
+    ).all()
     return {"items": [order_out(x) for x in rows]}
 
 
 @app.get("/api/v1/orders/{order_id}")
 def order_for_user(order_id: str, user: User = Depends(current_user), db: Session = Depends(get_db)):
-    order = db.scalar(select(Order).options(selectinload(Order.items)).where(Order.id == order_id))
+    order = db.scalar(
+        select(Order)
+        .options(selectinload(Order.items), selectinload(Order.status_events))
+        .where(Order.id == order_id)
+    )
     if not order or (order.user_id != user.id and user.role != "admin"):
         raise HTTPException(404, "Order not found")
     return order_out(order)
@@ -812,7 +836,13 @@ async def complete_payment(provider: str, order_id: str, reference: str, user: U
     for item in list(cart.items):
         db.delete(item)
     db.commit()
-    return order_out(db.scalar(select(Order).options(selectinload(Order.items)).where(Order.id == order.id)))
+    return order_out(
+        db.scalar(
+            select(Order)
+            .options(selectinload(Order.items), selectinload(Order.status_events))
+            .where(Order.id == order.id)
+        )
+    )
 
 
 @app.post("/api/v1/webhooks/stripe")
@@ -867,7 +897,11 @@ def admin_overview(_: User = Depends(admin_user), db: Session = Depends(get_db))
     return {
         "books": db.scalar(select(func.count(Book.id))),
         "customers": db.scalar(select(func.count(User.id)).where(User.role == "customer")),
-        "open_orders": db.scalar(select(func.count(Order.id)).where(Order.status.in_(["paid", "processing"]))),
+        "open_orders": db.scalar(
+            select(func.count(Order.id)).where(
+                Order.status.in_(["paid", "processing", "shipped", "out_for_delivery"])
+            )
+        ),
         "hidden_comments": db.scalar(select(func.count(Comment.id)).where(Comment.visible.is_(False))),
     }
 
@@ -977,21 +1011,68 @@ def update_book(book_id: str, data: BookInput, _: User = Depends(admin_user), db
 
 @app.get("/api/v1/admin/orders")
 def admin_orders(_: User = Depends(admin_user), db: Session = Depends(get_db)):
-    rows = db.scalars(select(Order).options(selectinload(Order.items)).order_by(Order.created_at.desc())).all()
+    rows = db.scalars(
+        select(Order)
+        .options(selectinload(Order.items), selectinload(Order.status_events))
+        .order_by(Order.created_at.desc())
+    ).all()
     return {"items": [order_out(x) for x in rows]}
 
 
 @app.patch("/api/v1/admin/orders/{order_id}", dependencies=[Depends(require_csrf)])
-def admin_order_status(order_id: str, data: OrderStatusInput, _: User = Depends(admin_user), db: Session = Depends(get_db)):
-    allowed = {"pending_payment", "paid", "processing", "shipped", "cancelled", "refunded"}
-    if data.status not in allowed:
-        raise HTTPException(422, "Unsupported order status")
-    order = db.scalar(select(Order).options(selectinload(Order.items), selectinload(Order.user)).where(Order.id == order_id))
+def admin_order_status(
+    order_id: str,
+    data: OrderStatusInput,
+    staff: User = Depends(admin_user),
+    db: Session = Depends(get_db),
+):
+    order = db.scalar(
+        select(Order)
+        .options(selectinload(Order.items), selectinload(Order.user), selectinload(Order.status_events))
+        .where(Order.id == order_id)
+        .with_for_update()
+    )
     if not order:
         raise HTTPException(404, "Order not found")
-    order.status = data.status
-    order.tracking_reference = data.tracking_reference
-    queue_email(db, order.user.email, f"Order {order.number}: {data.status.replace('_', ' ')}", f"<p>Your order is now <strong>{data.status.replace('_', ' ')}</strong>.</p>")
+
+    target = data.status
+    if target == order.status:
+        raise HTTPException(409, "Order is already in this status")
+    if order.status in {"cancelled", "refunded", "delivered"}:
+        raise HTTPException(409, "This order is in a terminal status")
+
+    normal_next = {
+        "paid": "processing",
+        "processing": "shipped",
+        "shipped": "out_for_delivery",
+        "out_for_delivery": "delivered",
+    }
+    allowed = target == normal_next.get(order.status)
+    if order.status == "pending_payment" and target == "cancelled":
+        allowed = True
+    if order.status in PAID_ORDER_STATUSES - {"refunded", "delivered"} and target == "refunded":
+        allowed = True
+    if not allowed:
+        raise HTTPException(409, "This status is not the next valid step for the order")
+
+    if target == "shipped":
+        order.tracking_reference = data.tracking_reference
+        order.tracking_carrier = data.tracking_carrier
+        order.tracking_url = str(data.tracking_url) if data.tracking_url else None
+    elif target == "cancelled":
+        reservations = db.scalars(
+            select(InventoryReservation).where(
+                InventoryReservation.order_id == order.id,
+                InventoryReservation.consumed_at.is_(None),
+                InventoryReservation.released_at.is_(None),
+            )
+        ).all()
+        for reservation in reservations:
+            reservation.released_at = datetime.now(UTC)
+
+    order.status = target
+    add_order_status_event(db, order, target, "admin", staff.id)
+    queue_order_status_email(db, order, target)
     db.commit()
     return order_out(order)
 

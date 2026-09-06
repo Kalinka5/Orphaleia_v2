@@ -12,9 +12,11 @@ export type User = { id: string; email: string; pending_email: string | null; fu
 export type CartItem = { id: string; book_id: string; quantity: number; book: Pick<Book, 'title' | 'slug' | 'cover_url' | 'price_cents' | 'stock_qty'> }
 export type Cart = { id: string; items: CartItem[]; subtotal_cents: number; currency: string }
 export type Address = { name: string; line1: string; line2: string; city: string; postal_code: string; country: string }
+export type OrderStatus = 'pending_payment' | 'paid' | 'processing' | 'shipped' | 'out_for_delivery' | 'delivered' | 'cancelled' | 'refunded'
 export type Order = {
-  id: string; number: string; status: string; subtotal_cents: number; shipping_cents: number; total_cents: number
-  currency: string; tracking_reference?: string; created_at: string; shipping: Address
+  id: string; number: string; status: OrderStatus; subtotal_cents: number; shipping_cents: number; total_cents: number
+  currency: string; tracking_reference?: string | null; tracking_carrier?: string | null; tracking_url?: string | null
+  status_history: Array<{ status: OrderStatus; occurred_at: string }>; created_at: string; shipping: Address
   items: Array<{ book_id: string; title: string; isbn: string; cover_url: string; unit_price_cents: number; quantity: number }>
 }
 export type Page<T> = { items: T[]; page: number; page_size: number; total: number }

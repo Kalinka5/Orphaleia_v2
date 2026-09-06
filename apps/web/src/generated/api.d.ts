@@ -1078,10 +1078,17 @@ export interface components {
         };
         /** OrderStatusInput */
         OrderStatusInput: {
-            /** Status */
-            status: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending_payment" | "paid" | "processing" | "shipped" | "out_for_delivery" | "delivered" | "cancelled" | "refunded";
             /** Tracking Reference */
             tracking_reference?: string | null;
+            /** Tracking Carrier */
+            tracking_carrier?: string | null;
+            /** Tracking Url */
+            tracking_url?: string | null;
         };
         /** PasswordChangeInput */
         PasswordChangeInput: {

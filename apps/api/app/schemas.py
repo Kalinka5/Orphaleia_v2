@@ -131,9 +131,34 @@ class BookInput(BaseModel):
         return self
 
 
+OrderStatus = Literal[
+    "pending_payment",
+    "paid",
+    "processing",
+    "shipped",
+    "out_for_delivery",
+    "delivered",
+    "cancelled",
+    "refunded",
+]
+
+
 class OrderStatusInput(BaseModel):
-    status: str
-    tracking_reference: str | None = None
+    status: OrderStatus
+    tracking_reference: str | None = Field(default=None, min_length=1, max_length=120)
+    tracking_carrier: str | None = Field(default=None, min_length=1, max_length=120)
+    tracking_url: HttpUrl | None = None
+
+    @field_validator("tracking_reference", "tracking_carrier")
+    @classmethod
+    def normalize_tracking_text(cls, value: str | None) -> str | None:
+        return " ".join(value.split()) if value else None
+
+    @model_validator(mode="after")
+    def validate_shipping_details(self):
+        if self.status == "shipped" and (not self.tracking_reference or not self.tracking_carrier):
+            raise ValueError("Carrier and tracking reference are required when an order ships")
+        return self
 
 
 class ShippingZoneInput(BaseModel):

@@ -60,6 +60,12 @@ def order_out(order: Order):
         "total_cents": order.total_cents,
         "currency": order.currency,
         "tracking_reference": order.tracking_reference,
+        "tracking_carrier": order.tracking_carrier,
+        "tracking_url": order.tracking_url,
+        "status_history": [
+            {"status": event.status, "occurred_at": event.occurred_at}
+            for event in order.status_events
+        ],
         "created_at": order.created_at,
         "shipping": {
             "name": order.shipping_name,

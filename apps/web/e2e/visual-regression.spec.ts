@@ -7,7 +7,7 @@ async function settle(page: Page) {
   await page.evaluate(() => document.fonts.ready)
 }
 
-async function mockAuthenticatedReader(page: Page, admin = false) {
+async function mockAuthenticatedReader(page: Page, admin = false, orders: unknown[] = []) {
   const user = {
     id: 'visual-user',
     email: admin ? 'keeper@orphaleia.local' : 'reader@orphaleia.local',
@@ -19,7 +19,7 @@ async function mockAuthenticatedReader(page: Page, admin = false) {
     default_shipping_address: null,
   }
   await page.route('**/api/v1/users/me', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(user) }))
-  await page.route('**/api/v1/orders', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [] }) }))
+  await page.route('**/api/v1/orders', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: orders }) }))
   await page.route('**/api/v1/admin/overview', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ books: 18, orders: 3, readers: 12, comments: 7 }) }))
 }
 
@@ -136,6 +136,26 @@ test('account visual baseline', async ({ page }) => {
   await page.goto('/account')
   await expect(page.getByRole('heading', { name: 'Welcome, Mina' })).toBeVisible()
   await capture(page, 'account')
+})
+
+test('account delivery timeline visual baseline', async ({ page }) => {
+  await mockAuthenticatedReader(page, false, [{
+    id: 'visual-order', number: 'ORP-260905-7536', status: 'delivered', subtotal_cents: 4200, shipping_cents: 770,
+    total_cents: 4970, currency: 'EUR', tracking_carrier: 'Correos', tracking_reference: 'PQ48392761ES',
+    tracking_url: 'https://www.correos.es/track/PQ48392761ES', created_at: '2026-09-05T10:00:00Z',
+    status_history: [
+      { status: 'paid', occurred_at: '2026-09-05T10:01:00Z' },
+      { status: 'processing', occurred_at: '2026-09-05T12:00:00Z' },
+      { status: 'shipped', occurred_at: '2026-09-06T08:00:00Z' },
+      { status: 'out_for_delivery', occurred_at: '2026-09-08T07:00:00Z' },
+      { status: 'delivered', occurred_at: '2026-09-08T14:00:00Z' },
+    ],
+    shipping: { name: 'Mina Reader', line1: '1 Odyssey Way', line2: '', city: 'Madrid', postal_code: '28001', country: 'ES' },
+    items: [{ book_id: 'book-1', title: 'The Test Passage', isbn: '9780000099999', cover_url: '/covers/test.svg', unit_price_cents: 4200, quantity: 1 }],
+  }])
+  await page.goto('/account?section=orders&order=visual-order')
+  await expect(page.getByRole('list', { name: /Delivery progress/ })).toBeVisible()
+  await capture(page, 'account-order-timeline')
 })
 
 test('admin visual baseline', async ({ page }) => {

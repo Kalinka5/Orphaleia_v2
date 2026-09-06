@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AccountHub } from '../components/AccountHub'
-import type { User } from '../types'
+import type { Order, User } from '../types'
 
 const user: User = {
   id: 'reader-1',
@@ -14,6 +14,29 @@ const user: User = {
   role: 'customer',
   is_verified: true,
   default_shipping_address: null,
+}
+
+const deliveredOrder: Order = {
+  id: 'order-1',
+  number: 'ORP-260905-7536',
+  status: 'delivered',
+  subtotal_cents: 4200,
+  shipping_cents: 770,
+  total_cents: 4970,
+  currency: 'EUR',
+  tracking_carrier: 'Correos',
+  tracking_reference: 'PQ48392761ES',
+  tracking_url: 'https://www.correos.es/track/PQ48392761ES',
+  created_at: '2026-09-05T10:00:00Z',
+  status_history: [
+    { status: 'paid', occurred_at: '2026-09-05T10:01:00Z' },
+    { status: 'processing', occurred_at: '2026-09-05T12:00:00Z' },
+    { status: 'shipped', occurred_at: '2026-09-06T08:00:00Z' },
+    { status: 'out_for_delivery', occurred_at: '2026-09-08T07:00:00Z' },
+    { status: 'delivered', occurred_at: '2026-09-08T14:00:00Z' },
+  ],
+  shipping: { name: 'Test Reader', line1: '1 Odyssey Way', line2: '', city: 'Madrid', postal_code: '28001', country: 'ES' },
+  items: [{ book_id: 'book-1', title: 'The Test Passage', isbn: '9780000099999', cover_url: '/covers/test.svg', unit_price_cents: 4200, quantity: 1 }],
 }
 
 function renderHub(path = '/account', currentUser = user, refresh = vi.fn(async () => {})) {
@@ -30,6 +53,34 @@ describe('AccountHub', () => {
     renderHub('/account?section=unknown')
     expect(screen.getByRole('link', { name: /Orders/ })).toHaveAttribute('aria-current', 'page')
     expect(await screen.findByRole('heading', { name: 'Books on their way and on your shelf' })).toBeInTheDocument()
+  })
+
+  it('opens a deep-linked order with timeline, delivery, and safe carrier tracking', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ items: [deliveredOrder] }), { status: 200, headers: { 'Content-Type': 'application/json' } })))
+    renderHub('/account?section=orders&order=order-1')
+    const summary = await screen.findByRole('button', { name: /ORP-260905-7536/ })
+    expect(summary).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('list', { name: /Delivery progress/ })).toBeInTheDocument()
+    expect(screen.getByText('PQ48392761ES')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Track with carrier/ })).toHaveAttribute('href', deliveredOrder.tracking_url)
+    expect(screen.getByText((_content, element) => element?.tagName === 'ADDRESS' && Boolean(element.textContent?.includes('1 Odyssey Way')))).toBeInTheDocument()
+  })
+
+  it('explains missing legacy history without inventing dates', async () => {
+    const legacyOrder = { ...deliveredOrder, status: 'shipped' as const, status_history: [] }
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ items: [legacyOrder] }), { status: 200, headers: { 'Content-Type': 'application/json' } })))
+    renderHub()
+    fireEvent.click(await screen.findByRole('button', { name: /ORP-260905-7536/ }))
+    expect(screen.getByText('Earlier updates were recorded before timeline tracking began.')).toBeInTheDocument()
+    expect(screen.getAllByText('Recorded before timeline tracking began')).toHaveLength(3)
+  })
+
+  it('shows refunded orders as an exception rather than a delivery step', async () => {
+    const refundedOrder = { ...deliveredOrder, status: 'refunded' as const, status_history: [...deliveredOrder.status_history.slice(0, 2), { status: 'refunded' as const, occurred_at: '2026-09-06T09:00:00Z' }] }
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ items: [refundedOrder] }), { status: 200, headers: { 'Content-Type': 'application/json' } })))
+    renderHub('/account?section=orders&order=order-1')
+    expect(await screen.findByText('This order is recorded as refunded. Contact the shop if you need payment details.')).toBeInTheDocument()
+    expect(screen.queryByText('Earlier updates were recorded before timeline tracking began.')).not.toBeInTheDocument()
   })
 
   it('saves a public display name from the profile section', async () => {

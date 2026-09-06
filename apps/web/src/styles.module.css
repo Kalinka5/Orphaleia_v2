@@ -161,6 +161,52 @@
 .readerRows { margin-top: 24px; border-top: 1px solid var(--line); }.readerRows article { min-height: 82px; padding: 16px 0; display: grid; grid-template-columns: 50px minmax(220px, 1fr) auto; align-items: center; gap: 18px; border-bottom: 1px solid var(--line); }.readerRows article > div { display: flex; flex-direction: column; gap: 5px; }.readerRows small { color: var(--ink-muted); }
 
 .adminForms { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }.adminForms form { margin: 0; padding: 25px; background: white; border: 1px solid var(--line); }.adminForms h3 { margin: 0; font: 30px 'GFS Didot'; }.adminForms small { color: var(--ink-muted); }.shippingList { border-top: 1px solid var(--line); }.shippingList article { min-height: 70px; display: grid; grid-template-columns: 1fr 180px 180px; align-items: center; gap: 20px; border-bottom: 1px solid var(--line); }.shippingList article div { display: flex; flex-direction: column; }.shippingList small { color: var(--ink-muted); }.inlineForm { display: grid; grid-template-columns: repeat(4, 1fr) auto; align-items: end; gap: 10px; margin-top: 35px; padding: 20px; background: var(--marble); }.inlineForm label { display: flex; flex-direction: column; gap: 6px; font-size: 11px; font-weight: 600; }.inlineForm input { min-width: 0; width: 100%; min-height: 44px; padding: 0 10px; border: 1px solid var(--line); background: white; }
+.adminOrders { margin-top: 26px; border-top: 1px solid var(--line); }
+.adminOrder { border-bottom: 1px solid var(--line); background: transparent; transition: background .2s ease; }
+.adminOrder[data-expanded] { background: rgba(255,255,255,.58); }
+.adminOrderSummary { width: 100%; min-height: 86px; padding: 16px 14px; display: grid; grid-template-columns: minmax(190px, 2fr) minmax(90px, .7fr) minmax(130px, .8fr) minmax(100px, .65fr); align-items: center; gap: 20px; border: 0; color: var(--night); background: transparent; text-align: left; cursor: pointer; transition: background .2s ease; }
+.adminOrderSummary:hover { background: rgba(255,255,255,.72); }
+.adminOrderSummary:focus-visible { outline: 2px solid var(--bronze); outline-offset: 2px; }
+.adminOrderSummary > div { display: flex; flex-direction: column; gap: 5px; }
+.adminOrderSummary small { color: var(--ink-muted); font-size: 11px; }
+.adminOrderSummary > span:nth-child(2) { font: 600 12px 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+.adminStatus { width: fit-content; padding: 7px 9px; color: #335443; background: #e4eee8; border-radius: 8px; font: 600 9px 'JetBrains Mono', monospace; letter-spacing: .06em; text-transform: uppercase; }
+.adminStatus[data-status='pending_payment'] { color: #74552f; background: #f3e7d5; }
+.adminStatus[data-status='cancelled'], .adminStatus[data-status='refunded'] { color: #813a34; background: #f3dfda; }
+.adminStatus[data-status='delivered'] { color: #fff; background: #285f4c; }
+.manageLabel { display: inline-flex; align-items: center; justify-content: flex-end; gap: 7px; color: var(--bronze); font-size: 12px; font-weight: 600; }
+.manageLabel svg { transition: transform .2s ease; }
+.adminOrderSummary[aria-expanded='true'] .manageLabel svg { transform: rotate(180deg); }
+.adminOrderBody { padding: 10px 20px 28px; display: grid; grid-template-columns: minmax(210px, .72fr) minmax(340px, 1.28fr); gap: clamp(28px, 5vw, 68px); animation: adminOrderReveal .22s ease both; }
+@keyframes adminOrderReveal { from { opacity: 0; transform: translateY(-7px); } }
+.adminOrderBody h3 { margin: 0 0 15px; color: var(--night); font: 400 25px 'GFS Didot', Georgia, serif; }
+.adminOrderHistory ol { margin: 0; padding: 0; list-style: none; }
+.adminOrderHistory li { padding: 8px 0; display: flex; align-items: flex-start; gap: 9px; color: #285f4c; }
+.adminOrderHistory li span, .adminOrderHistory li b, .adminOrderHistory li small { display: block; }
+.adminOrderHistory li b { color: var(--night); font-size: 12px; }
+.adminOrderHistory li small, .adminOrderHistory > p { margin-top: 3px; color: var(--ink-muted); font-size: 10px; line-height: 1.5; }
+.adminOrderActions > .secondaryButton { gap: 9px; }
+.adminOrderComplete { color: var(--ink-muted); font-size: 12px; }
+.shipmentForm { margin: 0; padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; background: #f1eee6; border: 1px solid var(--line); }
+.shipmentForm label { display: flex; flex-direction: column; gap: 6px; color: #26352e; font-size: 11px; font-weight: 600; }
+.shipmentForm label:nth-child(3), .shipmentForm button { grid-column: 1 / -1; }
+.shipmentForm label span { color: var(--ink-muted); font-weight: 400; }
+.shipmentForm input { width: 100%; min-height: 44px; padding: 0 11px; border: 1px solid #cfd7d2; border-radius: 8px; color: var(--night); background: white; }
+.shipmentForm input:focus { border-color: var(--bronze); box-shadow: 0 0 0 3px rgba(40,95,76,.13); outline: 0; }
+.exceptionActions { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 14px; }
+.exceptionActions button { min-height: 40px; padding: 0; border: 0; color: #8a493f; background: transparent; font-size: 11px; font-weight: 600; text-decoration: underline; text-underline-offset: 4px; }
+.exceptionActions button:hover:not(:disabled) { color: #6d3028; }
+.orderConfirmation { grid-column: 1 / -1; padding: 18px 20px; display: grid; grid-template-columns: auto 1fr; align-items: start; gap: 13px; color: #6f4928; background: #f6ecde; border-left: 3px solid #a77843; }
+.orderConfirmation b { color: #4c321d; }
+.orderConfirmation p { max-width: 72ch; margin: 5px 0 14px; font-size: 12px; line-height: 1.55; }
+.orderConfirmation > div > div { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+.orderConfirmation .textButton { color: #6f4928; }
+.adminOrderBody > .formError { grid-column: 1 / -1; margin: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .adminOrderBody { animation: none; }
+  .adminOrder, .adminOrderSummary, .manageLabel svg { transition: none; }
+}
 
 .footer { padding: 70px clamp(28px, 7vw, 112px) 25px; display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 50px; color: rgba(240,231,211,.75); background: #071727; font-size: 13px; }.footerBrand { color: var(--marble); font: 44px 'GFS Didot'; }.footer > div:not(:first-child) { display: flex; flex-direction: column; gap: 10px; }.footer b { color: #83b59f; font: 10px 'IBM Plex Mono'; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 8px; }.footer a { text-decoration: none; }.copyright { grid-column: 1/-1; border-top: 1px solid rgba(240,231,211,.12); padding-top: 22px; margin: 20px 0 0; font: 8px 'IBM Plex Mono'; letter-spacing: .09em; text-transform: uppercase; }
 
@@ -185,6 +231,12 @@
   .authPage { grid-template-columns: 1fr; }.authAside { min-height: 400px; padding: 65px 25px; }.authAside h1 { font-size: 60px; }.authAside .seal { display: none; }.authForm { padding: 60px 0; }.formColumns { grid-template-columns: 1fr; }
   .cartLayout, .checkoutPage { grid-template-columns: 1fr; }.cartItems article { grid-template-columns: 70px 1fr; }.cartItems img { width: 65px; height: 98px; }.cartItems article > b { grid-column: 2; }.orderCard { position: static; }.checkoutPage { padding: 65px 22px; }.checkoutPage h1 { font-size: 55px; }.checkoutForm { grid-template-columns: 1fr; }.checkoutForm label:nth-child(2), .checkoutForm label:nth-child(3), .checkoutForm .secondaryButton { grid-column: auto; }.orders article { grid-template-columns: 1fr auto; }.orders > article > b { grid-column: 2; }
   .adminPage { grid-template-columns: 1fr; }.adminNav { padding: 35px 22px; }.adminNav h1 { margin: 10px 0; }.adminNav button { display: inline-block; width: auto; margin-right: 5px; }.adminContent { padding: 45px 22px; }.stats { grid-template-columns: 1fr 1fr; }.moderation article { align-items: flex-start; flex-direction: column; }.readerRows article { grid-template-columns: 50px 1fr; }.readerRows article > button, .readerRows article > span { grid-column: 2; justify-self: start; }.adminForms { grid-template-columns: 1fr; }.shippingList article { grid-template-columns: 1fr; padding: 16px 0; gap: 6px; }.inlineForm { grid-template-columns: 1fr; }.footer { grid-template-columns: 1fr; padding: 55px 24px 24px; }.copyright { grid-column: 1; }
+  .adminOrderSummary { grid-template-columns: 1fr auto; gap: 10px 18px; }
+  .adminOrderSummary .adminStatus { grid-column: 1; }
+  .manageLabel { grid-column: 2; grid-row: 1 / 3; }
+  .adminOrderBody { grid-template-columns: 1fr; }
+  .shipmentForm { grid-template-columns: 1fr; }
+  .shipmentForm label:nth-child(3), .shipmentForm button { grid-column: auto; }
 }
 
 /* Home experience */
