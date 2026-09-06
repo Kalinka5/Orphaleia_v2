@@ -48,6 +48,13 @@ function renderHub(path = '/account', currentUser = user, refresh = vi.fn(async 
 afterEach(() => vi.unstubAllGlobals())
 
 describe('AccountHub', () => {
+  it('welcomes the reader with the Dorian Gray portrait scene', () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ items: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } })))
+    renderHub()
+    expect(screen.getByRole('heading', { name: 'Welcome, Test' })).toBeInTheDocument()
+    expect(screen.getByAltText(/Dorian Gray leans against the page/)).toHaveAttribute('src', '/assets/account/dorian-gray-account-header-v3.png')
+  })
+
   it('defaults invalid sections to the order history', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ items: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } })))
     renderHub('/account?section=unknown')

@@ -221,7 +221,10 @@ export function AccountHub({ user, refresh }: { user: User; refresh: () => Promi
   return <section className={s.page} aria-labelledby="account-title">
     <header className={s.header}>
       <ReaderAvatar name={user.full_name} src={user.avatar_url} size="account" />
-      <div><span className={s.kicker}>Reader’s account</span><h1 id="account-title">Welcome, {user.full_name.split(' ')[0]}</h1><p>{user.email}<span aria-hidden="true"> · </span>{user.is_verified ? 'Verified reader' : 'Email verification pending'}</p></div>
+      <div className={s.greeting}><span className={s.kicker}>Reader’s account</span><h1 id="account-title">Welcome, {user.full_name.split(' ')[0]}</h1><p>{user.email}<span aria-hidden="true"> · </span>{user.is_verified ? 'Verified reader' : 'Email verification pending'}</p></div>
+      <figure className={s.dorian}>
+        <img src="/assets/account/dorian-gray-account-header-v3.png" alt="Dorian Gray leans against the page and presents a golden frame containing his frightening, corrupted portrait." width="1024" height="1536" decoding="async" />
+      </figure>
     </header>
     <div className={s.folio}>
       <nav className={s.navigation} aria-label="Account sections">
