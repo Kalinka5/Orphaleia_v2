@@ -176,7 +176,7 @@ export function MarketGlobe() {
     positionLabel()
   }
 
-  return <section className={s.section} aria-labelledby="market-globe-title">
+  return <section className={s.section} aria-labelledby="market-globe-title" data-home-motion="section">
     <header className={s.header}><div><span className={s.notice}>Concept preview · Fictional data</span><h2 id="market-globe-title">A world of readers</h2><p>Explore how annual print-book sales could compare across markets.</p></div><Link to="/rankings?preview=concept">Explore the chart <ArrowUpRight size={18} aria-hidden="true" /></Link></header>
     <div className={s.layout}>
       <figure className={s.figure}>

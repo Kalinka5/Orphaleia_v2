@@ -282,16 +282,18 @@
   mask-image: linear-gradient(to bottom, #000 0 62%, rgba(0, 0, 0, .92) 68%, transparent 84%);
 }
 .dwarfLeft1 { left: 0; top: calc(var(--dwarf-reveal-space) + 22%); transform: translate(-66%, -50%) rotate(-2deg); }
-.dwarfLeft2 { left: 0; top: auto; bottom: -2%; transform: translate(-64%, 0) rotate(2deg); }
+.dwarfLeft2 { left: 0; top: auto; bottom: 4px; transform: translate(-64%, 0) rotate(2deg); }
 .dwarfTop1, .dwarfTop2, .dwarfTop3 { width: clamp(176px, 15vw, 220px); top: var(--dwarf-reveal-space); transform: translate(-50%, -88%); }
 .dwarfTop1 { left: 27%; transform: translate(-50%, -86%) rotate(-2deg); }
 .dwarfTop2 { left: 50%; z-index: 2; transform: translate(-50%, -90%); }
 .dwarfTop3 { left: 73%; transform: translate(-50%, -86%) rotate(2deg); }
 .dwarfRight1 { right: 0; top: calc(var(--dwarf-reveal-space) + 25%); transform: translate(65%, -50%) rotate(2deg); }
 .dwarfRight1 img { transform: scaleX(-1); }
-.dwarfRight2 { right: 0; top: auto; bottom: -2%; transform: translate(64%, 0) rotate(-2deg); }
+.dwarfRight2 { right: 0; top: auto; bottom: 4px; transform: translate(64%, 0) rotate(-2deg); }
 .featuredBento { width: 100%; max-width: 1420px; min-height: 840px; margin: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); grid-auto-flow: dense; gap: 1px; position: relative; z-index: 3; background: #a7a99f; border: 1px solid #a7a99f; }
-.bentoBook { min-width: 0; min-height: 0; display: grid; position: relative; isolation: isolate; overflow: hidden; color: white; background: #191c17; text-decoration: none; }
+.bentoBook { min-width: 0; min-height: 0; display: grid; position: relative; isolation: isolate; overflow: hidden; color: white; background: #191c17; text-decoration: none; transform-origin: center; }
+.bentoBook::after { content: ''; position: absolute; inset: 0; z-index: 3; border: 1px solid rgba(255,255,255,0); box-shadow: inset 0 0 0 1px rgba(255,255,255,0); pointer-events: none; transition: border-color .45s ease, box-shadow .45s ease; }
+.bentoBook:hover::after, .bentoBook:focus-visible::after { border-color: rgba(255,255,255,.38); box-shadow: inset 0 0 36px rgba(255,255,255,.08); }
 .bentoBook1 { grid-column: span 2; grid-row: span 2; }
 .bentoBook2 { grid-column: span 2; grid-row: span 1; grid-template-columns: 1fr 1fr; }
 .bentoBook3, .bentoBook4 { grid-column: span 1; grid-row: span 1; }
@@ -299,7 +301,8 @@
 .bentoImage::after { content: ''; position: absolute; inset: 0; z-index: 1; background: linear-gradient(180deg, transparent 28%, rgba(3,5,3,.84)); pointer-events: none; }
 .bentoImage img { width: 100%; height: 100%; object-fit: cover; filter: saturate(.55) contrast(1.1); transition: transform .7s ease-out, filter .7s ease-out; }
 .bentoBook:hover .bentoImage img { transform: scale(1.05); filter: saturate(.8) contrast(1.05); }
-.bentoCopy { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; padding: clamp(22px, 3vw, 44px); }
+.bentoCopy { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; padding: clamp(22px, 3vw, 44px); transition: transform .55s cubic-bezier(.22,1,.36,1); }
+.bentoBook:hover .bentoCopy, .bentoBook:focus-visible .bentoCopy { transform: translateY(-7px); }
 .bentoCopy > span { color: rgba(255,255,255,.67); font: 500 9px/1 'IBM Plex Mono', monospace; letter-spacing: .12em; text-transform: uppercase; }
 .bentoCopy h3 { max-width: 600px; margin: 10px 0 5px; font: 500 clamp(25px, 3.5vw, 56px)/.98 'Geist', sans-serif; letter-spacing: -.055em; }
 .bentoCopy p { margin: 0; color: rgba(255,255,255,.65); font-size: 12px; }
@@ -330,8 +333,9 @@
 .stackCard p { display: -webkit-box; margin: 0 0 30px; overflow: hidden; color: #565b50; font-size: 14px; line-height: 1.6; -webkit-box-orient: vertical; -webkit-line-clamp: 4; }
 .stackCard > div a { align-self: flex-start; color: #141610; font-size: 12px; font-weight: 600; text-decoration: none; border-bottom: 1px solid; padding-bottom: 5px; }
 .stackImage { display: block; min-width: 0; min-height: 0; overflow: hidden; }
-.stackImage img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(.35) contrast(1.1); transition: transform .7s ease-out; }
-.stackImage:hover img { transform: scale(1.05); }
+.stackImageFrame { width: 100%; height: 100%; display: block; transform-origin: center; will-change: transform; }
+.stackImage img { width: 100%; height: 100%; display: block; object-fit: cover; filter: grayscale(.35) contrast(1.1); transition: transform .75s cubic-bezier(.22,1,.36,1), filter .6s ease; }
+.stackImage:hover img, .stackImage:focus-visible img { transform: scale(1.045); filter: grayscale(0) contrast(1.04); }
 
 .genreSection { padding: clamp(120px, 14vw, 220px) clamp(22px, 5vw, 80px) clamp(52px, 5vw, 88px); color: #11130f; background: #d8d2c5; }
 .genreHeading { min-height: 0; position: relative; isolation: isolate; align-items: end; }
@@ -359,7 +363,8 @@
   .cheshireCat { transform: translateX(clamp(-340px, calc(-20.6vw - 4px), -220px)); }
 }
 .genreAccordion { --genre-panel-size: 618px; max-width: 1420px; height: 620px; margin: 0 auto; display: flex; overflow: hidden; border-block: 1px solid #7d8076; }
-.genreSlice { flex: 1 1 0; min-width: 74px; position: relative; isolation: isolate; overflow: hidden; color: #12140f; background: #d8d2c5; border-right: 1px solid #7d8076; text-decoration: none; transition: flex-grow .7s cubic-bezier(.2,.8,.2,1), flex-basis .7s cubic-bezier(.2,.8,.2,1), background .45s ease; }
+.genreSlice { flex: 1 1 0; min-width: 74px; position: relative; isolation: isolate; overflow: hidden; color: #12140f; background: #d8d2c5; border-right: 1px solid #7d8076; text-decoration: none; transform-origin: center bottom; transition: flex-grow .7s cubic-bezier(.2,.8,.2,1), flex-basis .7s cubic-bezier(.2,.8,.2,1), background .45s ease, filter .45s ease; }
+.genreSlice:hover, .genreSlice:focus-visible { filter: brightness(1.04); }
 .genreSlice:last-child { border-right: 0; }
 .genreSlice:hover, .genreSlice:focus-visible, .genreSlice:first-child { flex: 0 0 var(--genre-panel-size); }
 .genreSlice:focus-visible { z-index: 5; outline-offset: -4px; }
@@ -507,7 +512,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .heroWord, .stackCard, .genreArt img, .genreCopy, .wonderlandTeaParty { transform: none !important; opacity: 1 !important; transition: none !important; }
+  .heroWord, .stackCard, .stackImageFrame, .genreArt img, .genreCopy, .wonderlandTeaParty, .bentoBook, .bentoCopy, [data-home-motion] { transform: none !important; opacity: 1 !important; transition: none !important; }
   .sleepMarks i { animation: none; opacity: 1; }
   .cheshireCat img { animation: none; }
 }

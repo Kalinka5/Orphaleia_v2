@@ -44,7 +44,7 @@ function BrowseLink() {
 }
 
 export function CtaWithMarquee() {
-  return <section className={styles.section} aria-labelledby="book-marquee-cta-title">
+  return <section className={styles.section} aria-labelledby="book-marquee-cta-title" data-home-motion="section">
     <div className={styles.inner}>
       <div className={styles.copy}>
         <p className={styles.eyebrow}>For people who read beyond the final page</p>

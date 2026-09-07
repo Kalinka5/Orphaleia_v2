@@ -228,8 +228,8 @@ function Testimonials() {
   const secondColumn = readerTestimonials.slice(3, 6)
   const thirdColumn = readerTestimonials.slice(6, 9)
 
-  return <section className={s.testimonialsSection} aria-labelledby="reader-notes-title">
-    <div className={s.testimonialsHeadingStage} data-testid="reader-notes-characters">
+  return <section className={s.testimonialsSection} aria-labelledby="reader-notes-title" data-home-motion="section">
+    <div className={s.testimonialsHeadingStage} data-testid="reader-notes-characters" data-home-motion="heading">
       <figure className={`${s.readerNotesCharacter} ${s.readerNotesPeter}`} data-testid="reader-notes-peter" aria-hidden="true">
         <img src="/assets/landing/peter-pan-reader-notes.png" alt="" width="1024" height="1536" loading="lazy" decoding="async" />
       </figure>
@@ -246,7 +246,7 @@ function Testimonials() {
         <img src="/assets/landing/captain-hook-reader-notes.png" alt="" width="1024" height="1536" loading="lazy" decoding="async" />
       </figure>
     </div>
-    <div className={s.testimonialsColumns}>
+    <div className={s.testimonialsColumns} data-home-motion="columns">
       <TestimonialsColumn testimonials={firstColumn} duration={18} paused={paused} />
       <TestimonialsColumn testimonials={secondColumn} className={s.testimonialsSecondColumn} duration={22} paused={paused} />
       <TestimonialsColumn testimonials={thirdColumn} className={s.testimonialsThirdColumn} duration={20} paused={paused} />
@@ -287,24 +287,31 @@ function Home() {
           .from(`.${s.heroButtons}`, { y: 18, duration: .72, ease: 'power3.out' }, '-=.56')
           .from(`.${s.heroBookStage}`, { y: 72, scale: .96, opacity: 0, duration: 1.05, ease: 'power3.out' }, '-=.72')
 
-        gsap.utils.toArray<HTMLElement>(`.${s.stackCard}`).forEach((card, index) => {
-          gsap.fromTo(card, { y: 110, scale: 0.92, rotate: index % 2 ? 1.5 : -1.5 }, { y: 0, scale: 1, rotate: 0, ease: 'none', scrollTrigger: { trigger: card, start: 'top 92%', end: 'top 38%', scrub: 1 } })
+        gsap.utils.toArray<HTMLElement>('[data-home-motion="section"]').forEach((section) => {
+          gsap.from(section, {
+            y: 54,
+            opacity: 0,
+            duration: 1,
+            ease: 'power3.out',
+            scrollTrigger: { trigger: section, start: 'top 88%', once: true },
+          })
         })
 
-        gsap.from(`.${s.quixoteTableau}`, {
-          y: 38,
+        gsap.from('[data-home-motion="heading"] > *', {
+          y: 36,
+          opacity: 0,
+          duration: .8,
+          stagger: .1,
+          ease: 'power3.out',
+          scrollTrigger: { trigger: '[data-home-motion="heading"]', start: 'top 82%', once: true },
+        })
+
+        gsap.from('[data-home-motion="columns"]', {
+          y: 48,
           opacity: 0,
           duration: .9,
           ease: 'power3.out',
-          scrollTrigger: { trigger: `.${s.collectionStory}`, start: 'top 78%', once: true },
-        })
-
-        gsap.from(`.${s.wonderlandTeaParty}`, {
-          y: 54,
-          opacity: 0,
-          duration: 1,
-          ease: 'power3.out',
-          scrollTrigger: { trigger: `.${s.wonderlandTeaParty}`, start: 'top 88%', once: true },
+          scrollTrigger: { trigger: '[data-home-motion="columns"]', start: 'top 88%', once: true },
         })
       }, root)
     }
@@ -321,6 +328,111 @@ function Home() {
     const genre = genres.data?.items.find((item) => item.slug === slug)
     return genre ? [genre] : []
   })
+
+  useEffect(() => {
+    if (!featured.length || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    let cancelled = false
+    let context: { revert: () => void } | undefined
+    async function animateFeatured() {
+      const [{ default: gsap }, { ScrollTrigger }] = await Promise.all([import('gsap'), import('gsap/ScrollTrigger')])
+      if (cancelled || !root.current) return
+      gsap.registerPlugin(ScrollTrigger)
+      context = gsap.context(() => {
+        gsap.from(`.${s.featuredSection} .${s.editorialHeading} > *`, {
+          y: 52,
+          opacity: 0,
+          duration: .9,
+          stagger: .12,
+          ease: 'power3.out',
+          scrollTrigger: { trigger: `.${s.featuredSection}`, start: 'top 78%', once: true },
+        })
+
+        gsap.from(`.${s.bentoBook}`, {
+          y: 72,
+          scale: .96,
+          opacity: 0,
+          duration: 1,
+          stagger: .1,
+          ease: 'power3.out',
+          scrollTrigger: { trigger: `.${s.featuredBento}`, start: 'top 82%', once: true },
+        })
+
+        gsap.from(`.${s.featuredDwarf}`, {
+          opacity: 0,
+          duration: .7,
+          stagger: .06,
+          ease: 'power2.out',
+          scrollTrigger: { trigger: `.${s.featuredBentoStage}`, start: 'top 80%', once: true },
+        })
+
+        gsap.from(`.${s.collectionIntro} > :not(.${s.quixoteTableau})`, {
+          y: 34,
+          opacity: 0,
+          duration: .8,
+          stagger: .09,
+          ease: 'power3.out',
+          scrollTrigger: { trigger: `.${s.collectionStory}`, start: 'top 78%', once: true },
+        })
+
+        gsap.from(`.${s.quixoteTableau}`, {
+          y: 44,
+          opacity: 0,
+          duration: 1,
+          ease: 'power3.out',
+          scrollTrigger: { trigger: `.${s.collectionStory}`, start: 'top 76%', once: true },
+        })
+
+        gsap.utils.toArray<HTMLElement>(`.${s.stackCard}`).forEach((card, index) => {
+          gsap.fromTo(card,
+            { y: 110, scale: .93, rotate: index % 2 ? 1.2 : -1.2 },
+            { y: 0, scale: 1, rotate: 0, ease: 'none', scrollTrigger: { trigger: card, start: 'top 94%', end: 'top 42%', scrub: .8 } },
+          )
+          const imageFrame = card.querySelector<HTMLElement>(`.${s.stackImageFrame}`)
+          if (imageFrame) gsap.fromTo(imageFrame, { scale: 1.08, yPercent: -3 }, { scale: 1.08, yPercent: 3, ease: 'none', scrollTrigger: { trigger: card, start: 'top bottom', end: 'bottom top', scrub: 1.2 } })
+        })
+      }, root)
+    }
+    void animateFeatured()
+    return () => { cancelled = true; context?.revert() }
+  }, [featured.length])
+
+  useEffect(() => {
+    if (!collectionGenres.length || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    let cancelled = false
+    let context: { revert: () => void } | undefined
+    async function animateGenres() {
+      const [{ default: gsap }, { ScrollTrigger }] = await Promise.all([import('gsap'), import('gsap/ScrollTrigger')])
+      if (cancelled || !root.current) return
+      gsap.registerPlugin(ScrollTrigger)
+      context = gsap.context(() => {
+        gsap.from(`.${s.genreHeading} > *`, {
+          y: 48,
+          opacity: 0,
+          duration: .9,
+          stagger: .12,
+          ease: 'power3.out',
+          scrollTrigger: { trigger: `.${s.genreSection}`, start: 'top 80%', once: true },
+        })
+        gsap.from(`.${s.genreSlice}`, {
+          y: 58,
+          opacity: 0,
+          duration: .85,
+          stagger: .08,
+          ease: 'power3.out',
+          scrollTrigger: { trigger: `.${s.genreAccordion}`, start: 'top 86%', once: true },
+        })
+        gsap.from(`.${s.wonderlandTeaParty}`, {
+          y: 54,
+          opacity: 0,
+          duration: 1,
+          ease: 'power3.out',
+          scrollTrigger: { trigger: `.${s.wonderlandTeaParty}`, start: 'top 90%', once: true },
+        })
+      }, root)
+    }
+    void animateGenres()
+    return () => { cancelled = true; context?.revert() }
+  }, [collectionGenres.length])
 
   return <div ref={root} className={s.home}>
     <section className={s.hero} aria-labelledby="home-hero-title">
@@ -395,7 +507,7 @@ function Home() {
           const illustration = getLandingIllustration(book, 'story')
           return <article className={s.stackCard} data-collection-slug={book.slug} key={book.id} style={{ zIndex: index + 1 }}>
             <div><span>{String(index + 1).padStart(2, '0')}</span><h3>{book.title}</h3><p>{book.description}</p><Link to={`/books/${book.slug}`}>Open this book</Link></div>
-            <Link className={s.stackImage} to={`/books/${book.slug}`}><img src={illustration.src} alt={illustration.alt} loading="lazy" decoding="async" style={{ objectPosition: illustration.objectPosition }} /></Link>
+            <Link className={s.stackImage} to={`/books/${book.slug}`}><span className={s.stackImageFrame}><img src={illustration.src} alt={illustration.alt} loading="lazy" decoding="async" style={{ objectPosition: illustration.objectPosition }} /></span></Link>
           </article>
         })}
       </div>
