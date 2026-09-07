@@ -19,6 +19,14 @@ export const homepageFeaturedBookSlugs = [
   'twenty-thousand-leagues-under-the-sea',
 ] as const
 
+export const homepageHeroBookSlugs = [
+  'twenty-thousand-leagues-under-the-sea',
+  'romeo-and-juliet',
+  'the-adventures-of-sherlock-holmes',
+  'the-little-prince',
+  'the-hobbit',
+] as const
+
 export const landingIllustrations = {
   'romeo-and-juliet': {
     featured: {
@@ -73,6 +81,14 @@ export const landingIllustrations = {
 export function orderHomepageBooks(books: Book[]): Book[] {
   const bySlug = new Map(books.map((book) => [book.slug, book]))
   return homepageFeaturedBookSlugs.flatMap((slug) => {
+    const book = bySlug.get(slug)
+    return book ? [book] : []
+  })
+}
+
+export function orderHomepageHeroBooks(books: Book[]): Book[] {
+  const bySlug = new Map(books.map((book) => [book.slug, book]))
+  return homepageHeroBookSlugs.flatMap((slug) => {
     const book = bySlug.get(slug)
     return book ? [book] : []
   })

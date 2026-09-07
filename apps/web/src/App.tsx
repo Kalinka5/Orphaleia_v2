@@ -15,7 +15,7 @@ import { CtaWithMarquee } from './components/ui/cta-with-marquee'
 import { CatalogCharacterScene } from './components/CatalogCharacterScene'
 import { TestimonialsColumn, type Testimonial } from './components/ui/testimonials-columns-1'
 import { getGenreIllustration, homepageGenreSlugs } from './genreIllustrations'
-import { getLandingIllustration, orderHomepageBooks } from './landingIllustrations'
+import { getLandingIllustration, orderHomepageBooks, orderHomepageHeroBooks } from './landingIllustrations'
 import { formatSalesUnits, salesBarRatio } from './rankingUtils'
 import { getRankingPreview } from './rankingPreview'
 import { MarketGlobe } from './components/MarketGlobe'
@@ -215,9 +215,11 @@ const featuredDwarfs = [
 ] as const
 
 const fallbackHeroBooks: HeroBook[] = [
+  { slug: 'twenty-thousand-leagues-under-the-sea', title: 'Twenty Thousand Leagues Under the Sea', cover_url: '/covers/twenty-thousand-leagues-under-the-sea.webp' },
   { slug: 'romeo-and-juliet', title: 'Romeo and Juliet', cover_url: '/covers/romeo-and-juliet.webp' },
   { slug: 'the-adventures-of-sherlock-holmes', title: 'The Adventures of Sherlock Holmes', cover_url: '/covers/the-adventures-of-sherlock-holmes.webp' },
   { slug: 'the-little-prince', title: 'The Little Prince', cover_url: '/covers/the-little-prince.webp' },
+  { slug: 'the-hobbit', title: 'The Hobbit', cover_url: '/covers/the-hobbit.webp' },
 ]
 
 function Testimonials() {
@@ -311,9 +313,10 @@ function Home() {
   }, [])
 
   const featured = useMemo(() => orderHomepageBooks(query.data?.items ?? []), [query.data?.items])
-  const heroBooks = useMemo<HeroBook[]>(() => featured.length >= 3
-    ? featured.slice(0, 3).map(({ slug, title, cover_url }) => ({ slug, title, cover_url }))
-    : fallbackHeroBooks, [featured])
+  const heroFeatured = useMemo(() => orderHomepageHeroBooks(query.data?.items ?? []), [query.data?.items])
+  const heroBooks = useMemo<HeroBook[]>(() => heroFeatured.length >= 5
+    ? heroFeatured.map(({ slug, title, cover_url }) => ({ slug, title, cover_url }))
+    : fallbackHeroBooks, [heroFeatured])
   const collectionGenres = homepageGenreSlugs.flatMap((slug) => {
     const genre = genres.data?.items.find((item) => item.slug === slug)
     return genre ? [genre] : []
@@ -328,7 +331,7 @@ function Home() {
           <span className={s.heroLine}><span className={s.heroWord}>Books worth</span></span>
           <span className={s.heroLine}><span className={s.heroWord}>keeping close.</span></span>
         </h1>
-        <p className={`${s.heroDescription} ${s.heroReveal}`}>Three enduring stories, chosen by booksellers to be read, revisited, and passed on.</p>
+        <p className={`${s.heroDescription} ${s.heroReveal}`}>Enduring stories, chosen by booksellers to be read, revisited, and passed on.</p>
         <div className={s.heroButtons}><Link className={s.primaryButton} to="/books">Browse books <ArrowUpRight size={16} aria-hidden="true" /></Link><Link className={s.heroSecondary} to="/rankings">Bestseller charts</Link></div>
       </div>
       <BookHeroScene books={heroBooks} />

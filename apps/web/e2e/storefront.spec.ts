@@ -12,14 +12,14 @@ test('home exposes the discovery route', async ({ page }) => {
   await expect(hero.getByRole('link', { name: /Bestseller charts/i })).toHaveAttribute('href', '/rankings')
 
   const stage = hero.getByTestId('hero-book-stage')
-  await expect(stage).toHaveAttribute('aria-label', /hovering fan of three featured books/i)
+  const compactHero = (page.viewportSize()?.width ?? 0) <= 760
+  await expect(stage).toHaveAttribute('aria-label', new RegExp(`hovering fan of ${compactHero ? 'three' : 'five'} featured books`, 'i'))
   await expect.poll(() => stage.getAttribute('data-scene-state')).toMatch(/ready|fallback/)
-  await expect(stage.locator('[data-hero-book-slug]')).toHaveCount(3)
-  expect(await stage.locator('[data-hero-book-slug]').evaluateAll((items) => items.map((item) => item.getAttribute('data-hero-book-slug')))).toEqual([
-    'romeo-and-juliet',
-    'the-adventures-of-sherlock-holmes',
-    'the-little-prince',
-  ])
+  const expectedHeroSlugs = compactHero
+    ? ['romeo-and-juliet', 'the-adventures-of-sherlock-holmes', 'the-little-prince']
+    : ['twenty-thousand-leagues-under-the-sea', 'romeo-and-juliet', 'the-adventures-of-sherlock-holmes', 'the-little-prince', 'the-hobbit']
+  await expect(stage.locator('[data-hero-book-slug]')).toHaveCount(expectedHeroSlugs.length)
+  expect(await stage.locator('[data-hero-book-slug]').evaluateAll((items) => items.map((item) => item.getAttribute('data-hero-book-slug')))).toEqual(expectedHeroSlugs)
   await expect(stage.getByRole('link')).toHaveCount(0)
   await expect(stage.getByRole('button')).toHaveCount(0)
   await expect(hero.locator('video')).toHaveCount(0)
@@ -490,6 +490,7 @@ test('hero remains complete with reduced motion', async ({ page }) => {
   const stage = hero.getByTestId('hero-book-stage')
   await expect(stage).toHaveAttribute('data-scene-state', 'reduced-motion')
   await expect(stage.getByTestId('hero-book-fallback')).toBeVisible()
+  await expect(stage.locator('[data-hero-book-slug]')).toHaveCount((page.viewportSize()?.width ?? 0) <= 760 ? 3 : 5)
   await expect(stage.locator('canvas')).toBeHidden()
   await expect(hero.locator('video')).toHaveCount(0)
 })
@@ -512,15 +513,18 @@ test('hero keeps an interactive 3D fallback when WebGL is unavailable', async ({
   const centerBook = stage.locator('[data-hero-book-slug="the-adventures-of-sherlock-holmes"]')
   if ((page.viewportSize()?.width ?? 0) > 760) {
     await page.waitForTimeout(1300)
-    const viewportHeight = page.viewportSize()!.height
     const heroBox = await hero.boundingBox()
-    const restVisualBox = await centerBook.locator('[data-hero-book-visual]').boundingBox()
+    const restVisualBoxes = await stage.locator('[data-hero-book-visual]').evaluateAll((elements) => elements.map((element) => {
+      const bounds = element.getBoundingClientRect()
+      return { top: bounds.top, bottom: bounds.bottom }
+    }))
     expect(heroBox).not.toBeNull()
-    expect(restVisualBox).not.toBeNull()
-    expect(heroBox!.height).toBeGreaterThanOrEqual(1000)
-    expect(heroBox!.height).toBeLessThanOrEqual(1220)
-    const visibleHeight = Math.min(restVisualBox!.y + restVisualBox!.height, viewportHeight) - Math.max(restVisualBox!.y, 0)
-    expect(visibleHeight / restVisualBox!.height).toBeGreaterThanOrEqual(.55)
+    expect(heroBox!.height).toBeGreaterThanOrEqual(1099)
+    expect(heroBox!.height).toBeLessThanOrEqual(1101)
+    for (const bounds of restVisualBoxes) {
+      expect(bounds.top).toBeGreaterThanOrEqual(heroBox!.y)
+      expect(bounds.bottom).toBeLessThanOrEqual(heroBox!.y + heroBox!.height + 1)
+    }
   }
   await centerBook.hover({ position: { x: 140, y: 150 } })
   await expect(stage).toHaveAttribute('data-active-book', 'the-adventures-of-sherlock-holmes')
@@ -531,17 +535,11 @@ test('hero keeps an interactive 3D fallback when WebGL is unavailable', async ({
   if ((page.viewportSize()?.width ?? 0) > 760) {
     const visualBox = await centerBook.locator('[data-hero-book-visual]').boundingBox()
     const stageBox = await stage.boundingBox()
-    const browseBox = await hero.getByRole('link', { name: /Browse books/i }).boundingBox()
-    const chartsBox = await hero.getByRole('link', { name: /Bestseller charts/i }).boundingBox()
     const copy = hero.getByTestId('hero-copy')
     expect(visualBox).not.toBeNull()
     expect(stageBox).not.toBeNull()
-    expect(browseBox).not.toBeNull()
-    expect(chartsBox).not.toBeNull()
-    const ctaBottom = Math.max(browseBox!.y + browseBox!.height, chartsBox!.y + chartsBox!.height)
-    expect(visualBox!.y).toBeLessThan(stageBox!.y)
-    expect(visualBox!.y).toBeLessThan(ctaBottom)
-    expect(visualBox!.y + visualBox!.height).toBeGreaterThan(ctaBottom + 100)
+    expect(visualBox!.y).toBeGreaterThanOrEqual(0)
+    expect(visualBox!.y + visualBox!.height).toBeLessThanOrEqual(1101)
     expect(Number(await stage.evaluate((element) => getComputedStyle(element).zIndex))).toBeLessThan(
       Number(await copy.evaluate((element) => getComputedStyle(element).zIndex)),
     )
@@ -550,7 +548,7 @@ test('hero keeps an interactive 3D fallback when WebGL is unavailable', async ({
       pointerEvents: getComputedStyle(element).pointerEvents,
       stageOverflow: getComputedStyle(element.parentElement!).overflow,
     }))
-    expect(presentation.maskImage).toBe('none')
+    expect(presentation.maskImage).toContain('linear-gradient')
     expect(presentation.pointerEvents).toBe('auto')
     expect(presentation.stageOverflow).toBe('visible')
     expect(await copy.evaluate((element) => getComputedStyle(element, '::before').backgroundImage)).toContain('radial-gradient')

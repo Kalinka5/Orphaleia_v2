@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest'
 import {
   getLandingIllustration,
   homepageFeaturedBookSlugs,
+  homepageHeroBookSlugs,
   landingIllustrations,
   orderHomepageBooks,
+  orderHomepageHeroBooks,
   type LandingIllustrationVariant,
 } from '../landingIllustrations'
 import type { Book } from '../types'
@@ -32,6 +34,14 @@ describe('landing illustrations', () => {
     const apiBooks = [...seededBooks].reverse().map(([slug, title]) => ({ slug, title })) as Book[]
 
     expect(orderHomepageBooks(apiBooks).map((book) => book.slug)).toEqual(homepageFeaturedBookSlugs)
+  })
+
+  it('orders the five-book hero independently from the four-book featured grid', () => {
+    const apiBooks = [...homepageHeroBookSlugs].reverse().map((slug) => ({ slug, title: slug })) as Book[]
+
+    expect(orderHomepageHeroBooks(apiBooks).map((book) => book.slug)).toEqual(homepageHeroBookSlugs)
+    expect(homepageFeaturedBookSlugs).toHaveLength(4)
+    expect(homepageHeroBookSlugs).toHaveLength(5)
   })
 
   it('falls back to a canonical cover for books without generated art', () => {

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import type { Group, Material, Mesh, Object3D, PerspectiveCamera, Scene, Texture, WebGLRenderer } from 'three'
 import type { Book } from '../types'
@@ -64,9 +64,11 @@ type BookRig = {
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
 
 const desktopSlots: Slot[] = [
-  { position: [-2.04, -0.12, -0.22], rotation: [-0.04, 0.34, 0.17], scale: 1.18 },
-  { position: [0, 0.2, 0.58], rotation: [-0.04, -0.04, -0.025], scale: 1.38 },
-  { position: [2.04, -0.16, -0.25], rotation: [-0.04, -0.34, -0.16], scale: 1.18 },
+  { position: [-3.42, -0.48, -0.58], rotation: [-0.04, 0.38, 0.19], scale: 0.9 },
+  { position: [-1.72, -0.17, -0.14], rotation: [-0.04, 0.2, 0.08], scale: 1.08 },
+  { position: [0, 0.18, 0.58], rotation: [-0.04, -0.04, -0.025], scale: 1.3 },
+  { position: [1.72, -0.19, -0.16], rotation: [-0.04, -0.2, -0.08], scale: 1.08 },
+  { position: [3.42, -0.5, -0.6], rotation: [-0.04, -0.38, -0.19], scale: 0.9 },
 ]
 
 const mobileSlots: Slot[] = [
@@ -75,7 +77,20 @@ const mobileSlots: Slot[] = [
   { position: [1.32, -1.02, -0.22], rotation: [-0.04, -0.34, -0.16], scale: 1.08 },
 ]
 
-const edgeColors = [0x7c413c, 0x294851, 0xc6973d]
+const edgeColors = [0x295267, 0x7c413c, 0x294851, 0xc6973d, 0x6c5635]
+
+function useCompactHero() {
+  const [compact, setCompact] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches)
+
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 760px)')
+    const update = () => setCompact(query.matches)
+    query.addEventListener('change', update)
+    return () => query.removeEventListener('change', update)
+  }, [])
+
+  return compact
+}
 
 function useReducedMotion() {
   const [reduced, setReduced] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches)
@@ -122,6 +137,8 @@ export function BookHeroScene({ books }: { books: HeroBook[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const fallbackDragRef = useRef({ pointerId: -1, startX: 0, startY: 0, horizontal: false })
   const reducedMotion = useReducedMotion()
+  const compact = useCompactHero()
+  const sceneBooks = useMemo(() => compact ? books.slice(1, 4) : books.slice(0, 5), [books, compact])
   const [phase, setPhase] = useState<ScenePhase>(reducedMotion ? 'reduced-motion' : 'loading')
   const [fallbackReason, setFallbackReason] = useState(reducedMotion ? 'reduced-motion' : '')
 
@@ -131,7 +148,7 @@ export function BookHeroScene({ books }: { books: HeroBook[] }) {
       setFallbackReason('reduced-motion')
       return
     }
-    if (books.length < 3 || !stageRef.current || !canvasRef.current) {
+    if (sceneBooks.length < 3 || !stageRef.current || !canvasRef.current) {
       setPhase('fallback')
       setFallbackReason('insufficient-book-data')
       return
@@ -208,7 +225,7 @@ export function BookHeroScene({ books }: { books: HeroBook[] }) {
         scene.add(shadowPlane)
 
         const textureLoader = new THREE.TextureLoader()
-        const textures = await Promise.all(books.slice(0, 3).map(async (book) => {
+        const textures = await Promise.all(sceneBooks.map(async (book) => {
           const texture = await textureLoader.loadAsync(book.cover_url).catch(() => {
             throw new Error('texture-load-failed')
           })
@@ -230,7 +247,8 @@ export function BookHeroScene({ books }: { books: HeroBook[] }) {
         const rigs: BookRig[] = []
         const hitToRig = new Map<Object3D, BookRig>()
 
-        books.slice(0, 3).forEach((book, index) => {
+        const initialSlots = compact ? mobileSlots : desktopSlots
+        sceneBooks.forEach((book, index) => {
           const root = new THREE.Group()
           const float = new THREE.Group()
           root.add(float)
@@ -272,7 +290,7 @@ export function BookHeroScene({ books }: { books: HeroBook[] }) {
           float.add(spine)
 
           const hit = new THREE.Mesh(hitGeometry, hitMaterial)
-          const slot = desktopSlots[index]
+          const slot = initialSlots[index]
           hit.position.set(slot.position[0], slot.position[1], slot.position[2] + 0.08)
           hit.rotation.set(...slot.rotation)
           hit.scale.setScalar(slot.scale)
@@ -292,7 +310,7 @@ export function BookHeroScene({ books }: { books: HeroBook[] }) {
               z: new Spring(slot.position[2], 76, 16),
               rx: new Spring(slot.rotation[0], 80, 17),
               ry: new Spring(slot.rotation[1], 80, 17),
-              rz: new Spring(slot.rotation[2] + (index - 1) * 0.18, 80, 17),
+              rz: new Spring(slot.rotation[2] + (index - (initialSlots.length - 1) / 2) * 0.12, 80, 17),
               scale: new Spring(slot.scale, 86, 18),
               lift: new Spring(0, 72, 17),
               tiltX: new Spring(0, 86, 19),
@@ -320,7 +338,7 @@ export function BookHeroScene({ books }: { books: HeroBook[] }) {
         let downX = 0
         let downY = 0
         let dragPointerId: number | null = null
-        let currentSlots = desktopSlots
+        let currentSlots = initialSlots
 
         const setHovered = (rig: BookRig | null) => {
           if (hovered === rig) return
@@ -398,7 +416,7 @@ export function BookHeroScene({ books }: { books: HeroBook[] }) {
           if (!renderer || !camera) return
           const width = Math.max(1, stage.clientWidth)
           const height = Math.max(1, stage.clientHeight)
-          const mobile = width <= 760
+          const mobile = sceneBooks.length === 3
           const slots = mobile ? mobileSlots : desktopSlots
           currentSlots = slots
           renderer.setSize(width, height, false)
@@ -554,7 +572,7 @@ export function BookHeroScene({ books }: { books: HeroBook[] }) {
       intersectionObserver?.disconnect()
       cleanupScene?.()
     }
-  }, [books, reducedMotion])
+  }, [compact, reducedMotion, sceneBooks])
 
   const activateFallbackBook = (event: ReactPointerEvent<HTMLElement>, slug: string) => {
     if (phase !== 'fallback' || event.pointerType === 'touch') return
@@ -625,10 +643,10 @@ export function BookHeroScene({ books }: { books: HeroBook[] }) {
     onPointerUp={endFallbackDrag}
     onPointerCancel={endFallbackDrag}
     role="img"
-    aria-label="A hovering fan of three featured books: Romeo and Juliet, The Adventures of Sherlock Holmes, and The Little Prince."
+    aria-label={`A hovering fan of ${sceneBooks.length === 5 ? 'five' : 'three'} featured books: ${sceneBooks.map((book) => book.title).join(', ')}.`}
   >
     <div className={s.heroBookFallback} data-testid="hero-book-fallback" aria-hidden="true">
-      {books.slice(0, 3).map((book) => <span
+      {sceneBooks.map((book) => <span
         className={s.heroFallbackBook}
         data-hero-book-slug={book.slug}
         key={book.slug}
