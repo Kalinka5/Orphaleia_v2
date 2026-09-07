@@ -11,9 +11,11 @@ from app.worker import send_pending_mail
 
 def test_registration_queues_email_without_exposing_verification_token(client, monkeypatch):
     monkeypatch.setattr(settings, "app_env", "development")
+    monkeypatch.setattr(settings, "frontend_url", "https://orphaleia.com")
+    monkeypatch.setattr(settings, "mail_preview_url", "http://localhost:8025")
     response = client.post(
         "/api/v1/auth/register",
-        json={"email": "new.reader@example.com", "full_name": "New Reader", "password": "LongPassword123"},
+        json={"email": "new.reader@example.com", "full_name": "New <Reader>", "password": "LongPassword123"},
     )
 
     assert response.status_code == 200
@@ -26,6 +28,10 @@ def test_registration_queues_email_without_exposing_verification_token(client, m
         assert message is not None
         assert message.subject == "Verify your Orphaleia account"
         assert "/verify?token=" in message.html_body
+        assert "Verify my email" in message.html_body
+        assert "Hello New &lt;Reader&gt;" in message.html_body
+        assert "https://orphaleia.com/assets/verification/four-musketeers-welcome.png" in message.html_body
+        assert "width=\"600\"" in message.html_body
 
 
 def test_worker_uses_starttls_and_authentication(monkeypatch):

@@ -22,6 +22,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from .config import settings
 from .database import Base, engine, get_db
+from .email_templates import verification_email
 from .models import (
     ActionToken,
     Author,
@@ -218,7 +219,12 @@ def register(data: RegisterInput, db: Session = Depends(get_db)):
     db.flush()
     raw = issue_action_token(db, user, "verify", 24)
     url = f"{settings.frontend_url}/verify?token={raw}"
-    queue_email(db, user.email, "Verify your Orphaleia account", f"<h1>Welcome aboard</h1><p><a href=\"{url}\">Verify your email</a> to rate books and place orders.</p>")
+    queue_email(
+        db,
+        user.email,
+        "Verify your Orphaleia account",
+        verification_email(full_name=user.full_name, verification_url=url, frontend_url=settings.frontend_url),
+    )
     db.commit()
     result = {"message": "Check your email to verify your account"}
     if settings.app_env == "development" and settings.mail_preview_url:
