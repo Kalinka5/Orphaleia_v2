@@ -24,6 +24,7 @@ import { VerificationPassage } from './components/VerificationPassage'
 import { AccountHub } from './components/AccountHub'
 import { ReaderAvatar } from './components/ReaderAvatar'
 import { AdminOrderOperations } from './components/AdminOrderOperations'
+import { NotFoundPage } from './components/NotFoundPage'
 import type { Address, Author, Book, Cart, Genre, Order, Page, SalesRankingResponse, User } from './types'
 import s from './styles.module.css'
 
@@ -131,7 +132,7 @@ function getRouteMeta(pathname: string) {
   if (pathname === '/payment/return') return { title: 'Payment status', description: 'Review your Orphaleia payment status.' }
   if (pathname === '/account') return { title: 'Your account', description: 'View your Orphaleia reader account and orders.' }
   if (pathname.startsWith('/admin')) return { title: 'Shop admin', description: 'Manage the Orphaleia catalogue and orders.' }
-  return { title: 'Page not found', description: 'This page could not be found at Orphaleia.' }
+  return { title: 'Page not found', description: 'The page you were looking for is missing. Return safely to the Orphaleia bookshop.' }
 }
 
 function RequireUser({ children, admin = false }: { children: ReactNode; admin?: boolean }) {
@@ -1109,14 +1110,12 @@ function BookEditor({ edit = false }: { edit?: boolean }) {
   </section>
 }
 
-function NotFound() { return <section className={s.narrowPage}><div className={s.seal}>404</div><h1>This island is not on the chart.</h1><p>The page may have moved, or the route was copied incorrectly.</p><Link className={s.primaryButton} to="/">Return home</Link></section> }
-
 export default function App() {
   return <AuthProvider><Layout><Routes>
     <Route path="/" element={<Home />} /><Route path="/books" element={<Catalog />} /><Route path="/all-books" element={<Catalog />} /><Route path="/books/:slug" element={<BookPage />} />
     <Route path="/genres" element={<Directory kind="genres" />} /><Route path="/genres/:slug" element={<Shelf kind="genres" />} /><Route path="/authors" element={<Directory kind="authors" />} /><Route path="/authors/:slug" element={<Shelf kind="authors" />} /><Route path="/rankings" element={<Rankings />} />
     <Route path="/sign-in" element={<AuthPage key="sign-in" />} /><Route path="/register" element={<AuthPage key="register" register />} /><Route path="/verify" element={<TokenPage mode="verify" />} /><Route path="/forgot-password" element={<TokenPage mode="forgot" />} /><Route path="/reset-password" element={<TokenPage mode="reset" />} /><Route path="/confirm-email-change" element={<TokenPage mode="email-change" />} />
     <Route path="/cart" element={<RequireUser><CartPage /></RequireUser>} /><Route path="/checkout" element={<RequireUser><Checkout /></RequireUser>} /><Route path="/payment/return" element={<PaymentReturn />} /><Route path="/account" element={<RequireUser><Account /></RequireUser>} />
-    <Route path="/admin" element={<RequireUser admin><Admin /></RequireUser>} /><Route path="/admin/books/new" element={<RequireUser admin><BookEditor /></RequireUser>} /><Route path="/admin/books/:slug/edit" element={<RequireUser admin><BookEditor edit /></RequireUser>} /><Route path="*" element={<NotFound />} />
+    <Route path="/admin" element={<RequireUser admin><Admin /></RequireUser>} /><Route path="/admin/books/new" element={<RequireUser admin><BookEditor /></RequireUser>} /><Route path="/admin/books/:slug/edit" element={<RequireUser admin><BookEditor edit /></RequireUser>} /><Route path="*" element={<NotFoundPage />} />
   </Routes></Layout></AuthProvider>
 }

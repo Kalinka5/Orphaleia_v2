@@ -167,6 +167,7 @@ test('admin visual baseline', async ({ page }) => {
 
 test('not-found visual baseline', async ({ page }) => {
   await page.goto('/not-a-real-page')
-  await expect(page.getByRole('heading', { name: 'This island is not on the chart.' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'We cannot tell a lie...' })).toBeVisible()
+  await expect(page.getByTestId('not-found-poster')).toBeVisible()
   await capture(page, 'not-found')
 })
