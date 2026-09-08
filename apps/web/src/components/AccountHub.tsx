@@ -10,6 +10,7 @@ import { AccountEmptyState } from './AccountEmptyState'
 import { ReaderAvatar } from './ReaderAvatar'
 import { ErrorState, RouteState as State } from './ui/RouteState'
 import { SelectControl } from './ui/SelectControl'
+import { FormNotification } from './ui/FormNotification'
 import s from './AccountHub.module.css'
 
 type AccountSection = 'orders' | 'profile' | 'delivery' | 'security'
@@ -187,7 +188,7 @@ export function AccountHub({ user, refresh }: { user: User; refresh: () => Promi
     event.preventDefault()
     const form = event.currentTarget
     const data = new FormData(form)
-    setEmailBusy(true); setEmailNotice(''); setEmailError(null)
+    setEmailBusy(true); setEmailNotice(''); setEmailError(null); setPasswordNotice(''); setPasswordError(null)
     try {
       const result = await api<{ message: string }>('/users/me/email-change', { method: 'POST', body: JSON.stringify({ email: data.get('email'), current_password: data.get('current_password') }) })
       form.reset()
@@ -209,8 +210,8 @@ export function AccountHub({ user, refresh }: { user: User; refresh: () => Promi
     event.preventDefault()
     const form = event.currentTarget
     const data = new FormData(form)
-    if (data.get('new_password') !== data.get('confirm_password')) { setPasswordError(new Error('New passwords do not match.')); setPasswordNotice(''); return }
-    setPasswordBusy(true); setPasswordNotice(''); setPasswordError(null)
+    if (data.get('new_password') !== data.get('confirm_password')) { setEmailNotice(''); setEmailError(null); setPasswordError(new Error('New passwords do not match.')); setPasswordNotice(''); return }
+    setPasswordBusy(true); setPasswordNotice(''); setPasswordError(null); setEmailNotice(''); setEmailError(null)
     try {
       const result = await api<{ message: string }>('/users/me/password', { method: 'POST', body: JSON.stringify({ current_password: data.get('current_password'), new_password: data.get('new_password') }) })
       form.reset()
@@ -218,7 +219,23 @@ export function AccountHub({ user, refresh }: { user: User; refresh: () => Promi
     } catch (error) { setPasswordError(error) } finally { setPasswordBusy(false) }
   }
 
+  const activeFeedback = section === 'profile'
+    ? { notice: profileNotice, error: profileError, title: 'Profile updated', errorTitle: 'Profile not updated', close: () => { setProfileNotice(''); setProfileError(null) } }
+    : section === 'delivery'
+      ? { notice: deliveryNotice, error: deliveryError, title: 'Delivery details updated', errorTitle: 'Delivery details not updated', close: () => { setDeliveryNotice(''); setDeliveryError(null) } }
+      : section === 'security'
+        ? emailError || emailNotice
+          ? { notice: emailNotice, error: emailError, title: 'Email settings updated', errorTitle: 'Email settings not updated', close: () => { setEmailNotice(''); setEmailError(null) } }
+          : { notice: passwordNotice, error: passwordError, title: 'Password updated', errorTitle: 'Password not updated', close: () => { setPasswordNotice(''); setPasswordError(null) } }
+        : null
+
   return <section className={s.page} aria-labelledby="account-title">
+    {activeFeedback && <FormNotification
+      title={activeFeedback.error ? activeFeedback.errorTitle : activeFeedback.title}
+      message={activeFeedback.error ? (activeFeedback.error as Error).message : activeFeedback.notice}
+      variant={activeFeedback.error ? 'error' : 'success'}
+      onClose={activeFeedback.close}
+    />}
     <header className={s.header}>
       <ReaderAvatar name={user.full_name} src={user.avatar_url} size="account" />
       <div className={s.greeting}><span className={s.kicker}>Reader’s account</span><h1 id="account-title">Welcome, {user.full_name.split(' ')[0]}</h1><p>{user.email}<span aria-hidden="true"> · </span>{user.is_verified ? 'Verified reader' : 'Email verification pending'}</p></div>
@@ -258,7 +275,6 @@ export function AccountHub({ user, refresh }: { user: User; refresh: () => Promi
               <button className={s.primaryButton} disabled={profileBusy}>{profileBusy ? 'Saving…' : 'Save display name'}</button>
             </form>
           </div>
-          {profileNotice && <p className={s.notice} role="status" aria-live="polite">{profileNotice}</p>}{profileError ? <p className={s.error} role="alert">{(profileError as Error).message}</p> : null}
         </section>}
         {section === 'delivery' && <section aria-labelledby="delivery-title"><div className={s.sectionHeading}><span>Private delivery details</span><h2 id="delivery-title">Where your books usually find you</h2><p>Save one default address to prefill checkout. You can still change it for any individual order.</p></div>
           <form className={`${s.form} ${s.deliveryForm}`} onSubmit={(event) => void saveDeliveryAddress(event)} aria-busy={deliveryBusy || undefined}>
@@ -266,7 +282,6 @@ export function AccountHub({ user, refresh }: { user: User; refresh: () => Promi
             <SelectControl label="Country" labelMode="stacked" value={deliveryAddress.country} options={countryOptions} onChange={(country) => setDeliveryAddress({ ...deliveryAddress, country })} />
             <div className={s.deliveryActions}><button className={s.primaryButton} disabled={deliveryBusy}>{deliveryBusy ? 'Saving…' : 'Save delivery address'}</button>{hasSavedDeliveryAddress && <button className={s.textButton} type="button" disabled={deliveryBusy} onClick={() => void removeDeliveryAddress()}><Trash size={16} aria-hidden="true" /> Remove saved address</button>}</div>
           </form>
-          {deliveryNotice && <p className={s.notice} role="status" aria-live="polite">{deliveryNotice}</p>}{deliveryError ? <p className={s.error} role="alert">{(deliveryError as Error).message}</p> : null}
         </section>}
         {section === 'security' && <section aria-labelledby="security-title"><div className={s.sectionHeading}><span>Account security</span><h2 id="security-title">Your sign-in details</h2><p>Sensitive changes ask for your current password and notify you by email.</p></div>
           <div className={s.securityStack}>
@@ -276,7 +291,6 @@ export function AccountHub({ user, refresh }: { user: User; refresh: () => Promi
               <label htmlFor="new-email">New email address<input id="new-email" name="email" type="email" defaultValue={user.pending_email || ''} autoComplete="email" required aria-invalid={Boolean(fieldError(emailError, 'email')) || undefined} /></label>
               <label htmlFor="email-current-password">Current password<input id="email-current-password" name="current_password" type="password" autoComplete="current-password" required /></label>
               <button className={s.primaryButton} disabled={emailBusy}>{emailBusy ? 'Sending…' : user.pending_email ? 'Resend confirmation' : 'Send confirmation'}</button>
-              {emailNotice && <p className={s.notice} role="status" aria-live="polite">{emailNotice}</p>}{emailError ? <p className={s.error} role="alert">{(emailError as Error).message}</p> : null}
             </form>
             <form className={s.form} onSubmit={(event) => void changePassword(event)} aria-busy={passwordBusy || undefined}>
               <div className={s.formTitle}><LockKey size={24} aria-hidden="true" /><div><h3>Change password</h3><p>Other signed-in devices will be logged out.</p></div></div>
@@ -284,7 +298,6 @@ export function AccountHub({ user, refresh }: { user: User; refresh: () => Promi
               <label htmlFor="password-new">New password<input id="password-new" name="new_password" type="password" minLength={10} maxLength={128} autoComplete="new-password" required aria-describedby="password-help" /></label><small id="password-help">Use at least 10 characters.</small>
               <label htmlFor="password-confirm">Confirm new password<input id="password-confirm" name="confirm_password" type="password" minLength={10} maxLength={128} autoComplete="new-password" required /></label>
               <button className={s.primaryButton} disabled={passwordBusy}>{passwordBusy ? 'Updating…' : 'Update password'}</button>
-              {passwordNotice && <p className={s.notice} role="status" aria-live="polite">{passwordNotice}</p>}{passwordError ? <p className={s.error} role="alert">{(passwordError as Error).message}</p> : null}
             </form>
           </div>
         </section>}

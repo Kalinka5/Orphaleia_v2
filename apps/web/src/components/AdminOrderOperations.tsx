@@ -1,9 +1,10 @@
 import { FormEvent, useState } from 'react'
-import { CaretDown, CheckCircle, Package, Truck, WarningCircle } from '@phosphor-icons/react'
+import { CaretDown, CheckCircle, Package, Truck } from '@phosphor-icons/react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, money } from '../api'
 import { nextOrderStatus, orderStatusLabel } from '../orderStatus'
 import type { Order, OrderStatus } from '../types'
+import { FormNotification } from './ui/FormNotification'
 import s from '../styles.module.css'
 
 type StatusUpdate = {
@@ -31,6 +32,7 @@ export function AdminOrderOperations({ order }: { order: Order }) {
   const client = useQueryClient()
   const [expanded, setExpanded] = useState(false)
   const [confirming, setConfirming] = useState<StatusUpdate | null>(null)
+  const [notice, setNotice] = useState('')
   const next = nextOrderStatus(order.status)
   const canCancel = order.status === 'pending_payment'
   const canRefund = ['paid', 'processing', 'shipped', 'out_for_delivery'].includes(order.status)
@@ -38,6 +40,7 @@ export function AdminOrderOperations({ order }: { order: Order }) {
     mutationFn: (payload: StatusUpdate) => api<Order>(`/admin/orders/${order.id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
     onSuccess: async () => {
       setConfirming(null)
+      setNotice('Order status updated and the reader notification has been queued.')
       await client.invalidateQueries({ queryKey: ['admin-orders'] })
     },
   })
@@ -62,8 +65,23 @@ export function AdminOrderOperations({ order }: { order: Order }) {
   }
 
   const history = order.status_history ?? []
+  const confirmationMessage = confirming?.status === 'refunded'
+    ? 'This records and emails the status only. It does not send money through Stripe or PayPal.'
+    : confirming?.status === 'shipped'
+      ? `The customer will receive ${confirming.tracking_carrier} tracking details by email.`
+      : 'The customer will receive an email about this change.'
 
   return <article className={s.adminOrder} data-expanded={expanded || undefined}>
+    <FormNotification
+      title={confirming ? `Confirm “${orderStatusLabel(confirming.status)}”` : update.error ? 'Order not updated' : 'Order updated'}
+      message={confirming ? confirmationMessage : update.error?.message || notice}
+      variant={confirming ? 'warning' : update.error ? 'error' : 'success'}
+      onClose={() => { setConfirming(null); update.reset(); setNotice('') }}
+      action={confirming ? <>
+        <button className={s.primaryButton} disabled={update.isPending} onClick={() => update.mutate(confirming)}>{update.isPending ? 'Saving…' : 'Confirm update'}</button>
+        <button className={s.textButton} disabled={update.isPending} onClick={() => setConfirming(null)}>Keep current status</button>
+      </> : undefined}
+    />
     <button type="button" className={s.adminOrderSummary} aria-expanded={expanded} aria-controls={`admin-order-${order.id}`} onClick={() => setExpanded(!expanded)}>
       <div><b>{order.number}</b><small>{new Date(order.created_at).toLocaleDateString()}</small></div>
       <span>{money(order.total_cents)}</span>
@@ -88,11 +106,6 @@ export function AdminOrderOperations({ order }: { order: Order }) {
           {canRefund && <button type="button" disabled={update.isPending} onClick={() => startAction('refunded')}>Record as refunded</button>}
         </div>
       </div>
-      {confirming && <div className={s.orderConfirmation} role="alert">
-        <WarningCircle size={22} aria-hidden="true" />
-        <div><b>Confirm “{orderStatusLabel(confirming.status)}”</b><p>{confirming.status === 'refunded' ? 'This records and emails the status only. It does not send money through Stripe or PayPal.' : confirming.status === 'shipped' ? `The customer will receive ${confirming.tracking_carrier} tracking details by email.` : 'The customer will receive an email about this change.'}</p><div><button className={s.primaryButton} disabled={update.isPending} onClick={() => update.mutate(confirming)}>{update.isPending ? 'Saving…' : 'Confirm update'}</button><button className={s.textButton} disabled={update.isPending} onClick={() => setConfirming(null)}>Keep current status</button></div></div>
-      </div>}
-      {update.error && <p className={s.formError} role="alert">{update.error.message}</p>}
     </div>}
   </article>
 }
