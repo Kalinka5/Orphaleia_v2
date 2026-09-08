@@ -1,0 +1,53 @@
+- generic [active] [ref=e1]:
+  - link "Skip to content":
+    - /url: "#main"
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - link "Orphaleia home" [ref=e4] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e6]:
+          - text: Orphaleia
+          - generic [ref=e7]: INDEPENDENT BOOKSELLERS
+      - navigation "Main navigation" [ref=e8]:
+        - link "All books" [ref=e9] [cursor=pointer]:
+          - /url: /books
+        - link "Genres" [ref=e10] [cursor=pointer]:
+          - /url: /genres
+        - link "Authors" [ref=e11] [cursor=pointer]:
+          - /url: /authors
+        - link "Bestseller charts" [ref=e12] [cursor=pointer]:
+          - /url: /rankings
+      - generic [ref=e13]:
+        - link "Sign in" [ref=e14] [cursor=pointer]:
+          - /url: /sign-in
+        - link "Cart with 0 items" [ref=e15] [cursor=pointer]:
+          - /url: /cart
+          - text: Bag
+          - generic [ref=e16]: "0"
+    - main [ref=e17]:
+      - generic [ref=e18]:
+        - generic [ref=e19]: "404"
+        - heading "This island is not on the chart." [level=1] [ref=e20]
+        - paragraph [ref=e21]: The page may have moved, or the route was copied incorrectly.
+        - link "Return home" [ref=e22] [cursor=pointer]:
+          - /url: /
+    - contentinfo [ref=e23]:
+      - generic [ref=e24]:
+        - generic [ref=e25]: Orphaleia
+        - paragraph [ref=e26]: Independent bookselling for restless minds and unhurried shelves.
+      - generic [ref=e27]:
+        - generic [ref=e28]: Browse
+        - link "All books" [ref=e29] [cursor=pointer]:
+          - /url: /books
+        - link "Bestseller charts" [ref=e30] [cursor=pointer]:
+          - /url: /rankings
+        - link "Collections" [ref=e31] [cursor=pointer]:
+          - /url: /genres
+      - generic [ref=e32]:
+        - generic [ref=e33]: Elsewhere
+        - link "Our authors" [ref=e34] [cursor=pointer]:
+          - /url: /authors
+        - link "Your account" [ref=e35] [cursor=pointer]:
+          - /url: /account
+        - generic [ref=e36]: Spain and EU delivery
+      - paragraph [ref=e37]: © 2026 Orphaleia. Built for the long read.
