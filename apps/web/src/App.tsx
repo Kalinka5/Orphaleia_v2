@@ -12,6 +12,7 @@ import { PageMeta } from './components/PageMeta'
 import { ErrorState, RouteState as State } from './components/ui/RouteState'
 import { SelectControl, type SelectOption } from './components/ui/SelectControl'
 import { CtaWithMarquee } from './components/ui/cta-with-marquee'
+import { FaqSection } from './components/FaqSection'
 import { CatalogCharacterScene } from './components/CatalogCharacterScene'
 import { TestimonialsColumn, type Testimonial } from './components/ui/testimonials-columns-1'
 import { getGenreIllustration, homepageGenreSlugs } from './genreIllustrations'
@@ -571,6 +572,7 @@ function Home() {
     <MarketGlobe />
     <Testimonials />
 
+    <FaqSection />
     <CtaWithMarquee />
   </div>
 }

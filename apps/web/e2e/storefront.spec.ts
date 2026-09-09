@@ -242,6 +242,45 @@ test('home presents the ordered classic collection with complete artwork', async
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 })
 
+test('homepage FAQ sits before the final CTA and supports independent keyboard expansion', async ({ page }) => {
+  await page.goto('/')
+
+  const faq = page.getByRole('region', { name: 'Frequently asked questions.' })
+  const cta = page.getByRole('region', { name: 'Find the book you’ll keep talking about.' })
+  const firstQuestion = faq.getByRole('button', { name: 'How does Orphaleia choose its books?' })
+  const paymentQuestion = faq.getByRole('button', { name: 'How can I pay?' })
+  const firstCard = firstQuestion.locator('..')
+  const paymentCard = paymentQuestion.locator('..')
+  const firstAnswer = firstCard.getByTestId('faq-answer')
+
+  await faq.scrollIntoViewIfNeeded()
+  await expect(faq.getByTestId('faq-card')).toHaveCount(8)
+  await expect(faq.locator('[data-open="true"]')).toHaveCount(0)
+  await expect(firstAnswer).toHaveCSS('grid-template-rows', '0px')
+
+  await firstQuestion.focus()
+  await page.keyboard.press('Enter')
+  await paymentQuestion.focus()
+  await page.keyboard.press('Enter')
+
+  await expect(firstQuestion).toHaveAttribute('aria-expanded', 'true')
+  await expect(paymentQuestion).toHaveAttribute('aria-expanded', 'true')
+  await expect(firstCard).toHaveAttribute('data-open', 'true')
+  await expect(paymentCard).toHaveAttribute('data-open', 'true')
+  await expect(firstAnswer).not.toHaveCSS('grid-template-rows', '0px')
+
+  const faqBox = await faq.boundingBox()
+  const ctaBox = await cta.boundingBox()
+  expect(faqBox).not.toBeNull()
+  expect(ctaBox).not.toBeNull()
+  expect(faqBox!.y + faqBox!.height).toBeLessThanOrEqual(ctaBox!.y + 1)
+
+  const mobile = (page.viewportSize()?.width ?? 0) <= 760
+  const columns = faq.getByTestId('faq-columns')
+  await expect(columns).toHaveCSS('grid-template-columns', mobile ? /\d+(?:\.\d+)?px/ : /\d+(?:\.\d+)?px \d+(?:\.\d+)?px/)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+})
+
 test('seven storybook dwarfs peek from behind the featured bento', async ({ page }) => {
   await page.goto('/')
 

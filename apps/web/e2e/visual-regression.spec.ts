@@ -39,6 +39,16 @@ test('home visual baseline', async ({ page }) => {
   await capture(page, 'home', false)
 })
 
+test('homepage FAQ visual baseline', async ({ page }) => {
+  await page.goto('/')
+  const faq = page.getByRole('region', { name: 'Frequently asked questions.' })
+  await faq.scrollIntoViewIfNeeded()
+  await faq.getByText('How does Orphaleia choose its books?').click()
+  await faq.getByText('How can I pay?').click()
+  await settle(page)
+  await expect(faq).toHaveScreenshot('homepage-faq.png', { animations: 'disabled', timeout: 15_000 })
+})
+
 test('Wonderland genre tableau visual baseline', async ({ page }) => {
   await page.goto('/')
   const tableau = page.getByTestId('wonderland-tea-party')
