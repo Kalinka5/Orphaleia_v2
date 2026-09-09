@@ -4,6 +4,7 @@ export const orderJourney: OrderStatus[] = ['paid', 'processing', 'shipped', 'ou
 
 export const orderStatusLabels: Record<OrderStatus, string> = {
   pending_payment: 'Awaiting payment',
+  payment_review: 'Payment review',
   paid: 'Confirmed',
   processing: 'Preparing',
   shipped: 'Shipped',

@@ -5,6 +5,12 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    env:
+      APP_ENV: test
+      DATABASE_URL: sqlite:///./ci.db
+      SECRET_KEY: ci-only-test-secret-that-is-not-deployed
+      COOKIE_SECURE: false
+      PAYMENTS_MOCK: true
     defaults: { run: { working-directory: apps/api } }
     steps:
       - uses: actions/checkout@v4

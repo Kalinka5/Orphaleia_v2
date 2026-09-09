@@ -10,19 +10,14 @@ from app.worker import send_pending_mail
 
 
 def test_registration_queues_email_without_exposing_verification_token(client, monkeypatch):
-    monkeypatch.setattr(settings, "app_env", "development")
     monkeypatch.setattr(settings, "frontend_url", "https://orphaleia.com")
-    monkeypatch.setattr(settings, "mail_preview_url", "http://localhost:8025")
     response = client.post(
         "/api/v1/auth/register",
         json={"email": "new.reader@example.com", "full_name": "New <Reader>", "password": "LongPassword123"},
     )
 
-    assert response.status_code == 200
-    assert response.json() == {
-        "message": "Check your email to verify your account",
-        "email_preview_url": "http://localhost:8025",
-    }
+    assert response.status_code == 202
+    assert response.json() == {"message": "Check your email to verify your account"}
     with SessionLocal() as db:
         message = db.scalar(select(OutboxMessage).where(OutboxMessage.to_email == "new.reader@example.com"))
         assert message is not None

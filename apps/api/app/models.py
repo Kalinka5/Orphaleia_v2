@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Table, Text, UniqueConstraint
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, Integer, String, Table, Text, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -219,6 +219,16 @@ class ShippingZone(Base):
 
 class Order(Base):
     __tablename__ = "orders"
+    __table_args__ = (
+        Index("uq_orders_user_idempotency_key", "user_id", "idempotency_key", unique=True),
+        Index(
+            "uq_orders_one_pending_per_user",
+            "user_id",
+            unique=True,
+            postgresql_where=text("status = 'pending_payment'"),
+            sqlite_where=text("status = 'pending_payment'"),
+        ),
+    )
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
     number: Mapped[str] = mapped_column(String(24), unique=True, index=True)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
@@ -236,6 +246,9 @@ class Order(Base):
     tracking_reference: Mapped[str | None] = mapped_column(String(120))
     tracking_carrier: Mapped[str | None] = mapped_column(String(120), nullable=True)
     tracking_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    idempotency_key: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    checkout_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    payment_review_reason: Mapped[str | None] = mapped_column(String(40), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     items: Mapped[list[OrderItem]] = relationship(cascade="all, delete-orphan", back_populates="order")
     status_events: Mapped[list[OrderStatusEvent]] = relationship(
@@ -287,6 +300,7 @@ class PaymentAttempt(Base):
     order_id: Mapped[str] = mapped_column(ForeignKey("orders.id", ondelete="CASCADE"), index=True)
     provider: Mapped[str] = mapped_column(String(20))
     provider_reference: Mapped[str] = mapped_column(String(160), unique=True)
+    redirect_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     status: Mapped[str] = mapped_column(String(30), default="created")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 

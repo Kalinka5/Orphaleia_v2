@@ -1,5 +1,6 @@
 import io
 import uuid
+import warnings
 from pathlib import Path
 
 import boto3
@@ -11,6 +12,7 @@ ALLOWED = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
 MAX_BYTES = 8 * 1024 * 1024
 MAX_AVATAR_BYTES = 5 * 1024 * 1024
 MAX_AVATAR_PIXELS = 20_000_000
+MAX_COVER_PIXELS = 40_000_000
 AVATAR_SIZE = (256, 256)
 
 
@@ -36,9 +38,25 @@ def save_image(content: bytes, content_type: str) -> tuple[str, int]:
         raise ValueError("Upload a JPEG, PNG, or WebP image")
     if len(content) > MAX_BYTES:
         raise ValueError("Image must be smaller than 8 MB")
-    image = Image.open(io.BytesIO(content))
-    image.verify()
-    image = Image.open(io.BytesIO(content)).convert("RGB")
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", Image.DecompressionBombWarning)
+            probe = Image.open(io.BytesIO(content))
+            detected_format = probe.format
+            width, height = probe.size
+            if width * height > MAX_COVER_PIXELS:
+                raise ValueError("Image dimensions are too large")
+            probe.verify()
+        if detected_format not in {"JPEG", "PNG", "WEBP"}:
+            raise ValueError("Upload a JPEG, PNG, or WebP image")
+        image = Image.open(io.BytesIO(content)).convert("RGB")
+    except (
+        Image.DecompressionBombError,
+        Image.DecompressionBombWarning,
+        UnidentifiedImageError,
+        OSError,
+    ) as exc:
+        raise ValueError("Upload a valid JPEG, PNG, or WebP image") from exc
     image.thumbnail((1200, 1600))
     output = io.BytesIO()
     image.save(output, format="WEBP", quality=88, method=6)

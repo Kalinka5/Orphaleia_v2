@@ -65,7 +65,11 @@ def test_order_keeps_its_shipping_snapshot_when_default_address_changes(client):
     book = client.get("/api/v1/books").json()["items"][0]
     client.post("/api/v1/cart/items", json={"book_id": book["id"], "quantity": 1}, headers=headers)
     order_address = {**ADDRESS, "name": "Gift Reader", "line1": "8 Order Road", "line2": ""}
-    order = client.post("/api/v1/orders", json={"address": order_address}, headers=headers)
+    order = client.post(
+        "/api/v1/orders",
+        json={"address": order_address},
+        headers={**headers, "Idempotency-Key": "delivery-address-order-0001"},
+    )
     assert order.status_code == 200
 
     client.put("/api/v1/users/me/delivery-address", json={**ADDRESS, "line1": "99 Changed Street"}, headers=headers)

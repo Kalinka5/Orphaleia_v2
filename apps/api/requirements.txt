@@ -12,6 +12,7 @@ httpx==0.28.1
 stripe==12.5.1
 boto3==1.40.16
 pillow==11.3.0
+redis==8.1.0
 pytest==8.4.1
 pytest-cov==6.2.1
 ruff==0.12.9

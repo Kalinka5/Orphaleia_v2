@@ -749,12 +749,12 @@ test('auth routes keep account recovery and cross-navigation links', async ({ pa
   await expect(page.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/sign-in')
 })
 
-test('registration server errors float without shifting the form', async ({ page }) => {
+test('registration infrastructure errors float without shifting the form', async ({ page }) => {
   await mockGuest(page)
   await page.route('**/api/v1/auth/register', (route) => route.fulfill({
-    status: 409,
+    status: 503,
     contentType: 'application/json',
-    body: JSON.stringify({ message: 'An account already uses this email' }),
+    body: JSON.stringify({ message: 'Request protection is temporarily unavailable' }),
   }))
   await page.goto('/register')
   await page.getByLabel('Your name').fill('Marina Soler')
@@ -767,8 +767,7 @@ test('registration server errors float without shifting the form', async ({ page
 
   const alert = page.getByRole('alert')
   await expect(alert).toContainText('Account not created')
-  await expect(alert).toContainText('An account already uses this email')
-  await expect(page.getByRole('link', { name: 'Sign in instead' })).toHaveAttribute('href', '/sign-in')
+  await expect(alert).toContainText('Request protection is temporarily unavailable')
   await expect(page.getByLabel('Email address')).toHaveAttribute('aria-invalid', 'true')
   const headingAfter = await page.getByRole('heading', { name: 'Register' }).boundingBox()
   expect(headingBefore).not.toBeNull()

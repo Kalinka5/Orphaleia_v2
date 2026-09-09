@@ -1,9 +1,10 @@
 import os
 
 os.environ["APP_ENV"] = "test"
-os.environ["DATABASE_URL"] = "sqlite://"
+os.environ["DATABASE_URL"] = os.environ.get("TEST_DATABASE_URL", "sqlite://")
 os.environ["SECRET_KEY"] = "test-secret-that-is-long-enough-for-tests"
 os.environ["PAYMENTS_MOCK"] = "true"
+os.environ["COOKIE_SECURE"] = "false"
 
 import pytest
 from fastapi.testclient import TestClient

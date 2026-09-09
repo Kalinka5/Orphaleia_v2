@@ -1082,7 +1082,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "pending_payment" | "paid" | "processing" | "shipped" | "out_for_delivery" | "delivered" | "cancelled" | "refunded";
+            status: "pending_payment" | "payment_review" | "paid" | "processing" | "shipped" | "out_for_delivery" | "delivered" | "cancelled" | "refunded";
             /** Tracking Reference */
             tracking_reference?: string | null;
             /** Tracking Carrier */
@@ -1264,7 +1264,7 @@ export interface operations {
         };
         responses: {
             /** @description Successful Response */
-            200: {
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2247,7 +2247,9 @@ export interface operations {
     create_order_api_v1_orders_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
             path?: never;
             cookie?: never;
         };

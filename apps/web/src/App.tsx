@@ -844,7 +844,6 @@ function AuthPage({ register = false }: { register?: boolean }) {
       setSubmitting(false)
     }
   }
-  const existingAccount = error === 'An account already uses this email'
   const title = register ? 'Register' : 'Login'
   const description = register ? 'Keep your orders, ratings, and notes together in one quiet harbor.' : 'Your saved journey continues where you left it.'
   const artwork = register ? {
@@ -862,7 +861,6 @@ function AuthPage({ register = false }: { register?: boolean }) {
       message={notificationOpen ? sent ? `${sent.message}. We sent the link to ${sent.email}.` : fieldError || error : ''}
       variant={sent ? 'success' : 'error'}
       onClose={() => { setNotificationOpen(false); setError(''); setFieldError('') }}
-      action={existingAccount ? <Link to="/sign-in">Sign in instead</Link> : undefined}
     />
     <div className={s.authFormPanel} data-testid="auth-form-panel">
       <form className={s.authForm} onSubmit={submit} aria-busy={submitting}>
@@ -930,10 +928,10 @@ function CartPage() {
 }
 
 function Checkout() {
-  const { user } = useAuth(); const navigate = useNavigate(); const client = useQueryClient(); const [address, setAddress] = useState<Address>(() => user?.default_shipping_address ?? emptyAddress(user?.full_name)); const [saveAsDefault, setSaveAsDefault] = useState(false); const [quote, setQuote] = useState<{ subtotal_cents: number; shipping_cents: number; total_cents: number } | null>(null); const [quoteNotice, setQuoteNotice] = useState(false); const [error, setError] = useState(''); const [busy, setBusy] = useState(false)
+  const { user } = useAuth(); const navigate = useNavigate(); const client = useQueryClient(); const [address, setAddress] = useState<Address>(() => user?.default_shipping_address ?? emptyAddress(user?.full_name)); const [saveAsDefault, setSaveAsDefault] = useState(false); const [quote, setQuote] = useState<{ subtotal_cents: number; shipping_cents: number; total_cents: number } | null>(null); const [quoteNotice, setQuoteNotice] = useState(false); const [error, setError] = useState(''); const [busy, setBusy] = useState(false); const checkoutAttempt = useRef<{ payload: string; key: string } | null>(null)
   if (!user) return <Navigate to="/sign-in" state={{ from: '/checkout' }} />
   async function quoteOrder(e: FormEvent) { e.preventDefault(); setBusy(true); setError(''); setQuoteNotice(false); try { setQuote(await api('/checkout/quote', { method: 'POST', body: JSON.stringify({ address }) })); setQuoteNotice(true) } catch (err) { setError((err as Error).message) } finally { setBusy(false) } }
-  async function pay(provider: string) { setBusy(true); setError(''); try { if (saveAsDefault) { const nextUser = await api<User>('/users/me/delivery-address', { method: 'PUT', body: JSON.stringify(address) }); client.setQueryData(['me'], nextUser) } const order = await api<Order>('/orders', { method: 'POST', body: JSON.stringify({ address }) }); const payment = await api<{ redirect_url: string }>(`/payments/${provider}/start?order_id=${order.id}`, { method: 'POST' }); window.location.assign(payment.redirect_url) } catch (err) { setError((err as Error).message); setBusy(false) } }
+  async function pay(provider: string) { setBusy(true); setError(''); try { if (saveAsDefault) { const nextUser = await api<User>('/users/me/delivery-address', { method: 'PUT', body: JSON.stringify(address) }); client.setQueryData(['me'], nextUser) } const payload = JSON.stringify({ address }); if (!checkoutAttempt.current || checkoutAttempt.current.payload !== payload) checkoutAttempt.current = { payload, key: crypto.randomUUID() }; const order = await api<Order>('/orders', { method: 'POST', headers: { 'Idempotency-Key': checkoutAttempt.current.key }, body: payload }); const payment = await api<{ redirect_url: string }>(`/payments/${provider}/start?order_id=${order.id}`, { method: 'POST' }); window.location.assign(payment.redirect_url) } catch (err) { setError((err as Error).message); setBusy(false) } }
   return <section className={s.checkoutPage}>
     <FormNotification title={error ? 'Checkout could not continue' : 'Delivery calculated'} message={error || (quoteNotice ? 'Your delivery rate and order total are ready.' : '')} variant={error ? 'error' : 'success'} onClose={() => { setError(''); setQuoteNotice(false) }} />
     <div><span className={s.eyebrow}>DELIVERY</span><h1>Where should these stories find you?</h1>
@@ -961,7 +959,7 @@ function PaymentReturn() {
     if (!order || !provider || !reference) return
     if (requestStarted.current) return
     requestStarted.current = true
-    api<Order>(`/payments/${provider}/complete?order_id=${order}&reference=${encodeURIComponent(reference)}`, { method: 'POST' }).then(() => { setStatus('Payment confirmed. Your books are reserved.'); setConfirmed(true); client.invalidateQueries({ queryKey: ['cart'] }) }).catch((e) => setStatus(e.message)).finally(() => setBusy(false))
+    api<Order>(`/payments/${provider}/complete?order_id=${order}&reference=${encodeURIComponent(reference)}`, { method: 'POST' }).then((completed) => { const review = completed.status === 'payment_review'; setStatus(review ? 'Your payment was received and needs manual review.' : 'Payment confirmed. Your books are reserved.'); setConfirmed(true); client.invalidateQueries({ queryKey: ['cart'] }) }).catch((e) => setStatus(e.message)).finally(() => setBusy(false))
   }, [order, provider, reference, client])
   return <section className={s.narrowPage}>{busy ? <State title="Confirming your payment…" loading compact /> : <><div className={s.seal}>{confirmed ? <Check size={42} aria-hidden="true" /> : '?'}</div><span className={s.eyebrow}>{confirmed ? 'ORDER RECEIVED' : 'PAYMENT STATUS'}</span><h1 role="status">{status}</h1><p>{confirmed ? 'You can follow fulfillment from your account.' : 'Return to your bag or contact the shop if a payment was completed.'}</p><Link className={s.primaryButton} to={confirmed ? '/account' : '/cart'}>{confirmed ? 'View my orders' : 'Return to bag'} <ArrowRight size={16} aria-hidden="true" /></Link></>}</section>
 }

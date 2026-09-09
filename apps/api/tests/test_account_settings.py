@@ -1,13 +1,16 @@
 import io
 import re
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
 
+import pytest
 from conftest import login
 from fastapi.testclient import TestClient
 from PIL import Image
 from sqlalchemy import select
 
 from app.config import settings
-from app.database import SessionLocal
+from app.database import SessionLocal, engine
 from app.main import app
 from app.models import OutboxMessage
 
@@ -133,6 +136,33 @@ def test_new_email_request_supersedes_old_token_and_can_be_cancelled(client):
     cancelled = client.delete("/api/v1/users/me/email-change", headers=headers)
     assert cancelled.status_code == 200
     assert cancelled.json()["pending_email"] is None
+
+
+@pytest.mark.skipif(engine.dialect.name != "postgresql", reason="requires PostgreSQL concurrency")
+def test_concurrent_email_confirmation_consumes_token_once(client):
+    headers = login(client)
+    requested = client.post(
+        "/api/v1/users/me/email-change",
+        json={
+            "email": "concurrent.email@example.com",
+            "current_password": "ReaderPass!2026",
+        },
+        headers=headers,
+    )
+    assert requested.status_code == 202
+    token = email_change_token("concurrent.email@example.com")
+    barrier = Barrier(2)
+
+    def confirm(_):
+        with TestClient(app) as test_client:
+            barrier.wait()
+            return test_client.post(
+                "/api/v1/auth/confirm-email-change", json={"token": token}
+            ).status_code
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        statuses = list(executor.map(confirm, range(2)))
+    assert sorted(statuses) == [200, 400]
 
 
 def test_password_change_keeps_requesting_device_and_revokes_others(client):

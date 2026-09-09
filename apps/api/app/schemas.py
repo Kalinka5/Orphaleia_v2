@@ -133,6 +133,7 @@ class BookInput(BaseModel):
 
 OrderStatus = Literal[
     "pending_payment",
+    "payment_review",
     "paid",
     "processing",
     "shipped",

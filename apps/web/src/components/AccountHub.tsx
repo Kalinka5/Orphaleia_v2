@@ -52,13 +52,13 @@ function OrderDetails({ order }: { order: Order }) {
   const currentJourneyIndex = orderJourney.indexOf(order.status)
   const furthestJourneyIndex = Math.max(currentJourneyIndex, ...history.map((event) => orderJourney.indexOf(event.status)))
   const trackingUrl = safeTrackingUrl(order.tracking_url)
-  const isException = order.status === 'cancelled' || order.status === 'refunded'
+  const isException = order.status === 'cancelled' || order.status === 'refunded' || order.status === 'payment_review'
   const legacyHistory = order.status !== 'pending_payment' && history.length === 0
 
   return <div className={s.orderDetails} id={`order-details-${order.id}`}>
     {isException && <div className={s.orderException} role="status">
       <b>{orderStatusLabel(order.status)}</b>
-      <p>{order.status === 'cancelled' ? 'This unpaid order will not be prepared or dispatched.' : 'This order is recorded as refunded. Contact the shop if you need payment details.'}</p>
+      <p>{order.status === 'cancelled' ? 'This unpaid order will not be prepared or dispatched.' : order.status === 'payment_review' ? 'Your payment was received, but this order needs manual review. The shop will arrange a refund if it cannot be fulfilled.' : 'This order is recorded as refunded. Contact the shop if you need payment details.'}</p>
     </div>}
     <ol className={s.timeline} aria-label={`Delivery progress for ${order.number}`}>
       {orderJourney.map((status, index) => {

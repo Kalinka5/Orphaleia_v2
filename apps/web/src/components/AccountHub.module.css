@@ -65,7 +65,7 @@
 .orderSummary[aria-expanded='true'] .orderCaret { transform: rotate(180deg); }
 .status { padding: 7px 9px; color: #3f5938; background: #dfe9da; font: 600 9px 'JetBrains Mono', monospace; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
 .status[data-status='pending_payment'] { color: #74552f; background: #f3e7d5; }
-.status[data-status='cancelled'], .status[data-status='refunded'] { color: #813a34; background: #f3dfda; }
+.status[data-status='cancelled'], .status[data-status='refunded'], .status[data-status='payment_review'] { color: #813a34; background: #f3dfda; }
 .status[data-status='delivered'] { color: #fff; background: #285f4c; }
 .orderDetails { padding: 8px clamp(18px, 3vw, 34px) 34px; animation: revealOrder .22s ease both; }
 @keyframes revealOrder { from { transform: translateY(-8px); } }

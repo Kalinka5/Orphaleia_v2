@@ -1,3 +1,4 @@
+import hashlib
 import json
 import logging
 import re
@@ -11,18 +12,19 @@ from pathlib import Path
 
 import httpx
 import stripe
-from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, Response, UploadFile
+from fastapi import Depends, FastAPI, File, Header, HTTPException, Query, Request, Response, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from .config import settings
 from .database import Base, engine, get_db
 from .email_templates import verification_email
+from .middleware import RequestBodyLimitMiddleware
 from .models import (
     ActionToken,
     Author,
@@ -92,7 +94,7 @@ from .services import (
     shipping_quote,
 )
 from .storage import delete_avatar, save_avatar, save_image
-from .throttle import throttle
+from .throttle import rate_limit_health, throttle, throttle_email
 
 logger = logging.getLogger(__name__)
 
@@ -110,8 +112,9 @@ app.add_middleware(
     allow_origins=[settings.frontend_url],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "X-CSRF-Token"],
+    allow_headers=["Content-Type", "X-CSRF-Token", "Idempotency-Key"],
 )
+app.add_middleware(RequestBodyLimitMiddleware)
 Path(settings.media_dir).mkdir(parents=True, exist_ok=True)
 app.mount("/media", StaticFiles(directory=settings.media_dir), name="media")
 
@@ -128,7 +131,7 @@ async def request_id_middleware(request: Request, call_next):
 async def http_error(request: Request, exc: HTTPException):
     return JSONResponse(
         status_code=exc.status_code,
-        content={"code": f"http_{exc.status_code}", "message": str(exc.detail), "request_id": request.state.request_id},
+        content={"code": f"http_{exc.status_code}", "message": str(exc.detail), "request_id": getattr(request.state, "request_id", str(uuid.uuid4()))},
     )
 
 
@@ -144,7 +147,17 @@ async def validation_error(request: Request, exc: RequestValidationError):
 @app.get("/health")
 def health(db: Session = Depends(get_db)):
     db.execute(select(1))
+    rate_limit_health()
     return {"status": "ok", "service": "orphaleia-api"}
+
+
+async def read_limited_upload(file: UploadFile, max_bytes: int) -> bytes:
+    content = bytearray()
+    while chunk := await file.read(64 * 1024):
+        content.extend(chunk)
+        if len(content) > max_bytes:
+            raise HTTPException(413, "Request body is too large")
+    return bytes(content)
 
 
 def user_out(user: User):
@@ -210,22 +223,42 @@ def clear_user_avatar(db: Session, user: User):
     return user_out(user)
 
 
-@app.post("/api/v1/auth/register", dependencies=[Depends(throttle(5, 60))])
+@app.post("/api/v1/auth/register", status_code=202, dependencies=[Depends(throttle(5, 60, "auth:register:ip"))])
 def register(data: RegisterInput, db: Session = Depends(get_db)):
-    if db.scalar(select(User).where(func.lower(User.email) == data.email.lower())):
-        raise HTTPException(409, "An account already uses this email")
-    user = User(email=data.email.lower(), full_name=data.full_name.strip(), password_hash=hash_password(data.password))
-    db.add(user)
-    db.flush()
-    raw = issue_action_token(db, user, "verify", 24)
-    url = f"{settings.frontend_url}/verify?token={raw}"
-    queue_email(
-        db,
-        user.email,
-        "Verify your Orphaleia account",
-        verification_email(full_name=user.full_name, verification_url=url, frontend_url=settings.frontend_url),
-    )
-    db.commit()
+    email = data.email.lower()
+    throttle_email("auth:register:email", email, 5, 60)
+    password_hash = hash_password(data.password)
+    user = db.scalar(select(User).where(func.lower(User.email) == email))
+    if user:
+        queue_email(
+            db,
+            email,
+            "An Orphaleia registration was attempted",
+            "<p>Someone tried to create an Orphaleia account with this address. Your existing account was not changed. Sign in normally or request a password reset if needed.</p>",
+        )
+    else:
+        user = User(email=email, full_name=data.full_name.strip(), password_hash=password_hash)
+        db.add(user)
+        db.flush()
+        raw = issue_action_token(db, user, "verify", 24)
+        url = f"{settings.frontend_url}/verify?token={raw}"
+        queue_email(
+            db,
+            user.email,
+            "Verify your Orphaleia account",
+            verification_email(full_name=user.full_name, verification_url=url, frontend_url=settings.frontend_url),
+        )
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        queue_email(
+            db,
+            email,
+            "An Orphaleia registration was attempted",
+            "<p>Someone tried to create an Orphaleia account with this address. Your existing account was not changed. Sign in normally or request a password reset if needed.</p>",
+        )
+        db.commit()
     result = {"message": "Check your email to verify your account"}
     if settings.app_env == "development" and settings.mail_preview_url:
         result["email_preview_url"] = settings.mail_preview_url
@@ -234,22 +267,37 @@ def register(data: RegisterInput, db: Session = Depends(get_db)):
 
 @app.post("/api/v1/auth/verify")
 def verify_email(data: TokenInput, db: Session = Depends(get_db)):
-    record = db.scalar(select(ActionToken).where(ActionToken.kind == "verify", ActionToken.token_hash == token_hash(data.token)))
+    digest = token_hash(data.token)
+    user_id = db.scalar(
+        select(ActionToken.user_id).where(
+            ActionToken.kind == "verify", ActionToken.token_hash == digest
+        )
+    )
+    if not user_id:
+        raise HTTPException(400, "Verification link is invalid or expired")
+    user = db.scalar(select(User).where(User.id == user_id).with_for_update())
+    record = db.scalar(
+        select(ActionToken)
+        .where(ActionToken.kind == "verify", ActionToken.token_hash == digest)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
     if not record or record.used_at or record.expires_at.replace(tzinfo=UTC) < datetime.now(UTC):
         raise HTTPException(400, "Verification link is invalid or expired")
-    user = db.get(User, record.user_id)
     user.is_verified = True
     record.used_at = datetime.now(UTC)
     db.commit()
     return {"message": "Email verified. You can now sign in."}
 
 
-@app.post("/api/v1/auth/login", dependencies=[Depends(throttle(10, 60))])
+@app.post("/api/v1/auth/login", dependencies=[Depends(throttle(10, 60, "auth:login:ip"))])
 def login(data: LoginInput, response: Response, db: Session = Depends(get_db)):
+    throttle_email("auth:login:email", data.email, 10, 60)
     user = db.scalar(select(User).where(func.lower(User.email) == data.email.lower()))
     if not user or not verify_password(data.password, user.password_hash):
         raise HTTPException(401, "Email or password is incorrect")
     access, refresh, csrf = create_session(db, user)
+    db.commit()
     set_auth_cookies(response, access, refresh, csrf)
     return {"user": user_out(user)}
 
@@ -259,13 +307,26 @@ def refresh(request: Request, response: Response, db: Session = Depends(get_db))
     raw = request.cookies.get("refresh_token")
     if not raw:
         raise HTTPException(401, "Refresh session not found")
-    session = db.scalar(select(RefreshSession).where(RefreshSession.token_hash == token_hash(raw)))
+    digest = token_hash(raw)
+    session = db.scalar(select(RefreshSession).where(RefreshSession.token_hash == digest))
     if not session or session.revoked_at or session.expires_at.replace(tzinfo=UTC) < datetime.now(UTC):
         raise HTTPException(401, "Refresh session expired")
-    session.revoked_at = datetime.now(UTC)
+    consumed = db.execute(
+        update(RefreshSession)
+        .where(
+            RefreshSession.id == session.id,
+            RefreshSession.revoked_at.is_(None),
+            RefreshSession.expires_at > datetime.now(UTC),
+        )
+        .values(revoked_at=datetime.now(UTC))
+        .execution_options(synchronize_session=False)
+    )
+    if consumed.rowcount != 1:
+        db.rollback()
+        raise HTTPException(401, "Refresh session expired")
     user = db.get(User, session.user_id)
-    db.commit()
     access, next_refresh, csrf = create_session(db, user)
+    db.commit()
     set_auth_cookies(response, access, next_refresh, csrf)
     return {"user": user_out(user)}
 
@@ -282,10 +343,14 @@ def logout(request: Request, response: Response, db: Session = Depends(get_db)):
     return {"message": "Signed out"}
 
 
-@app.post("/api/v1/auth/request-reset", dependencies=[Depends(throttle(5, 300))])
+@app.post("/api/v1/auth/request-reset", dependencies=[Depends(throttle(5, 300, "auth:reset:ip"))])
 def request_reset(data: EmailInput, db: Session = Depends(get_db)):
-    user = db.scalar(select(User).where(func.lower(User.email) == data.email.lower()))
+    email = data.email.lower()
+    throttle_email("auth:reset:email", email, 5, 300)
+    candidate = db.scalar(select(User.id).where(func.lower(User.email) == email))
+    user = db.scalar(select(User).where(User.id == candidate).with_for_update()) if candidate else None
     if user:
+        invalidate_action_tokens(db, user, "reset")
         raw = issue_action_token(db, user, "reset", 2)
         url = f"{settings.frontend_url}/reset-password?token={raw}"
         queue_email(db, user.email, "Reset your Orphaleia password", f"<p><a href=\"{url}\">Choose a new password</a>. This link expires in two hours.</p>")
@@ -295,13 +360,26 @@ def request_reset(data: EmailInput, db: Session = Depends(get_db)):
 
 @app.post("/api/v1/auth/reset")
 def reset_password(data: ResetInput, db: Session = Depends(get_db)):
-    record = db.scalar(select(ActionToken).where(ActionToken.kind == "reset", ActionToken.token_hash == token_hash(data.token)))
+    digest = token_hash(data.token)
+    user_id = db.scalar(
+        select(ActionToken.user_id).where(
+            ActionToken.kind == "reset", ActionToken.token_hash == digest
+        )
+    )
+    if not user_id:
+        raise HTTPException(400, "Reset link is invalid or expired")
+    user = db.scalar(select(User).where(User.id == user_id).with_for_update())
+    record = db.scalar(
+        select(ActionToken)
+        .where(ActionToken.kind == "reset", ActionToken.token_hash == digest)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
     if not record or record.used_at or record.expires_at.replace(tzinfo=UTC) < datetime.now(UTC):
         raise HTTPException(400, "Reset link is invalid or expired")
-    user = db.get(User, record.user_id)
     user.password_hash = hash_password(data.password)
     user.auth_version += 1
-    record.used_at = datetime.now(UTC)
+    invalidate_action_tokens(db, user, "reset")
     revoke_user_sessions(db, user)
     queue_email(db, user.email, "Your Orphaleia password was changed", "<p>Your password was changed and all signed-in devices were logged out. If this was not you, request another password reset immediately.</p>")
     db.commit()
@@ -342,7 +420,7 @@ def remove_delivery_address(user: User = Depends(current_user), db: Session = De
 
 @app.put("/api/v1/users/me/avatar", dependencies=[Depends(require_csrf), Depends(throttle(10, 600))])
 async def update_avatar(file: UploadFile = File(...), user: User = Depends(current_user), db: Session = Depends(get_db)):
-    content = await file.read()
+    content = await read_limited_upload(file, 5 * 1024 * 1024)
     try:
         url, size = save_avatar(content, file.content_type or "", user.id)
     except ValueError as exc:
@@ -371,6 +449,7 @@ def remove_avatar(user: User = Depends(current_user), db: Session = Depends(get_
 
 @app.post("/api/v1/users/me/email-change", status_code=202, dependencies=[Depends(require_csrf), Depends(throttle(5, 300))])
 def request_email_change(data: EmailChangeInput, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    user = db.scalar(select(User).where(User.id == user.id).with_for_update())
     if not verify_password(data.current_password, user.password_hash):
         raise HTTPException(401, "Current password is incorrect")
     next_email = str(data.email).lower()
@@ -394,6 +473,7 @@ def request_email_change(data: EmailChangeInput, user: User = Depends(current_us
 
 @app.delete("/api/v1/users/me/email-change", dependencies=[Depends(require_csrf)])
 def cancel_email_change(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    user = db.scalar(select(User).where(User.id == user.id).with_for_update())
     invalidate_action_tokens(db, user, "email_change")
     user.pending_email = None
     db.commit()
@@ -402,10 +482,23 @@ def cancel_email_change(user: User = Depends(current_user), db: Session = Depend
 
 @app.post("/api/v1/auth/confirm-email-change")
 def confirm_email_change(data: TokenInput, response: Response, db: Session = Depends(get_db)):
-    record = db.scalar(select(ActionToken).where(ActionToken.kind == "email_change", ActionToken.token_hash == token_hash(data.token)))
+    digest = token_hash(data.token)
+    user_id = db.scalar(
+        select(ActionToken.user_id).where(
+            ActionToken.kind == "email_change", ActionToken.token_hash == digest
+        )
+    )
+    if not user_id:
+        raise HTTPException(400, "Email change link is invalid or expired")
+    user = db.scalar(select(User).where(User.id == user_id).with_for_update())
+    record = db.scalar(
+        select(ActionToken)
+        .where(ActionToken.kind == "email_change", ActionToken.token_hash == digest)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
     if not record or record.used_at or record.expires_at.replace(tzinfo=UTC) < datetime.now(UTC):
         raise HTTPException(400, "Email change link is invalid or expired")
-    user = db.get(User, record.user_id)
     if not user or not user.pending_email:
         raise HTTPException(400, "Email change is no longer pending")
     existing = db.scalar(select(User).where(func.lower(User.email) == user.pending_email, User.id != user.id))
@@ -428,14 +521,16 @@ def confirm_email_change(data: TokenInput, response: Response, db: Session = Dep
 
 @app.post("/api/v1/users/me/password", dependencies=[Depends(require_csrf), Depends(throttle(5, 300))])
 def change_password(data: PasswordChangeInput, response: Response, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    user = db.scalar(select(User).where(User.id == user.id).with_for_update())
     if not verify_password(data.current_password, user.password_hash):
         raise HTTPException(401, "Current password is incorrect")
     user.password_hash = hash_password(data.new_password)
     user.auth_version += 1
+    invalidate_action_tokens(db, user, "reset")
     revoke_user_sessions(db, user)
     queue_email(db, user.email, "Your Orphaleia password was changed", "<p>Your password was changed and other signed-in devices were logged out. If this was not you, request a password reset immediately.</p>")
-    db.commit()
     access, refresh_token, csrf = create_session(db, user)
+    db.commit()
     set_auth_cookies(response, access, refresh_token, csrf)
     return {"message": "Password updated. Other devices were signed out."}
 
@@ -731,16 +826,133 @@ def checkout_quote(data: CheckoutInput, user: User = Depends(verified_user), db:
     return shipping_quote(db, cart, data.address.country)
 
 
+def checkout_fingerprint(cart: Cart, data: CheckoutInput, quote: dict, books: dict[str, Book]) -> str:
+    payload = {
+        "address": data.address.model_dump(),
+        "items": sorted(
+            [
+                {
+                    "book_id": item.book_id,
+                    "quantity": item.quantity,
+                    "unit_price_cents": books[item.book_id].price_cents,
+                }
+                for item in cart.items
+            ],
+            key=lambda item: item["book_id"],
+        ),
+        "currency": quote["currency"],
+        "subtotal_cents": quote["subtotal_cents"],
+        "shipping_cents": quote["shipping_cents"],
+        "total_cents": quote["total_cents"],
+    }
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode()).hexdigest()
+
+
+def existing_order_fingerprint(order: Order, data: CheckoutInput) -> str:
+    payload = {
+        "address": data.address.model_dump(),
+        "items": sorted(
+            [
+                {
+                    "book_id": item.book_id,
+                    "quantity": item.quantity,
+                    "unit_price_cents": item.unit_price_cents,
+                }
+                for item in order.items
+            ],
+            key=lambda item: item["book_id"],
+        ),
+        "currency": order.currency,
+        "subtotal_cents": order.subtotal_cents,
+        "shipping_cents": order.shipping_cents,
+        "total_cents": order.total_cents,
+    }
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode()).hexdigest()
+
+
+def keyed_checkout_matches(order: Order, cart: Cart | None, data: CheckoutInput) -> bool:
+    if order.checkout_fingerprint != existing_order_fingerprint(order, data):
+        return False
+    if not cart or not cart.items:
+        return True
+    requested_lines = sorted((item.book_id, item.quantity) for item in cart.items)
+    stored_lines = sorted((item.book_id, item.quantity) for item in order.items)
+    return requested_lines == stored_lines
+
+
 @app.post("/api/v1/orders", dependencies=[Depends(require_csrf)])
-def create_order(data: CheckoutInput, user: User = Depends(verified_user), db: Session = Depends(get_db)):
-    cart = get_cart(db, user)
-    if not cart.items:
+def create_order(
+    data: CheckoutInput,
+    idempotency_key: str = Header(min_length=16, max_length=128, alias="Idempotency-Key"),
+    user: User = Depends(verified_user),
+    db: Session = Depends(get_db),
+):
+    user = db.scalar(select(User).where(User.id == user.id).with_for_update())
+    keyed_order = db.scalar(
+        select(Order)
+        .options(selectinload(Order.items), selectinload(Order.status_events))
+        .where(Order.user_id == user.id, Order.idempotency_key == idempotency_key)
+        .with_for_update()
+    )
+    if keyed_order:
+        replay_cart = db.scalar(
+            select(Cart)
+            .options(selectinload(Cart.items))
+            .where(Cart.user_id == user.id)
+            .with_for_update()
+        )
+        if not keyed_checkout_matches(keyed_order, replay_cart, data):
+            raise HTTPException(409, "This idempotency key was already used for a different checkout")
+        return order_out(keyed_order)
+
+    cart = db.scalar(
+        select(Cart)
+        .options(selectinload(Cart.items).selectinload(CartItem.book))
+        .where(Cart.user_id == user.id)
+        .with_for_update()
+    )
+    if not cart or not cart.items:
         raise HTTPException(422, "Your cart is empty")
-    quote = shipping_quote(db, cart, data.address.country)
+
+    pending_order = db.scalar(
+        select(Order)
+        .options(selectinload(Order.items), selectinload(Order.status_events))
+        .where(Order.user_id == user.id, Order.status == "pending_payment")
+        .with_for_update()
+    )
+    book_ids = sorted(item.book_id for item in cart.items)
+    locked_books = db.scalars(
+        select(Book).where(Book.id.in_(book_ids)).order_by(Book.id).with_for_update()
+    ).all()
+    books = {book.id: book for book in locked_books}
+    quote = shipping_quote(db, cart, data.address.country, books)
+    fingerprint = checkout_fingerprint(cart, data, quote, books)
+
+    if pending_order and pending_order.checkout_fingerprint == fingerprint:
+        return order_out(pending_order)
+
+    if pending_order:
+        timestamp = datetime.now(UTC)
+        reservations = db.scalars(
+            select(InventoryReservation).where(
+                InventoryReservation.order_id == pending_order.id,
+                InventoryReservation.consumed_at.is_(None),
+                InventoryReservation.released_at.is_(None),
+            )
+        ).all()
+        for reservation in reservations:
+            reservation.released_at = timestamp
+        pending_order.status = "cancelled"
+        add_order_status_event(db, pending_order, "cancelled", "checkout")
+        db.flush()
+
     for item in cart.items:
-        available = item.book.stock_qty - reserved_quantity(db, item.book_id)
+        book = books[item.book_id]
+        available = book.stock_qty - reserved_quantity(db, item.book_id)
         if available < item.quantity:
-            raise HTTPException(409, f"Only {max(available, 0)} copies of {item.book.title} remain")
+            raise HTTPException(409, f"Only {max(available, 0)} copies of {book.title} remain")
     number = f"ORP-{datetime.now(UTC):%y%m%d}-{secrets.token_hex(2).upper()}"
     address = data.address
     order = Order(
@@ -755,12 +967,15 @@ def create_order(data: CheckoutInput, user: User = Depends(verified_user), db: S
         shipping_city=address.city,
         shipping_postal_code=address.postal_code,
         shipping_country=address.country,
+        idempotency_key=idempotency_key,
+        checkout_fingerprint=fingerprint,
     )
     db.add(order)
     db.flush()
     expires = datetime.now(UTC) + timedelta(minutes=settings.reservation_minutes)
     for item in cart.items:
-        db.add(OrderItem(order_id=order.id, book_id=item.book_id, title=item.book.title, isbn=item.book.isbn, cover_url=item.book.cover_url, unit_price_cents=item.book.price_cents, quantity=item.quantity))
+        book = books[item.book_id]
+        db.add(OrderItem(order_id=order.id, book_id=item.book_id, title=book.title, isbn=book.isbn, cover_url=book.cover_url, unit_price_cents=book.price_cents, quantity=item.quantity))
         db.add(InventoryReservation(order_id=order.id, book_id=item.book_id, quantity=item.quantity, expires_at=expires))
     db.commit()
     return order_out(
@@ -799,9 +1014,33 @@ def order_for_user(order_id: str, user: User = Depends(current_user), db: Sessio
 async def start_payment(provider: str, order_id: str, user: User = Depends(verified_user), db: Session = Depends(get_db)):
     if provider not in PROVIDERS:
         raise HTTPException(404, "Payment provider not supported")
-    order = db.scalar(select(Order).options(selectinload(Order.user)).where(Order.id == order_id, Order.user_id == user.id))
+    order = db.scalar(
+        select(Order)
+        .options(selectinload(Order.user))
+        .where(Order.id == order_id, Order.user_id == user.id)
+        .with_for_update()
+    )
     if not order or order.status != "pending_payment":
         raise HTTPException(409, "This order cannot be paid")
+    active_attempt = db.scalar(
+        select(PaymentAttempt)
+        .where(
+            PaymentAttempt.order_id == order.id,
+            PaymentAttempt.provider == provider,
+            PaymentAttempt.status == "created",
+        )
+        .order_by(PaymentAttempt.created_at.desc())
+        .with_for_update()
+    )
+    if active_attempt:
+        if not active_attempt.redirect_url:
+            raise HTTPException(409, "This payment is already awaiting confirmation")
+        return {
+            "provider": provider,
+            "reference": active_attempt.provider_reference,
+            "redirect_url": active_attempt.redirect_url,
+            "mock": settings.payments_mock,
+        }
     return await PROVIDERS[provider].start(db, order)
 
 
@@ -837,7 +1076,7 @@ async def complete_payment(provider: str, order_id: str, reference: str, user: U
         event_id = f"paypal-capture:{payload['id']}"
     else:
         raise HTTPException(404, "Payment provider not supported")
-    finalize_payment(db, order, provider, event_id, payload)
+    finalize_payment(db, order, provider, event_id, payload, reference)
     cart = get_cart(db, user)
     for item in list(cart.items):
         db.delete(item)
@@ -861,12 +1100,20 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
             event = stripe.Webhook.construct_event(raw, request.headers.get("stripe-signature", ""), settings.stripe_webhook_secret)
         except Exception as exc:
             raise HTTPException(400, "Invalid Stripe signature") from exc
-    if event.get("type") == "checkout.session.completed":
+    if event.get("type") in {
+        "checkout.session.completed",
+        "checkout.session.async_payment_succeeded",
+    }:
         obj = event["data"]["object"]
-        order = db.scalar(select(Order).options(selectinload(Order.user)).where(Order.id == obj.get("metadata", {}).get("order_id")))
-        if order:
+        order = db.scalar(
+            select(Order)
+            .options(selectinload(Order.user))
+            .where(Order.id == obj.get("metadata", {}).get("order_id"))
+        )
+        reference = obj.get("id")
+        if order and reference and obj.get("payment_status") == "paid":
             payload = event.to_dict_recursive() if hasattr(event, "to_dict_recursive") else event
-            finalize_payment(db, order, "stripe", event["id"], payload)
+            finalize_payment(db, order, "stripe", event["id"], payload, reference)
     return {"received": True}
 
 
@@ -894,7 +1141,7 @@ async def paypal_webhook(request: Request, db: Session = Depends(get_db)):
         attempt = db.scalar(select(PaymentAttempt).where(PaymentAttempt.provider_reference == reference))
         if attempt:
             order = db.scalar(select(Order).options(selectinload(Order.user)).where(Order.id == attempt.order_id))
-            finalize_payment(db, order, "paypal", event["id"], event)
+            finalize_payment(db, order, "paypal", event["id"], event, reference)
     return {"received": True}
 
 
@@ -1056,6 +1303,8 @@ def admin_order_status(
     allowed = target == normal_next.get(order.status)
     if order.status == "pending_payment" and target == "cancelled":
         allowed = True
+    if order.status == "payment_review" and target == "refunded":
+        allowed = True
     if order.status in PAID_ORDER_STATUSES - {"refunded", "delivered"} and target == "refunded":
         allowed = True
     if not allowed:
@@ -1075,6 +1324,15 @@ def admin_order_status(
         ).all()
         for reservation in reservations:
             reservation.released_at = datetime.now(UTC)
+    elif order.status == "payment_review" and target == "refunded":
+        attempts = db.scalars(
+            select(PaymentAttempt).where(
+                PaymentAttempt.order_id == order.id,
+                PaymentAttempt.status == "requires_refund",
+            )
+        ).all()
+        for attempt in attempts:
+            attempt.status = "refunded"
 
     order.status = target
     add_order_status_event(db, order, target, "admin", staff.id)
@@ -1153,7 +1411,7 @@ def admin_remove_avatar(user_id: str, _: User = Depends(admin_user), db: Session
 
 @app.post("/api/v1/admin/media", dependencies=[Depends(require_csrf)])
 async def upload_media(file: UploadFile = File(...), _: User = Depends(admin_user), db: Session = Depends(get_db)):
-    content = await file.read()
+    content = await read_limited_upload(file, 8 * 1024 * 1024)
     try:
         url, size = save_image(content, file.content_type or "")
     except ValueError as exc:

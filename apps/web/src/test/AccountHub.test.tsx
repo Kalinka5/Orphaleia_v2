@@ -90,6 +90,21 @@ describe('AccountHub', () => {
     expect(screen.queryByText('Earlier updates were recorded before timeline tracking began.')).not.toBeInTheDocument()
   })
 
+  it('explains provider-confirmed orders awaiting payment review', async () => {
+    const reviewOrder = {
+      ...deliveredOrder,
+      status: 'payment_review' as const,
+      payment_review_reason: 'stock_unavailable' as const,
+      status_history: [
+        { status: 'payment_review' as const, occurred_at: '2026-09-05T10:01:00Z' },
+      ],
+    }
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ items: [reviewOrder] }), { status: 200, headers: { 'Content-Type': 'application/json' } })))
+    renderHub('/account?section=orders&order=order-1')
+    expect(await screen.findByText(/needs manual review/)).toBeInTheDocument()
+    expect(screen.getByText(/arrange a refund/)).toBeInTheDocument()
+  })
+
   it('saves a public display name from the profile section', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       void input; void init

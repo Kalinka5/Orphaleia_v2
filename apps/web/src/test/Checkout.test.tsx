@@ -75,4 +75,33 @@ describe('Checkout saved delivery address', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Address could not be saved')
     expect(orderCreated).toBe(false)
   })
+
+  it('reuses the same idempotency key when an order request is retried', async () => {
+    const orderKeys: string[] = []
+    let attempts = 0
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url.endsWith('/users/me')) return new Response(JSON.stringify(user), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      if (url.endsWith('/cart')) return new Response(JSON.stringify({ id: 'cart-1', items: [], subtotal_cents: 0, currency: 'EUR' }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      if (url.endsWith('/checkout/quote')) return new Response(JSON.stringify({ subtotal_cents: 2000, shipping_cents: 400, total_cents: 2400 }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      if (url.endsWith('/orders')) {
+        orderKeys.push(new Headers(init?.headers).get('Idempotency-Key') || '')
+        attempts += 1
+        if (attempts === 1) return new Response(JSON.stringify({ message: 'Please retry' }), { status: 503, headers: { 'Content-Type': 'application/json' } })
+        return new Response(JSON.stringify({ id: 'order-1' }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      }
+      if (url.includes('/payments/stripe/start')) return new Response(JSON.stringify({ redirect_url: '#payment' }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      throw new Error(`Unexpected request: ${url}`)
+    })
+    renderCheckout(fetchMock)
+    await screen.findByLabelText('Address')
+    fireEvent.click(screen.getByRole('button', { name: 'Calculate delivery' }))
+    await screen.findByText('€24.00')
+    fireEvent.click(screen.getByRole('button', { name: 'Pay securely with Stripe' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Please retry')
+    fireEvent.click(screen.getByRole('button', { name: 'Pay securely with Stripe' }))
+    await waitFor(() => expect(orderKeys).toHaveLength(2))
+    expect(orderKeys[0]).toHaveLength(36)
+    expect(orderKeys[1]).toBe(orderKeys[0])
+  })
 })

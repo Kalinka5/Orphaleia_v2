@@ -1,12 +1,23 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from .config import settings
 from .database import Base, SessionLocal, engine
-from .models import Author, Book, Comment, Genre, Rating, RatingEvent, ShippingZone, User
-from .security import hash_password
+from .models import (
+    ActionToken,
+    Author,
+    Book,
+    Comment,
+    Genre,
+    Rating,
+    RatingEvent,
+    RefreshSession,
+    ShippingZone,
+    User,
+)
+from .security import hash_password, verify_password
 
 LEGACY_CATALOG_SLUGS = {
     "the-cartographer-of-ithaca",
@@ -190,16 +201,49 @@ SEEDED_COMMENTS = (
 )
 
 
-def _upsert_user(db: Session, email: str, full_name: str, password: str, role: str = "customer") -> User:
+def _upsert_user(
+    db: Session,
+    email: str,
+    full_name: str,
+    password: str,
+    role: str = "customer",
+    rotate_credentials: bool = False,
+) -> User:
     user = db.scalar(select(User).where(User.email == email.lower()))
     if user is None:
         user = User(email=email.lower(), full_name=full_name, password_hash=hash_password(password), role=role, is_verified=True)
         db.add(user)
+    elif rotate_credentials:
+        user.full_name = full_name
+        user.role = role
+        user.is_verified = True
+        if not verify_password(password, user.password_hash):
+            timestamp = datetime.now(UTC)
+            user.password_hash = hash_password(password)
+            user.auth_version += 1
+            user.pending_email = None
+            db.execute(
+                update(RefreshSession)
+                .where(RefreshSession.user_id == user.id, RefreshSession.revoked_at.is_(None))
+                .values(revoked_at=timestamp)
+            )
+            db.execute(
+                update(ActionToken)
+                .where(ActionToken.user_id == user.id, ActionToken.used_at.is_(None))
+                .values(used_at=timestamp)
+            )
     return user
 
 
 def sync_catalog(db: Session) -> list[Book]:
-    admin = _upsert_user(db, settings.admin_email, "Orphaleia Keeper", settings.admin_password, role="admin")
+    admin = _upsert_user(
+        db,
+        settings.admin_email,
+        "Orphaleia Keeper",
+        settings.admin_password,
+        role="admin",
+        rotate_credentials=True,
+    )
     reader = _upsert_user(db, "reader@orphaleia.local", "Ariadne Reader", "ReaderPass!2026")
 
     authors: dict[str, Author] = {}
@@ -300,6 +344,10 @@ def sync_catalog(db: Session) -> list[Book]:
 
 
 def seed():
+    if settings.app_env != "development" or not settings.allow_demo_seed:
+        raise RuntimeError("Demo seeding requires APP_ENV=development and ALLOW_DEMO_SEED=true")
+    if len(settings.admin_password) < 16:
+        raise RuntimeError("ADMIN_PASSWORD must be at least 16 characters for demo seeding")
     Base.metadata.create_all(engine)
     with SessionLocal() as db:
         books = sync_catalog(db)

@@ -55,6 +55,7 @@ def order_out(order: Order):
         "id": order.id,
         "number": order.number,
         "status": order.status,
+        "payment_review_reason": order.payment_review_reason,
         "subtotal_cents": order.subtotal_cents,
         "shipping_cents": order.shipping_cents,
         "total_cents": order.total_cents,

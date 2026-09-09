@@ -4,19 +4,16 @@ An Odyssey-inspired physical book shop built with FastAPI, React, PostgreSQL, St
 
 ## Run the complete shop
 
-1. Copy the environment file: `cp .env.example .env`.
-2. Replace `SECRET_KEY` and, if desired, the seeded admin password.
-3. Start everything: `docker compose up --build`.
-4. Open the shop at <http://localhost:5173>, API docs at <http://localhost:8010/docs>, and development email at <http://localhost:8025>.
+1. Run `make demo` to create an ignored local environment with generated secrets, seed the demo catalog, and start the stack with mock payments.
+2. Open the shop at <http://localhost:5173>, API docs at <http://localhost:8010/docs>, and development email at <http://localhost:8025>.
 
-The Docker API host port defaults to `8010` to avoid common local port collisions; set `API_PORT` in `.env` if you prefer another port. Services inside Docker continue to use port `8000`.
+The Docker API host port defaults to `8010` to avoid common local port collisions; set `API_PORT` in `.env` if you prefer another port. Demo-facing API, web, and Mailpit ports bind to loopback only. Services inside Docker continue to use their normal container ports.
 
-The first API startup applies migrations and seeds the catalog. Demo credentials:
+Normal `make dev` uses an existing configuration and never creates privileged users or demo data implicitly. Demo credentials are printed once when `make demo` creates `.env`; the reader account remains:
 
-- Admin: `admin@orphaleia.local` / `Orphaleia!2026` (or the values in `.env`)
 - Reader: `reader@orphaleia.local` / `ReaderPass!2026`
 
-Payments run in safe mock mode by default. Both checkout buttons complete the full order, inventory, email, and cart-clearing flow without charging money.
+The explicit demo profile runs payments in mock mode. Production configuration fails closed unless PostgreSQL, HTTPS, secure cookies, Redis, trusted proxy CIDRs, live Stripe/PayPal settings, and non-placeholder secrets are supplied.
 
 ## Local development without Docker
 
@@ -28,8 +25,8 @@ python -m venv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
 alembic upgrade head
-python -m app.seed
-uvicorn app.main:app --reload
+ALLOW_DEMO_SEED=true APP_ENV=development python -m app.seed
+uvicorn app.main:app --reload --no-proxy-headers
 ```
 
 Frontend:
@@ -44,10 +41,10 @@ Run `pytest` in `apps/api` and `npm test && npm run build` in `apps/web`.
 
 ## Real payment providers
 
-Set `PAYMENTS_MOCK=false` and configure the relevant keys in `.env`.
+Set `PAYMENTS_MOCK=false` and configure both providers in `.env`.
 
-- Stripe: create a Checkout-enabled account, set `STRIPE_SECRET_KEY`, register `/api/v1/webhooks/stripe`, and set `STRIPE_WEBHOOK_SECRET`. Listen for `checkout.session.completed`.
-- PayPal: use sandbox REST application credentials for `PAYPAL_CLIENT_ID` and `PAYPAL_CLIENT_SECRET`, register `/api/v1/webhooks/paypal`, set `PAYPAL_WEBHOOK_ID`, and subscribe to `PAYMENT.CAPTURE.COMPLETED`. Change `PAYPAL_BASE_URL` only when moving to PayPal production.
+- Stripe: create a Checkout-enabled account, set `STRIPE_SECRET_KEY`, register `/api/v1/webhooks/stripe`, and set `STRIPE_WEBHOOK_SECRET`. Listen for `checkout.session.completed` and `checkout.session.async_payment_succeeded`; fulfillment occurs only after Stripe reports `payment_status=paid`.
+- PayPal: use live REST application credentials for `PAYPAL_CLIENT_ID` and `PAYPAL_CLIENT_SECRET`, register `/api/v1/webhooks/paypal`, set `PAYPAL_WEBHOOK_ID`, and subscribe to `PAYMENT.CAPTURE.COMPLETED`.
 
 Use HTTPS and `COOKIE_SECURE=true` in deployed environments. Refunds are made in the provider dashboard and reconciled through the admin order status, as defined for this MVP.
 

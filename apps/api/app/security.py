@@ -48,7 +48,6 @@ def create_session(db: Session, user: User) -> tuple[str, str, str]:
             expires_at=datetime.now(UTC) + timedelta(days=settings.refresh_days),
         )
     )
-    db.commit()
     return create_access_token(user), refresh, csrf
 
 

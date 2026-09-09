@@ -63,4 +63,17 @@ describe('AdminOrderOperations', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Record as refunded' }))
     expect(screen.getByText(/does not send money through Stripe or PayPal/i)).toBeInTheDocument()
   })
+
+  it('shows the safe review reason and offers an administrator-confirmed refund', () => {
+    vi.stubGlobal('fetch', vi.fn())
+    renderOrder({
+      ...order,
+      status: 'payment_review',
+      payment_review_reason: 'order_cancelled',
+      status_history: [{ status: 'payment_review', occurred_at: '2026-09-05T10:01:00Z' }],
+    })
+    fireEvent.click(screen.getByRole('button', { name: /Manage/ }))
+    expect(screen.getByText(/Reason: order cancelled/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Record as refunded' })).toBeInTheDocument()
+  })
 })

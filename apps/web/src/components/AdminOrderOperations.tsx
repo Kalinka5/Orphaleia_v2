@@ -35,7 +35,7 @@ export function AdminOrderOperations({ order }: { order: Order }) {
   const [notice, setNotice] = useState('')
   const next = nextOrderStatus(order.status)
   const canCancel = order.status === 'pending_payment'
-  const canRefund = ['paid', 'processing', 'shipped', 'out_for_delivery'].includes(order.status)
+  const canRefund = ['payment_review', 'paid', 'processing', 'shipped', 'out_for_delivery'].includes(order.status)
   const update = useMutation({
     mutationFn: (payload: StatusUpdate) => api<Order>(`/admin/orders/${order.id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
     onSuccess: async () => {
@@ -95,6 +95,7 @@ export function AdminOrderOperations({ order }: { order: Order }) {
       </div>
       <div className={s.adminOrderActions}>
         <h3>Next action</h3>
+        {order.status === 'payment_review' && <p className={s.adminOrderComplete}>Provider payment requires review before recording the external refund. Reason: {order.payment_review_reason?.replaceAll('_', ' ') || 'unknown'}.</p>}
         {next === 'shipped' ? <form className={s.shipmentForm} onSubmit={reviewShipment}>
           <label>Carrier<input name="tracking_carrier" defaultValue={order.tracking_carrier ?? ''} maxLength={120} placeholder="Correos" required /></label>
           <label>Tracking reference<input name="tracking_reference" defaultValue={order.tracking_reference ?? ''} maxLength={120} placeholder="PQ48 392 761 ES" required /></label>

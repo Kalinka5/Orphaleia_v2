@@ -172,7 +172,7 @@
 .adminOrderSummary > span:nth-child(2) { font: 600 12px 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
 .adminStatus { width: fit-content; padding: 7px 9px; color: #335443; background: #e4eee8; border-radius: 8px; font: 600 9px 'JetBrains Mono', monospace; letter-spacing: .06em; text-transform: uppercase; }
 .adminStatus[data-status='pending_payment'] { color: #74552f; background: #f3e7d5; }
-.adminStatus[data-status='cancelled'], .adminStatus[data-status='refunded'] { color: #813a34; background: #f3dfda; }
+.adminStatus[data-status='cancelled'], .adminStatus[data-status='refunded'], .adminStatus[data-status='payment_review'] { color: #813a34; background: #f3dfda; }
 .adminStatus[data-status='delivered'] { color: #fff; background: #285f4c; }
 .manageLabel { display: inline-flex; align-items: center; justify-content: flex-end; gap: 7px; color: var(--bronze); font-size: 12px; font-weight: 600; }
 .manageLabel svg { transition: transform .2s ease; }

@@ -1,8 +1,12 @@
+from datetime import UTC, datetime, timedelta
+
 from conftest import login
 from sqlalchemy import func, select
 
+from app.config import settings
 from app.database import SessionLocal
-from app.models import Author, Book, Genre, Rating, RatingEvent
+from app.models import ActionToken, Author, Book, Genre, Rating, RatingEvent, RefreshSession, User
+from app.security import token_hash, verify_password
 from app.seed import AUTHORS, CATALOG, FEATURED_SLUGS, LEGACY_CATALOG_SLUGS, sync_catalog
 
 
@@ -56,6 +60,37 @@ def test_catalog_sync_is_repeatable_and_deactivates_legacy_books():
         assert legacy is not None and not legacy.active and not legacy.featured
         assert db.scalar(select(func.count(RatingEvent.id))) == first_event_count
         assert db.scalar(select(func.count(Rating.id))) == first_rating_count
+
+
+def test_demo_sync_rotates_existing_admin_credentials_and_sessions(monkeypatch):
+    replacement = "GeneratedDemoAdminPass!2026"
+    monkeypatch.setattr(settings, "admin_password", replacement)
+    with SessionLocal() as db:
+        admin = db.scalar(select(User).where(User.email == settings.admin_email.lower()))
+        old_version = admin.auth_version
+        session = RefreshSession(
+            user_id=admin.id,
+            token_hash=token_hash("legacy-demo-session"),
+            expires_at=datetime.now(UTC) + timedelta(days=1),
+        )
+        action = ActionToken(
+            user_id=admin.id,
+            kind="reset",
+            token_hash=token_hash("legacy-demo-action"),
+            expires_at=datetime.now(UTC) + timedelta(hours=1),
+        )
+        db.add_all([session, action])
+        db.commit()
+
+        sync_catalog(db)
+        db.refresh(admin)
+        db.refresh(session)
+        db.refresh(action)
+        assert verify_password(replacement, admin.password_hash)
+        assert not verify_password("AdminPass!2026", admin.password_hash)
+        assert admin.auth_version == old_version + 1
+        assert session.revoked_at is not None
+        assert action.used_at is not None
 
 
 def test_catalog_filters_and_detail(client):

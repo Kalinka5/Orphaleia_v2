@@ -12,7 +12,7 @@
     "test:e2e": "playwright test",
     "measure:performance": "node scripts/measure-performance.mjs",
     "openapi": "cd ../api && .venv/bin/python scripts/export_openapi.py /tmp/orphaleia-openapi.json && cd ../web && openapi-typescript /tmp/orphaleia-openapi.json -o src/generated/api.d.ts",
-    "openapi:ci": "cd ../api && python3 scripts/export_openapi.py /tmp/orphaleia-openapi.json && cd ../web && openapi-typescript /tmp/orphaleia-openapi.json -o src/generated/api.d.ts"
+    "openapi:ci": "cd ../api && if [ -x .venv/bin/python ]; then .venv/bin/python scripts/export_openapi.py /tmp/orphaleia-openapi.json; else python3 scripts/export_openapi.py /tmp/orphaleia-openapi.json; fi && cd ../web && openapi-typescript /tmp/orphaleia-openapi.json -o src/generated/api.d.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
