@@ -124,6 +124,16 @@ test('authentication visual baselines', async ({ page }) => {
   await capture(page, 'register')
 })
 
+test('legal page visual baselines', async ({ page }) => {
+  await page.goto('/privacy')
+  await expect(page.getByRole('heading', { name: 'Privacy Policy', exact: true })).toBeVisible()
+  await capture(page, 'privacy', false)
+
+  await page.goto('/terms')
+  await expect(page.getByRole('heading', { name: 'Terms and Conditions', exact: true })).toBeVisible()
+  await capture(page, 'terms', false)
+})
+
 test('checkout visual baseline', async ({ page }) => {
   await mockAuthenticatedReader(page)
   await page.goto('/checkout')

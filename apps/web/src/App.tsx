@@ -26,6 +26,8 @@ import { ReaderAvatar } from './components/ReaderAvatar'
 import { AdminOrderOperations } from './components/AdminOrderOperations'
 import { NotFoundPage } from './components/NotFoundPage'
 import { FormNotification, type NotificationVariant } from './components/ui/FormNotification'
+import { ExternalVideo } from './components/ExternalVideo'
+import { PrivacyPolicyPage, TermsPage } from './components/LegalPages'
 import type { Address, Author, Book, Cart, Genre, Order, Page, SalesRankingResponse, User } from './types'
 import s from './styles.module.css'
 
@@ -109,6 +111,7 @@ function Layout({ children }: { children: ReactNode }) {
       <div className={s.footerLead}><div className={s.footerBrand}>Orphaleia</div><p>Independent bookselling for restless minds and unhurried shelves.</p></div>
       <div><b>Browse</b><Link to="/books">All books</Link><Link to="/rankings">Bestseller charts</Link><Link to="/genres">Collections</Link></div>
       <div><b>Elsewhere</b><Link to="/authors">Our authors</Link><Link to="/account">Your account</Link><span>Spain and EU delivery</span></div>
+      <div><b>Legal</b><Link to="/privacy">Privacy Policy</Link><Link to="/terms">Terms and Conditions</Link><a href="mailto:customer@orphaleia.com">Contact us</a></div>
       <p className={s.copyright}>© 2026 Orphaleia. Built for the long read.</p>
     </footer>}
   </>
@@ -132,6 +135,8 @@ function getRouteMeta(pathname: string) {
   if (pathname === '/checkout') return { title: 'Checkout', description: 'Choose delivery and complete your Orphaleia order.' }
   if (pathname === '/payment/return') return { title: 'Payment status', description: 'Review your Orphaleia payment status.' }
   if (pathname === '/account') return { title: 'Your account', description: 'View your Orphaleia reader account and orders.' }
+  if (pathname === '/privacy') return { title: 'Privacy Policy', description: 'Learn how Orphaleia collects, uses, shares, and protects personal information.' }
+  if (pathname === '/terms') return { title: 'Terms and Conditions', description: 'Read the terms that apply when you use Orphaleia or order books from us.' }
   if (pathname.startsWith('/admin')) return { title: 'Shop admin', description: 'Manage the Orphaleia catalogue and orders.' }
   return { title: 'Page not found', description: 'The page you were looking for is missing. Return safely to the Orphaleia bookshop.' }
 }
@@ -632,14 +637,6 @@ function Catalog() {
   </section>
 }
 
-function embedUrl(url?: string) {
-  if (!url) return ''
-  if (url.includes('youtu.be/')) return `https://www.youtube-nocookie.com/embed/${url.split('youtu.be/')[1]?.split('?')[0]}`
-  if (url.includes('youtube.com')) return `https://www.youtube-nocookie.com/embed/${new URL(url).searchParams.get('v')}`
-  if (url.includes('vimeo.com')) return `https://player.vimeo.com/video/${url.split('/').pop()}`
-  return ''
-}
-
 function BookPage() {
   const { slug = '' } = useParams(); const client = useQueryClient(); const { user } = useAuth(); const navigate = useNavigate()
   const query = useQuery({ queryKey: ['book', slug], queryFn: () => api<Book>(`/books/${slug}`) })
@@ -663,7 +660,7 @@ function BookPage() {
     <PageMeta title={book.title} description={book.description.slice(0, 155)} />
     <div className={s.crumbs}><Link to="/books">All books</Link><CaretRight size={13} aria-hidden="true" />{book.genres[0] && <Link to={`/genres/${book.genres[0].slug}`}>{book.genres[0].name}</Link>}<CaretRight size={13} aria-hidden="true" /><span>{book.title}</span></div>
     <BookDetailExperience book={book} adding={cart.isPending} notice={notice} onAdd={() => needsUser(() => cart.mutate(book.id))} />
-    {book.video_url && <section className={s.videoSection}><div><span className={s.eyebrow}>A TWO-MINUTE GLIMPSE</span><h2>Before you turn the first page</h2><p>A short, spoiler-free introduction to the world of the book.</p></div><div className={s.video}><iframe src={embedUrl(book.video_url)} title={`Introduction to ${book.title}`} loading="lazy" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowFullScreen /></div></section>}
+    {book.video_url && <section className={s.videoSection}><div><span className={s.eyebrow}>A TWO-MINUTE GLIMPSE</span><h2>Before you turn the first page</h2><p>A short, spoiler-free introduction to the world of the book.</p></div><div className={s.video}><ExternalVideo url={book.video_url} title={`Introduction to ${book.title}`} /></div></section>}
     <section className={s.community}><div><span className={s.eyebrow}>READER’S LOG</span><h2>Ratings over the years</h2>{trend.isLoading ? <State title="Reading the chart…" loading compact /> : trend.error ? <ErrorState error={trend.error} retry={() => void trend.refetch()} compact /> : <div className={s.trend}>{trend.data?.points.length ? trend.data.points.map((p) => <div key={p.year}><span style={{ height: `${Math.max(12, p.average * 20)}%` }} /><b>{p.average}</b><small>{p.year}</small></div>) : <p>No route has been charted yet.</p>}</div>}<div className={s.rateBox}><b>Your reading, your measure</b><div>{[1,2,3,4,5].map((value) => <button type="button" key={value} disabled={rate.isPending} aria-label={`Rate ${value} stars`} onClick={() => needsUser(() => rate.mutate({ id: book.id, value }))}><Star size={24} weight="fill" aria-hidden="true" /></button>)}</div></div></div><div><span className={s.eyebrow}>MARGINALIA</span><h2>From fellow readers</h2>{book.comments?.length ? <div className={s.comments}>{book.comments.map((c) => <article key={c.id}><ReaderAvatar name={c.author} src={c.author_avatar_url} /><div><p>{c.body}</p><small>{c.author} · {new Date(c.created_at).toLocaleDateString()}</small></div></article>)}</div> : <p className={s.muted}>No comments yet. Leave the first note in the margin.</p>}<form className={s.commentForm} aria-busy={post.isPending || undefined} onSubmit={(e) => { e.preventDefault(); setFormNotice(''); needsUser(() => post.mutate({ id: book.id, body: comment })) }}><label htmlFor="comment">Add a thoughtful note</label><textarea id="comment" value={comment} onChange={(e) => setComment(e.target.value)} minLength={2} maxLength={2000} placeholder="What stayed with you?" required /><button className={s.secondaryButton} disabled={post.isPending}>{post.isPending ? 'Publishing…' : 'Publish comment'}</button></form></div></section>
     {!!book.related?.length && <section className={s.related}><div className={s.sectionHeading}><div><span className={s.eyebrow}>CONTINUE THE JOURNEY</span><h2>Books on a nearby shore</h2></div></div><div className={s.bookGrid}>{book.related.map((x) => <BookCard key={x.id} book={x} />)}</div></section>}
   </div>
@@ -880,6 +877,7 @@ function AuthPage({ register = false }: { register?: boolean }) {
           <label>Password<span className={s.passwordField}><input id="auth-password" name="password" type={showPassword ? 'text' : 'password'} placeholder="Enter your password" required minLength={10} autoComplete={register ? 'new-password' : 'current-password'} /><button type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? 'Hide password' : 'Show password'} aria-controls="auth-password">{showPassword ? <EyeSlash size={19} aria-hidden="true" /> : <Eye size={19} aria-hidden="true" />}</button></span></label>
           {!register && <Link className={s.authForgot} to="/forgot-password">Forgot your password?</Link>}
           {register && <label>Confirm password<span className={s.passwordField}><input id="auth-confirm-password" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} placeholder="Repeat your password" required minLength={10} autoComplete="new-password" aria-invalid={Boolean(fieldError) || undefined} /><button type="button" onClick={() => setShowConfirmPassword((visible) => !visible)} aria-label={showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'} aria-controls="auth-confirm-password">{showConfirmPassword ? <EyeSlash size={19} aria-hidden="true" /> : <Eye size={19} aria-hidden="true" />}</button></span></label>}
+          {register && <p className={s.legalAcknowledgement}>By creating an account, you agree to our <Link to="/terms">Terms and Conditions</Link> and acknowledge our <Link to="/privacy">Privacy Policy</Link>.</p>}
           <button className={`${s.primaryButton} ${s.authSubmit}`} disabled={submitting}>{submitting ? register ? 'Creating account…' : 'Signing in…' : register ? 'Create account' : 'Sign in'} {!submitting && <ArrowRight size={16} aria-hidden="true" />}</button>
           <p className={s.authSwitch}>{register ? <>Already aboard? <Link to="/sign-in">Sign in</Link></> : <>New to Orphaleia? <Link to="/register">Create an account</Link></>}</p>
         </>}
@@ -944,6 +942,7 @@ function Checkout() {
     </div>
     <aside className={s.orderCard}><h2>Final passage</h2>{quote ? <>
       <div><span>Books</span><b>{money(quote.subtotal_cents)}</b></div><div><span>Delivery</span><b>{money(quote.shipping_cents)}</b></div><hr /><div className={s.total}><span>Total</span><b>{money(quote.total_cents)}</b></div>
+      <p className={s.legalAcknowledgement}>By selecting a payment option, you agree to our <Link to="/terms">Terms and Conditions</Link>, acknowledge our <Link to="/privacy">Privacy Policy</Link>, and confirm an obligation to pay.</p>
       <button className={s.stripeButton} disabled={busy} onClick={() => void pay('stripe')}>{busy ? 'Opening payment…' : 'Pay securely with Stripe'}</button>
       <button className={s.paypalButton} disabled={busy} onClick={() => void pay('paypal')}>{busy ? 'Opening payment…' : 'Pay with PayPal'}</button>
     </> : <p>Enter your address to see delivery and the final total.</p>}
@@ -1133,6 +1132,7 @@ export default function App() {
     <Route path="/genres" element={<Directory kind="genres" />} /><Route path="/genres/:slug" element={<Shelf kind="genres" />} /><Route path="/authors" element={<Directory kind="authors" />} /><Route path="/authors/:slug" element={<Shelf kind="authors" />} /><Route path="/rankings" element={<Rankings />} />
     <Route path="/sign-in" element={<AuthPage key="sign-in" />} /><Route path="/register" element={<AuthPage key="register" register />} /><Route path="/verify" element={<TokenPage mode="verify" />} /><Route path="/forgot-password" element={<TokenPage mode="forgot" />} /><Route path="/reset-password" element={<TokenPage mode="reset" />} /><Route path="/confirm-email-change" element={<TokenPage mode="email-change" />} />
     <Route path="/cart" element={<RequireUser><CartPage /></RequireUser>} /><Route path="/checkout" element={<RequireUser><Checkout /></RequireUser>} /><Route path="/payment/return" element={<PaymentReturn />} /><Route path="/account" element={<RequireUser><Account /></RequireUser>} />
+    <Route path="/privacy" element={<PrivacyPolicyPage />} /><Route path="/terms" element={<TermsPage />} />
     <Route path="/admin" element={<RequireUser admin><Admin /></RequireUser>} /><Route path="/admin/books/new" element={<RequireUser admin><BookEditor /></RequireUser>} /><Route path="/admin/books/:slug/edit" element={<RequireUser admin><BookEditor edit /></RequireUser>} /><Route path="*" element={<NotFoundPage />} />
   </Routes></Layout></AuthProvider>
 }

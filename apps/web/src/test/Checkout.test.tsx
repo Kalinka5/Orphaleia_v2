@@ -31,6 +31,9 @@ describe('Checkout saved delivery address', () => {
     fireEvent.change(screen.getByLabelText('Address'), { target: { value: '8 Order Road' } })
     fireEvent.click(screen.getByRole('button', { name: 'Calculate delivery' }))
     await screen.findByText('€24.00')
+    expect(screen.getByText(/confirm an obligation to pay/)).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: 'Terms and Conditions' }).some((link) => link.closest('aside') && link.getAttribute('href') === '/terms')).toBe(true)
+    expect(screen.getAllByRole('link', { name: 'Privacy Policy' }).some((link) => link.closest('aside') && link.getAttribute('href') === '/privacy')).toBe(true)
     expect(calls.some((url) => url.endsWith('/delivery-address'))).toBe(false)
   })
 

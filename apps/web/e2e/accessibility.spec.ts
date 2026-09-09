@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
 
-const publicRoutes = ['/', '/books', '/books/the-little-prince', '/sign-in', '/not-a-real-page']
+const publicRoutes = ['/', '/books', '/books/the-little-prince', '/sign-in', '/privacy', '/terms', '/not-a-real-page']
 
 for (const route of publicRoutes) {
   test(`${route} has no serious automated WCAG violations`, async ({ page }) => {

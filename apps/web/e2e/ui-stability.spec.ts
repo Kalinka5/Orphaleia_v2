@@ -129,7 +129,7 @@ test('all routes remain free of unexpected console and page errors', async ({ pa
   await page.route('**/api/v1/orders', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [] }) }))
   await page.route('**/api/v1/admin/overview', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ books: 18, orders: 3, readers: 12, comments: 7 }) }))
 
-  const routes = ['/', '/books', '/books/the-little-prince', '/genres', '/authors', '/rankings', '/sign-in', '/register', '/verify', '/forgot-password', '/reset-password', '/cart', '/checkout', '/payment/return', '/account', '/admin', '/admin/books/new', '/not-a-real-page']
+  const routes = ['/', '/books', '/books/the-little-prince', '/genres', '/authors', '/rankings', '/sign-in', '/register', '/privacy', '/terms', '/verify', '/forgot-password', '/reset-password', '/cart', '/checkout', '/payment/return', '/account', '/admin', '/admin/books/new', '/not-a-real-page']
   for (const route of routes) {
     await page.goto(route)
     await page.locator('main').waitFor()
@@ -141,7 +141,7 @@ test('all routes remain free of unexpected console and page errors', async ({ pa
 test('representative routes do not overflow at key responsive widths', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium', 'Responsive geometry is sampled once in desktop Chromium.')
   test.setTimeout(75_000)
-  const routes = ['/', '/books', '/books/the-little-prince', '/genres', '/authors', '/rankings', '/sign-in', '/register', '/not-a-real-page']
+  const routes = ['/', '/books', '/books/the-little-prince', '/genres', '/authors', '/rankings', '/sign-in', '/register', '/privacy', '/terms', '/not-a-real-page']
   const widths = [320, 390, 768, 1024, 1440]
   for (const width of widths) {
     await page.setViewportSize({ width, height: width <= 390 ? 844 : 900 })
