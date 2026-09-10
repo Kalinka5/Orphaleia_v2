@@ -1,0 +1,32 @@
+# Orphaleia crawler policy
+# Public storefront, catalogue, editorial, legal, media, and asset pages are crawlable.
+
+User-agent: *
+Allow: /
+
+# Reader accounts and transactional flows
+Disallow: /account
+Disallow: /cart
+Disallow: /checkout
+Disallow: /payment/
+
+# Administration
+Disallow: /admin
+
+# Authentication and account verification
+Disallow: /sign-in
+Disallow: /register
+Disallow: /verify
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /confirm-email-change
+
+# Application internals
+Disallow: /api/
+Disallow: /store-api/
+Disallow: /health
+
+# Duplicate and parameterized catalogue views
+Disallow: /all-books
+Disallow: /books?
+Disallow: /rankings?
