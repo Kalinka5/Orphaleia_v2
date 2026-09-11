@@ -13,6 +13,7 @@
 .cartLink { border-left: 1px solid rgba(240,231,211,.2); padding-left: 16px !important; }
 .cartLink span { display: inline-grid; place-items: center; width: 22px; height: 22px; margin-left: 5px; background: var(--bronze); border-radius: 50%; color: white; font: 11px 'IBM Plex Mono'; }
 .menuButton { display: none; background: none; color: inherit; border: 0; font-size: 22px; }
+.mobileNavSession { display: none !important; }
 
 .hero { min-height: 650px; color: var(--marble); background-color: var(--night); background-image: radial-gradient(circle at 10% 20%, rgba(255,255,255,.06) 0 1px, transparent 1.5px), radial-gradient(circle at 70% 30%, rgba(255,255,255,.05) 0 1px, transparent 1.5px); background-size: 41px 41px, 67px 67px; display: grid; grid-template-columns: 1.05fr .95fr; align-items: center; gap: 40px; padding: 80px clamp(28px, 8vw, 130px) 110px; overflow: hidden; }
 .heroCopy { position: relative; z-index: 2; }
@@ -215,13 +216,13 @@
 .footer { padding: 70px clamp(28px, 7vw, 112px) 25px; display: grid; grid-template-columns: 2fr repeat(3, 1fr); gap: 50px; color: rgba(240,231,211,.75); background: #071727; font-size: 13px; }.footerBrand { color: var(--marble); font: 44px 'GFS Didot'; }.footer > div:not(:first-child) { display: flex; flex-direction: column; gap: 10px; }.footer b { color: #83b59f; font: 10px 'IBM Plex Mono'; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 8px; }.footer a { text-decoration: none; }.copyright { grid-column: 1/-1; border-top: 1px solid rgba(240,231,211,.12); padding-top: 22px; margin: 20px 0 0; font: 8px 'IBM Plex Mono'; letter-spacing: .09em; text-transform: uppercase; }
 
 @media (max-width: 1050px) {
-  .header { grid-template-columns: auto auto 1fr; gap: 18px; }.menuButton { display: block; }.nav { display: none; position: absolute; top: 88px; left: 0; right: 0; padding: 22px; background: var(--night); border-top: 1px solid rgba(255,255,255,.1); }.navOpen { display: flex; }.actions { justify-self: end; }.actions > a:not(.cartLink), .actions > button { display: none; }
+  .header { grid-template-columns: auto auto 1fr; gap: 18px; }.menuButton { display: block; }.nav { display: none; position: absolute; top: 88px; left: 0; right: 0; padding: 12px 22px 16px; flex-direction: column; align-items: stretch; gap: 0; background: #fdfbf7; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); box-shadow: 0 20px 42px rgba(25,69,54,.14); }.navOpen { display: flex; }.nav a, .nav .textButton { width: 100%; min-height: 44px; padding: 0 8px; display: flex; align-items: center; text-align: left; }.nav .textButton { justify-content: flex-start; }.nav a::after { bottom: 5px; }.mobileNavSession { display: flex !important; }.nav > :nth-child(5) { margin-top: 6px; border-top: 1px solid var(--line); }.actions { justify-self: end; }.actions > a:not(.cartLink), .actions > button { display: none; }
   .hero { grid-template-columns: 1fr .7fr; }.heroChart { opacity: .7; }.routeShelf, .bookGrid { grid-template-columns: repeat(2, 1fr); }.routeLine { display: none; }.genreBand { grid-template-columns: 1fr; }.filters { grid-template-columns: 1fr 1fr 1fr; }.search { grid-column: span 2; }.bookHero { grid-template-columns: 330px 1fr; gap: 45px; }.community { gap: 50px; }.stats { grid-template-columns: repeat(2, 1fr); }
   .authorsHero { min-height: 0; grid-template-columns: minmax(22rem, .9fr) minmax(25rem, 1.1fr); }
 }
 
 @media (max-width: 760px) {
-  .header { height: 72px; padding: 0 18px; }.nav { top: 72px; flex-direction: column; }.brand b { font-size: 20px; }.brand small { display: none; }.brandMark { width: 36px; height: 36px; flex-basis: 36px; }.actions { gap: 7px; }.cartLink { border: 0; padding-left: 0 !important; font-size: 0 !important; }.cartLink::before { content: 'Bag'; font-size: 12px; }
+  .header { height: 72px; padding: 0 18px; }.nav { top: 72px; }.brand { min-height: 44px; }.brand b { font-size: 20px; }.brand small { display: none; }.brandMark { width: 36px; height: 36px; flex-basis: 36px; }.actions { gap: 7px; }.cartLink { min-height: 44px; display: inline-flex; align-items: center; border: 0; padding-left: 0 !important; font-size: 0 !important; }.cartLink::before { content: 'Bag'; font-size: 12px; }
   .hero { min-height: 720px; grid-template-columns: 1fr; padding: 65px 25px 80px; align-items: start; }.hero h1 { font-size: 60px; }.heroChart { height: 240px; margin-top: -20px; }.heroChart svg { inset: 0; width: 100%; }.sun { font-size: 42px; }.heroButtons { align-items: stretch; flex-direction: column; max-width: 310px; }
   .marbleSection, .page, .related { padding: 72px 22px; }.sectionHeading { grid-template-columns: 1fr; gap: 15px; margin-bottom: 38px; }.routeShelf, .bookGrid { gap: 35px 16px; }.cardBody h3 { font-size: 21px; }.cardMeta { align-items: start; flex-direction: column; }.coverWrap { box-shadow: 0 9px 20px rgba(11,31,51,.12); }
   .genreBand { padding: 65px 22px; gap: 35px; }.genreLinks { grid-template-columns: 1fr; }.genreLinks a:nth-child(odd), .genreLinks a:nth-child(even) { border-right: 0; padding: 0; }.genreLinks a:nth-child(even):hover, .genreLinks a:hover { padding-left: 10px; }.promise blockquote { font-size: 32px; }
@@ -241,6 +242,8 @@
   .adminOrderBody { grid-template-columns: 1fr; }
   .shipmentForm { grid-template-columns: 1fr; }
   .shipmentForm label:nth-child(3), .shipmentForm button { grid-column: auto; }
+  .narrowPage { padding: 64px 20px 80px; }
+  .narrowPage h1 { font-size: clamp(2.5rem, 13vw, 3.25rem); line-height: .94; overflow-wrap: anywhere; }
 }
 
 /* Home experience */
@@ -1084,6 +1087,7 @@
 .authSubmit:disabled { transform: none; }
 .authForm > p.authSwitch { margin: 2px 0 0; color: #676b66; text-align: center; }
 .authSwitch a { color: #285f4c; font-weight: 600; text-underline-offset: 4px; }
+.authFieldError { margin: -5px 0 0; padding: 10px 12px; color: #8a2f18; border-left: 3px solid #a53c24; border-radius: 0 8px 8px 0; background: #fff0eb; font-size: 12px; line-height: 1.45; }
 .authSuccess { display: grid; gap: 18px; padding-top: 8px; }
 .authSuccessIcon { width: 52px; height: 52px; display: grid; place-items: center; border-radius: 50%; color: #285f4c; background: #dcebe4; }
 .authSuccess h2 { margin: 0 0 7px; font: 500 1.55rem/1.1 'Iowan Old Style', 'Palatino Linotype', Baskerville, Georgia, serif; letter-spacing: -.02em; }

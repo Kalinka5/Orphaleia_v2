@@ -102,6 +102,11 @@ function Layout({ children }: { children: ReactNode }) {
         <button ref={menuButtonRef} className={s.menuButton} onClick={() => setMenu(!menu)} aria-expanded={menu} aria-controls="main-navigation" aria-label={menu ? 'Close navigation' : 'Open navigation'}>Menu</button>
         <nav ref={navRef} id="main-navigation" className={`${s.nav} ${menu ? s.navOpen : ''}`} aria-label="Main navigation" onClick={() => setMenu(false)}>
           <NavLink to="/books">All books</NavLink><NavLink to="/genres">Genres</NavLink><NavLink to="/authors">Authors</NavLink><NavLink to="/rankings">Bestseller charts</NavLink>
+          {user ? <>
+            <NavLink className={s.mobileNavSession} to="/account">Your account</NavLink>
+            {user.role === 'admin' && <NavLink className={s.mobileNavSession} to="/admin">Shop admin</NavLink>}
+            <button className={`${s.textButton} ${s.mobileNavSession}`} type="button" onClick={() => void signOut()}>Sign out</button>
+          </> : <NavLink className={s.mobileNavSession} to="/sign-in">Sign in</NavLink>}
         </nav>
         <div className={s.actions}>
           {user ? <><Link to="/account">{user.full_name.split(' ')[0]}</Link>{user.role === 'admin' && <Link to="/admin">Admin</Link>}<button className={s.textButton} onClick={() => void signOut()}>Sign out</button></> : <Link to="/sign-in">Sign in</Link>}
@@ -829,7 +834,7 @@ function AuthPage({ register = false }: { register?: boolean }) {
     const password = String(form.get('password') || '')
     if (register && password !== String(form.get('confirmPassword') || '')) {
       setFieldError('Passwords do not match.')
-      setNotificationOpen(true)
+      setNotificationOpen(false)
       return
     }
     setSubmitting(true)
@@ -838,7 +843,7 @@ function AuthPage({ register = false }: { register?: boolean }) {
         const email = String(form.get('email') || '')
         const result = await api<{ message: string; email_preview_url?: string }>('/auth/register', { method: 'POST', body: JSON.stringify({ email, full_name: form.get('name'), password }) })
         setSent({ message: result.message, email, previewUrl: result.email_preview_url })
-        setNotificationOpen(true)
+        setNotificationOpen(false)
       } else {
         await api('/auth/login', { method: 'POST', body: JSON.stringify({ email: form.get('email'), password }) })
         await refresh()
@@ -864,9 +869,9 @@ function AuthPage({ register = false }: { register?: boolean }) {
   }
   return <section className={`${s.authPage} ${register ? s.authRegister : s.authLogin}`} aria-labelledby="auth-title" data-testid="auth-shell">
     <FormNotification
-      title={sent ? 'Email sent' : fieldError ? 'Check your passwords' : register ? 'Account not created' : 'Sign-in failed'}
-      message={notificationOpen ? sent ? `${sent.message}. We sent the link to ${sent.email}.` : fieldError || error : ''}
-      variant={sent ? 'success' : 'error'}
+      title={register ? 'Account not created' : 'Sign-in failed'}
+      message={notificationOpen ? error : ''}
+      variant="error"
       onClose={() => { setNotificationOpen(false); setError(''); setFieldError('') }}
     />
     <div className={s.authFormPanel} data-testid="auth-form-panel">
@@ -884,9 +889,10 @@ function AuthPage({ register = false }: { register?: boolean }) {
         </div> : <>
           {register && <label>Your name<input name="name" placeholder="Your name" required minLength={2} autoComplete="name" /></label>}
           <label>Email address<input name="email" type="email" placeholder="reader@orphaleia.com" required autoComplete="email" aria-invalid={Boolean(error) || undefined} /></label>
-          <label>Password<span className={s.passwordField}><input id="auth-password" name="password" type={showPassword ? 'text' : 'password'} placeholder="Enter your password" required minLength={10} autoComplete={register ? 'new-password' : 'current-password'} /><button type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? 'Hide password' : 'Show password'} aria-controls="auth-password">{showPassword ? <EyeSlash size={19} aria-hidden="true" /> : <Eye size={19} aria-hidden="true" />}</button></span></label>
+          <label>Password<span className={s.passwordField}><input id="auth-password" name="password" type={showPassword ? 'text' : 'password'} placeholder="Enter your password" required minLength={10} autoComplete={register ? 'new-password' : 'current-password'} aria-invalid={Boolean(error) || Boolean(fieldError) || undefined} aria-describedby={fieldError ? 'auth-password-error' : undefined} /><button type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? 'Hide password' : 'Show password'} aria-controls="auth-password">{showPassword ? <EyeSlash size={19} aria-hidden="true" /> : <Eye size={19} aria-hidden="true" />}</button></span></label>
           {!register && <Link className={s.authForgot} to="/forgot-password">Forgot your password?</Link>}
-          {register && <label>Confirm password<span className={s.passwordField}><input id="auth-confirm-password" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} placeholder="Repeat your password" required minLength={10} autoComplete="new-password" aria-invalid={Boolean(fieldError) || undefined} /><button type="button" onClick={() => setShowConfirmPassword((visible) => !visible)} aria-label={showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'} aria-controls="auth-confirm-password">{showConfirmPassword ? <EyeSlash size={19} aria-hidden="true" /> : <Eye size={19} aria-hidden="true" />}</button></span></label>}
+          {register && <label>Confirm password<span className={s.passwordField}><input id="auth-confirm-password" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} placeholder="Repeat your password" required minLength={10} autoComplete="new-password" aria-invalid={Boolean(fieldError) || undefined} aria-describedby={fieldError ? 'auth-password-error' : undefined} /><button type="button" onClick={() => setShowConfirmPassword((visible) => !visible)} aria-label={showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'} aria-controls="auth-confirm-password">{showConfirmPassword ? <EyeSlash size={19} aria-hidden="true" /> : <Eye size={19} aria-hidden="true" />}</button></span></label>}
+          {fieldError && <p className={s.authFieldError} id="auth-password-error" role="alert">{fieldError}</p>}
           {register && <p className={s.legalAcknowledgement}>By creating an account, you agree to our <Link to="/terms">Terms and Conditions</Link> and acknowledge our <Link to="/privacy">Privacy Policy</Link>.</p>}
           <button className={`${s.primaryButton} ${s.authSubmit}`} disabled={submitting}>{submitting ? register ? 'Creating account…' : 'Signing in…' : register ? 'Create account' : 'Sign in'} {!submitting && <ArrowRight size={16} aria-hidden="true" />}</button>
           <p className={s.authSwitch}>{register ? <>Already aboard? <Link to="/sign-in">Sign in</Link></> : <>New to Orphaleia? <Link to="/register">Create an account</Link></>}</p>

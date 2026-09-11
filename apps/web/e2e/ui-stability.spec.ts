@@ -16,6 +16,42 @@ test('catalog custom filters are keyboard accessible and URL driven', async ({ p
   await expect(page.getByRole('status').first()).toContainText(/book/i)
 })
 
+test('mobile navigation stays legible and exposes session actions', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile-chromium', 'Mobile navigation is sampled once in Chromium.')
+  const user = { id: 'mobile-admin', email: 'keeper@orphaleia.local', full_name: 'Ada Keeper', role: 'admin', is_verified: true }
+  await page.route('**/api/v1/users/me', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(user) }))
+  await page.route('**/api/v1/cart', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 'cart', items: [], subtotal_cents: 0, currency: 'EUR' }) }))
+  await page.goto('/books')
+
+  await page.getByRole('button', { name: 'Open navigation' }).click()
+  const nav = page.getByRole('navigation', { name: 'Main navigation' })
+  await expect(nav.getByRole('link', { name: 'Your account' })).toBeVisible()
+  await expect(nav.getByRole('link', { name: 'Shop admin' })).toBeVisible()
+  await expect(nav.getByRole('button', { name: 'Sign out' })).toBeVisible()
+  const colors = await nav.locator('a').evaluateAll((links) => links.map((link) => ({
+    foreground: getComputedStyle(link).color,
+    background: getComputedStyle(link.parentElement!).backgroundColor,
+    height: link.getBoundingClientRect().height,
+  })))
+  expect(colors.every(({ foreground, background, height }) => foreground !== background && height >= 44)).toBe(true)
+})
+
+test('registration shows password mismatch beside the fields', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile-chromium', 'Mobile form feedback is sampled once in Chromium.')
+  await page.route('**/api/v1/users/me', (route) => route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ message: 'Not authenticated' }) }))
+  await page.goto('/register')
+  await page.getByLabel('Your name').fill('Mina Reader')
+  await page.getByLabel('Email address').fill('mina@example.com')
+  await page.getByLabel('Password', { exact: true }).fill('long-password-one')
+  await page.getByLabel('Confirm password').fill('long-password-two')
+  await page.getByRole('button', { name: 'Create account' }).click()
+
+  const error = page.locator('#auth-password-error')
+  await expect(error).toHaveText('Passwords do not match.')
+  await expect(page.getByLabel('Password', { exact: true })).toHaveAttribute('aria-describedby', 'auth-password-error')
+  await expect(page.getByLabel('Confirm password')).toHaveAttribute('aria-describedby', 'auth-password-error')
+})
+
 test('author portraits reveal color from synchronized pointer and focus states', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto('/authors')
