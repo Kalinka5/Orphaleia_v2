@@ -56,6 +56,26 @@ For real delivery, replace the Mailpit defaults with the SMTP server of your tra
 
 The production web image is an Nginx-served static build that proxies API and media paths to the FastAPI service. Run migrations as a release step, run one or more API containers, and keep exactly one reservation/email worker active unless adding worker-level locking.
 
+### Privacy-first analytics
+
+Production analytics uses an optional Umami Cloud EU tracker. Create one EU-region website in Umami, sign the Data Processing Agreement in the Umami account, and set these public build-time values:
+
+- `VITE_UMAMI_WEBSITE_ID`: the website ID from Umami.
+- `VITE_UMAMI_SCRIPT_URL`: the tracker URL copied from that EU-region website.
+- `VITE_UMAMI_DOMAINS`: a comma-separated allowlist such as `books.example.com,www.books.example.com`.
+
+The tracker is disabled when any required value is blank and is never enabled by the normal development configuration. These values are embedded in the browser bundle and are not secrets. For a production image, pass them as Docker build arguments, for example:
+
+```sh
+docker build --target production \
+  --build-arg VITE_UMAMI_WEBSITE_ID="$VITE_UMAMI_WEBSITE_ID" \
+  --build-arg VITE_UMAMI_SCRIPT_URL="$VITE_UMAMI_SCRIPT_URL" \
+  --build-arg VITE_UMAMI_DOMAINS="$VITE_UMAMI_DOMAINS" \
+  -t orphaleia-web:production apps/web
+```
+
+Configure an Umami funnel using `add_to_bag`, `checkout_started`, `delivery_quoted`, `payment_selected`, and `purchase`. Treat Umami revenue as directional conversion analytics; orders in PostgreSQL and the payment-provider records remain authoritative. Before launch, confirm the cookieless configuration and privacy notice against current AEPD guidance.
+
 Prices are stored in integer euro cents and displayed VAT-inclusive. Shipping zones and free-delivery thresholds live in the database. The seeded defaults cover Spain and other EU member states.
 
 ## API conventions

@@ -4,6 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { api, money } from './api'
 import { addressFields, countryOptions, emptyAddress } from './address'
+import { trackAnalytics } from './analytics'
 import { BookDetailExperience } from './components/BookDetailExperience'
 import { BookHeroScene, type HeroBook } from './components/BookHeroScene'
 import { AuthorShowcase } from './components/AuthorShowcase'
@@ -19,6 +20,7 @@ import { getGenreIllustration, homepageGenreSlugs } from './genreIllustrations'
 import { getLandingIllustration, orderHomepageBooks, orderHomepageHeroBooks } from './landingIllustrations'
 import { formatSalesUnits, salesBarRatio } from './rankingUtils'
 import { getRankingPreview } from './rankingPreview'
+import { getCanonicalPath } from './seo'
 import { MarketGlobe } from './components/MarketGlobe'
 import { CartEmptyState } from './components/CartEmptyState'
 import { VerificationPassage } from './components/VerificationPassage'
@@ -85,7 +87,7 @@ function Layout({ children }: { children: ReactNode }) {
   }, [menu])
   const routeMeta = getRouteMeta(location.pathname)
   return <>
-    <PageMeta title={routeMeta.title} description={routeMeta.description} />
+    <PageMeta title={routeMeta.title} description={routeMeta.description} canonicalPath={getCanonicalPath(location.pathname, location.search)} />
     <header className={`${s.header} ${location.pathname === '/' ? s.headerHome : ''} ${isAuthRoute ? s.headerAuth : ''}`}>
       <Link className={s.brand} to="/" aria-label="Orphaleia home">
         <span className={s.brandMark}><img src="/brand/orphaleia-mark.svg" alt="" /></span><span><b>Orphaleia</b><small>INDEPENDENT BOOKSELLERS</small></span>
@@ -581,6 +583,7 @@ function Catalog() {
   const [params, setParams] = useSearchParams()
   const queryParam = params.get('q') || ''
   const [searchTerm, setSearchTerm] = useState(queryParam)
+  const trackedSearches = useRef(new Set<string>())
   const queryString = params.toString()
   const books = useQuery({ queryKey: ['books', queryString], queryFn: () => api<Page<Book>>(`/books?${queryString}`), placeholderData: keepPreviousData })
   const genres = useQuery({ queryKey: ['genres'], queryFn: () => api<{ items: Genre[] }>('/genres') })
@@ -598,6 +601,11 @@ function Catalog() {
     const timer = window.setTimeout(() => update('q', searchTerm.trim(), true), 250)
     return () => window.clearTimeout(timer)
   }, [queryParam, searchTerm, update])
+  useEffect(() => {
+    if (!queryParam.trim() || books.isFetching || !books.data || trackedSearches.current.has(queryString)) return
+    trackedSearches.current.add(queryString)
+    trackAnalytics('catalog_search', { has_results: books.data.total > 0, result_count: books.data.total })
+  }, [books.data, books.isFetching, queryParam, queryString])
 
   const genreOptions: SelectOption[] = [{ value: '', label: 'All genres' }, ...(genres.data?.items.map((item) => ({ value: item.slug, label: item.name })) ?? [])]
   const authorOptions: SelectOption[] = [{ value: '', label: 'All authors' }, ...(authors.data?.items.map((item) => ({ value: item.slug, label: item.name })) ?? [])]
@@ -644,7 +652,7 @@ function BookPage() {
   const query = useQuery({ queryKey: ['book', slug], queryFn: () => api<Book>(`/books/${slug}`) })
   const trend = useQuery({ queryKey: ['trend', query.data?.id], queryFn: () => api<{ points: Array<{ year: number; average: number; count: number }> }>(`/books/${query.data!.id}/rating-trend`), enabled: !!query.data })
   const [comment, setComment] = useState(''); const [notice, setNotice] = useState(''); const [formNotice, setFormNotice] = useState('')
-  const cart = useMutation({ mutationFn: (bookId: string) => api('/cart/items', { method: 'POST', body: JSON.stringify({ book_id: bookId, quantity: 1 }) }), onSuccess: () => { client.invalidateQueries({ queryKey: ['cart'] }); setNotice('Added to your bag') }, onError: (e) => setNotice(e.message) })
+  const cart = useMutation({ mutationFn: (bookId: string) => api('/cart/items', { method: 'POST', body: JSON.stringify({ book_id: bookId, quantity: 1 }) }), onSuccess: (_, bookId) => { const addedBook = query.data; if (addedBook?.id === bookId) trackAnalytics('add_to_bag', { book_slug: addedBook.slug, quantity: 1, value: addedBook.price_cents / 100, currency: addedBook.currency }); client.invalidateQueries({ queryKey: ['cart'] }); setNotice('Added to your bag') }, onError: (e) => setNotice(e.message) })
   const rate = useMutation({ mutationFn: ({ id, value }: { id: string; value: number }) => api(`/books/${id}/ratings`, { method: 'PUT', body: JSON.stringify({ value }) }), onSuccess: () => { setFormNotice('Your rating has been saved.'); client.invalidateQueries({ queryKey: ['book', slug] }); client.invalidateQueries({ queryKey: ['trend'] }) } })
   const post = useMutation({ mutationFn: ({ id, body }: { id: string; body: string }) => api(`/books/${id}/comments`, { method: 'POST', body: JSON.stringify({ body }) }), onSuccess: () => { setComment(''); setFormNotice('Your note has been published.'); client.invalidateQueries({ queryKey: ['book', slug] }) } })
   if (query.isLoading) return <State title="Opening the book…" loading />; if (query.error) return <ErrorState error={query.error} retry={() => void query.refetch()} />; const book = query.data!
@@ -922,16 +930,16 @@ function TokenPage({ mode }: { mode: 'verify' | 'reset' | 'forgot' | 'email-chan
 
 function CartPage() {
   const { user, loading } = useAuth(); const client = useQueryClient(); const query = useQuery({ queryKey: ['cart'], queryFn: () => api<Cart>('/cart'), enabled: !!user })
-  const remove = useMutation({ mutationFn: (id: string) => api(`/cart/items/${id}`, { method: 'DELETE' }), onSuccess: () => client.invalidateQueries({ queryKey: ['cart'] }) })
+  const remove = useMutation({ mutationFn: (item: Cart['items'][number]) => api(`/cart/items/${item.id}`, { method: 'DELETE' }), onSuccess: (_, item) => { trackAnalytics('remove_from_bag', { book_slug: item.book.slug, quantity: item.quantity, value: item.book.price_cents * item.quantity / 100, currency: query.data?.currency ?? 'EUR' }); client.invalidateQueries({ queryKey: ['cart'] }) } })
   if (loading) return <State title="Finding your bag…" loading />; if (!user) return <Navigate to="/sign-in" state={{ from: '/cart' }} />; if (query.isLoading) return <State title="Opening your bag…" loading />; if (query.error) return <ErrorState error={query.error} retry={() => void query.refetch()} />
-  const cart = query.data!; return <section className={s.page}><div className={s.pageHeading}><span className={s.eyebrow}>YOUR BOOK BAG</span><h1>Books for the crossing</h1></div>{cart.items.length ? <div className={s.cartLayout}><div className={s.cartItems}>{cart.items.map((item) => <article key={item.id}><img src={item.book.cover_url} alt={`Cover of ${item.book.title}`} width="80" height="120" /><div><h2><Link to={`/books/${item.book.slug}`}>{item.book.title}</Link></h2><p>Quantity: {item.quantity}</p><button className={s.textButton} disabled={remove.isPending} onClick={() => remove.mutate(item.id)}>{remove.isPending ? 'Removing…' : 'Remove'}</button></div><b>{money(item.book.price_cents * item.quantity)}</b></article>)}</div><aside className={s.orderCard}><h2>Order summary</h2><div><span>Books</span><b>{money(cart.subtotal_cents)}</b></div><div><span>Shipping</span><span>Calculated next</span></div><hr /><div className={s.total}><span>Subtotal</span><b>{money(cart.subtotal_cents)}</b></div><Link className={s.primaryButton} to="/checkout">Continue to delivery <ArrowRight size={16} aria-hidden="true" /></Link><small>VAT included · Secure checkout</small>{remove.error && <p className={s.formError} role="alert">{remove.error.message}</p>}</aside></div> : <CartEmptyState />}</section>
+  const cart = query.data!; const itemCount = cart.items.reduce((sum, item) => sum + item.quantity, 0); return <section className={s.page}><div className={s.pageHeading}><span className={s.eyebrow}>YOUR BOOK BAG</span><h1>Books for the crossing</h1></div>{cart.items.length ? <div className={s.cartLayout}><div className={s.cartItems}>{cart.items.map((item) => <article key={item.id}><img src={item.book.cover_url} alt={`Cover of ${item.book.title}`} width="80" height="120" /><div><h2><Link to={`/books/${item.book.slug}`}>{item.book.title}</Link></h2><p>Quantity: {item.quantity}</p><button className={s.textButton} disabled={remove.isPending} onClick={() => remove.mutate(item)}>{remove.isPending ? 'Removing…' : 'Remove'}</button></div><b>{money(item.book.price_cents * item.quantity)}</b></article>)}</div><aside className={s.orderCard}><h2>Order summary</h2><div><span>Books</span><b>{money(cart.subtotal_cents)}</b></div><div><span>Shipping</span><span>Calculated next</span></div><hr /><div className={s.total}><span>Subtotal</span><b>{money(cart.subtotal_cents)}</b></div><Link className={s.primaryButton} to="/checkout" onClick={() => trackAnalytics('checkout_started', { item_count: itemCount, value: cart.subtotal_cents / 100, currency: cart.currency })}>Continue to delivery <ArrowRight size={16} aria-hidden="true" /></Link><small>VAT included · Secure checkout</small>{remove.error && <p className={s.formError} role="alert">{remove.error.message}</p>}</aside></div> : <CartEmptyState />}</section>
 }
 
 function Checkout() {
-  const { user } = useAuth(); const navigate = useNavigate(); const client = useQueryClient(); const [address, setAddress] = useState<Address>(() => user?.default_shipping_address ?? emptyAddress(user?.full_name)); const [saveAsDefault, setSaveAsDefault] = useState(false); const [quote, setQuote] = useState<{ subtotal_cents: number; shipping_cents: number; total_cents: number } | null>(null); const [quoteNotice, setQuoteNotice] = useState(false); const [error, setError] = useState(''); const [busy, setBusy] = useState(false); const checkoutAttempt = useRef<{ payload: string; key: string } | null>(null)
+  const { user } = useAuth(); const navigate = useNavigate(); const client = useQueryClient(); const [address, setAddress] = useState<Address>(() => user?.default_shipping_address ?? emptyAddress(user?.full_name)); const [saveAsDefault, setSaveAsDefault] = useState(false); const [quote, setQuote] = useState<{ subtotal_cents: number; shipping_cents: number; total_cents: number; currency?: string } | null>(null); const [quoteNotice, setQuoteNotice] = useState(false); const [error, setError] = useState(''); const [busy, setBusy] = useState(false); const checkoutAttempt = useRef<{ payload: string; key: string } | null>(null)
   if (!user) return <Navigate to="/sign-in" state={{ from: '/checkout' }} />
-  async function quoteOrder(e: FormEvent) { e.preventDefault(); setBusy(true); setError(''); setQuoteNotice(false); try { setQuote(await api('/checkout/quote', { method: 'POST', body: JSON.stringify({ address }) })); setQuoteNotice(true) } catch (err) { setError((err as Error).message) } finally { setBusy(false) } }
-  async function pay(provider: string) { setBusy(true); setError(''); try { if (saveAsDefault) { const nextUser = await api<User>('/users/me/delivery-address', { method: 'PUT', body: JSON.stringify(address) }); client.setQueryData(['me'], nextUser) } const payload = JSON.stringify({ address }); if (!checkoutAttempt.current || checkoutAttempt.current.payload !== payload) checkoutAttempt.current = { payload, key: crypto.randomUUID() }; const order = await api<Order>('/orders', { method: 'POST', headers: { 'Idempotency-Key': checkoutAttempt.current.key }, body: payload }); const payment = await api<{ redirect_url: string }>(`/payments/${provider}/start?order_id=${order.id}`, { method: 'POST' }); window.location.assign(payment.redirect_url) } catch (err) { setError((err as Error).message); setBusy(false) } }
+  async function quoteOrder(e: FormEvent) { e.preventDefault(); setBusy(true); setError(''); setQuoteNotice(false); try { const nextQuote = await api<{ subtotal_cents: number; shipping_cents: number; total_cents: number; currency?: string }>('/checkout/quote', { method: 'POST', body: JSON.stringify({ address }) }); setQuote(nextQuote); setQuoteNotice(true); trackAnalytics('delivery_quoted', { subtotal: nextQuote.subtotal_cents / 100, shipping: nextQuote.shipping_cents / 100, value: nextQuote.total_cents / 100, currency: nextQuote.currency || 'EUR' }) } catch (err) { setError((err as Error).message) } finally { setBusy(false) } }
+  async function pay(provider: 'stripe' | 'paypal') { setBusy(true); setError(''); try { if (saveAsDefault) { const nextUser = await api<User>('/users/me/delivery-address', { method: 'PUT', body: JSON.stringify(address) }); client.setQueryData(['me'], nextUser) } const payload = JSON.stringify({ address }); if (!checkoutAttempt.current || checkoutAttempt.current.payload !== payload) checkoutAttempt.current = { payload, key: crypto.randomUUID() }; const order = await api<Order>('/orders', { method: 'POST', headers: { 'Idempotency-Key': checkoutAttempt.current.key }, body: payload }); trackAnalytics('payment_selected', { provider, value: order.total_cents / 100, currency: order.currency || quote?.currency || 'EUR' }); const payment = await api<{ redirect_url: string }>(`/payments/${provider}/start?order_id=${order.id}`, { method: 'POST' }); window.location.assign(payment.redirect_url) } catch (err) { setError((err as Error).message); setBusy(false) } }
   return <section className={s.checkoutPage}>
     <FormNotification title={error ? 'Checkout could not continue' : 'Delivery calculated'} message={error || (quoteNotice ? 'Your delivery rate and order total are ready.' : '')} variant={error ? 'error' : 'success'} onClose={() => { setError(''); setQuoteNotice(false) }} />
     <div><span className={s.eyebrow}>DELIVERY</span><h1>Where should these stories find you?</h1>
@@ -954,14 +962,14 @@ function Checkout() {
 }
 
 function PaymentReturn() {
-  const [params] = useSearchParams(); const client = useQueryClient(); const requestStarted = useRef(false); const order = params.get('order'); const provider = params.get('provider'); const reference = params.get('reference') || params.get('token'); const valid = Boolean(order && provider && reference)
+  const [params] = useSearchParams(); const navigate = useNavigate(); const client = useQueryClient(); const requestStarted = useRef(false); const order = params.get('order'); const provider = params.get('provider'); const reference = params.get('reference') || params.get('token'); const validProvider = provider === 'stripe' || provider === 'paypal'; const valid = Boolean(order && validProvider && reference)
   const [status, setStatus] = useState(valid ? 'Confirming your payment…' : 'We could not identify this payment return.'); const [busy, setBusy] = useState(valid); const [confirmed, setConfirmed] = useState(false)
   useEffect(() => {
-    if (!order || !provider || !reference) return
+    if (!order || !reference || (provider !== 'stripe' && provider !== 'paypal')) return
     if (requestStarted.current) return
     requestStarted.current = true
-    api<Order>(`/payments/${provider}/complete?order_id=${order}&reference=${encodeURIComponent(reference)}`, { method: 'POST' }).then((completed) => { const review = completed.status === 'payment_review'; setStatus(review ? 'Your payment was received and needs manual review.' : 'Payment confirmed. Your books are reserved.'); setConfirmed(true); client.invalidateQueries({ queryKey: ['cart'] }) }).catch((e) => setStatus(e.message)).finally(() => setBusy(false))
-  }, [order, provider, reference, client])
+    api<Order>(`/payments/${provider}/complete?order_id=${order}&reference=${encodeURIComponent(reference)}`, { method: 'POST' }).then((completed) => { const review = completed.status === 'payment_review'; setStatus(review ? 'Your payment was received and needs manual review.' : 'Payment confirmed. Your books are reserved.'); setConfirmed(true); navigate('/payment/return', { replace: true }); const itemCount = completed.items.reduce((sum, item) => sum + item.quantity, 0); if (review) trackAnalytics('payment_review', { provider, value: completed.total_cents / 100, currency: completed.currency, item_count: itemCount }); else if (completed.status === 'paid') trackAnalytics('purchase', { provider, revenue: completed.total_cents / 100, currency: completed.currency, item_count: itemCount }); client.invalidateQueries({ queryKey: ['cart'] }) }).catch((e) => setStatus(e.message)).finally(() => setBusy(false))
+  }, [order, provider, reference, client, navigate])
   return <section className={s.narrowPage}>{busy ? <State title="Confirming your payment…" loading compact /> : <><div className={s.seal}>{confirmed ? <Check size={42} aria-hidden="true" /> : '?'}</div><span className={s.eyebrow}>{confirmed ? 'ORDER RECEIVED' : 'PAYMENT STATUS'}</span><h1 role="status">{status}</h1><p>{confirmed ? 'You can follow fulfillment from your account.' : 'Return to your bag or contact the shop if a payment was completed.'}</p><Link className={s.primaryButton} to={confirmed ? '/account' : '/cart'}>{confirmed ? 'View my orders' : 'Return to bag'} <ArrowRight size={16} aria-hidden="true" /></Link></>}</section>
 }
 

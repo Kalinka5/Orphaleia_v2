@@ -124,6 +124,9 @@ services:
     environment:
       VITE_PROXY_TARGET: http://api:8000
       VITE_API_URL: http://localhost:${API_PORT:-8010}/api/v1
+      VITE_UMAMI_WEBSITE_ID: ${VITE_UMAMI_WEBSITE_ID:-}
+      VITE_UMAMI_SCRIPT_URL: ${VITE_UMAMI_SCRIPT_URL:-}
+      VITE_UMAMI_DOMAINS: ${VITE_UMAMI_DOMAINS:-}
     ports:
       - "127.0.0.1:5173:5173"
     depends_on:

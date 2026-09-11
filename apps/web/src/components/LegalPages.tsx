@@ -2,7 +2,7 @@ import { useEffect, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import s from './LegalPages.module.css'
 
-const LAST_UPDATED = '9 September 2026'
+const LAST_UPDATED = '11 September 2026'
 
 type LegalSection = {
   id: string
@@ -152,9 +152,9 @@ const privacySections: LegalSection[] = [
   },
   {
     id: 'cookies',
-    title: 'Cookies and external media',
+    title: 'Cookies, audience measurement, and external media',
     content: <>
-      <p>Orphaleia currently uses only first-party cookies that are necessary to authenticate readers and protect the shop. Because they are essential, they cannot be switched off through a consent banner.</p>
+      <p>Orphaleia uses only first-party cookies that are necessary to authenticate readers and protect the shop. Because they are essential, they cannot be switched off through a consent banner.</p>
       <div className={s.tableWrap} tabIndex={0} role="region" aria-label="Essential cookie details">
         <table>
           <thead><tr><th>Cookie</th><th>Purpose</th><th>Duration</th><th>Access</th></tr></thead>
@@ -165,7 +165,13 @@ const privacySections: LegalSection[] = [
           </tbody>
         </table>
       </div>
-      <p>We do not currently use analytics or advertising cookies. Book videos are hosted by YouTube or Vimeo but are not loaded until you select “Load external video.” The provider will then receive technical information such as your IP address and device details and may use storage under its own privacy notice.</p>
+      <h3>Privacy-first audience measurement</h3>
+      <p>We use Umami Cloud, configured for its European Union region, to understand aggregate shop traffic and the steps readers take from browsing to checkout. Umami does not place analytics cookies, track you across websites, or receive your Orphaleia account identity.</p>
+      <p>The service receives the page path, a restricted set of catalogue and campaign parameters, referrer, browser language, screen size, device and browser information, and approximate country. Its cookieless session calculation uses technical request information such as the IP address and user agent; Umami states that the IP address itself is not stored. We also record limited commerce events such as catalogue searches, adding or removing a book, starting checkout, selecting a payment provider, and a confirmed purchase value.</p>
+      <p>We do not send Umami names, email or delivery addresses, account or order identifiers, payment references, search phrases, comments, ratings, or verification and password-reset tokens. We do not use analytics session replay or identify signed-in readers. Analytics is disabled when your browser sends a Do Not Track preference.</p>
+      <p>We use these aggregate measurements in our legitimate interests to assess the shop’s usefulness, diagnose navigation problems, and improve catalogue and checkout performance. Umami Cloud retains Hobby-plan analytics for six months. You may object to this processing by enabling Do Not Track or by contacting <a href="mailto:privacy@orphaleia.com">privacy@orphaleia.com</a>.</p>
+      <h3>External media</h3>
+      <p>Book videos are hosted by YouTube or Vimeo but are not loaded until you select “Load external video.” The provider will then receive technical information such as your IP address and device details and may use storage under its own privacy notice.</p>
     </>,
   },
   {
