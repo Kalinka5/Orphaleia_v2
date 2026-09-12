@@ -6,11 +6,18 @@ import { CtaWithMarquee } from '../components/ui/cta-with-marquee'
 const bookSlugs = [
   'the-little-prince',
   'the-adventures-of-sherlock-holmes',
+  'alices-adventures-in-wonderland',
+  'the-great-gatsby',
+  'the-hobbit',
+  'twenty-thousand-leagues-under-the-sea',
+  'romeo-and-juliet',
+  'the-picture-of-dorian-gray',
+]
+
+const retiredBookSlugs = [
   'the-cartographer-of-ithaca',
   'letters-from-the-wine-dark-sea',
   'olivewood-astronomy',
-  'twenty-thousand-leagues-under-the-sea',
-  'romeo-and-juliet',
   'a-house-for-the-north-wind',
 ]
 
@@ -21,6 +28,10 @@ describe('CtaWithMarquee', () => {
     for (const slug of bookSlugs) {
       const matches = document.querySelectorAll(`a[href="/books/${slug}"]`)
       expect(matches).toHaveLength(2)
+    }
+
+    for (const slug of retiredBookSlugs) {
+      expect(document.querySelector(`a[href="/books/${slug}"]`)).not.toBeInTheDocument()
     }
 
     expect(screen.getByRole('link', { name: 'Browse every book' })).toHaveAttribute('href', '/books')

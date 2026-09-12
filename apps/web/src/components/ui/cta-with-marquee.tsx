@@ -19,15 +19,15 @@ function Marquee({ children, reverse = false, speed = 34 }: MarqueeProps) {
 const firstRow = [
   { slug: 'the-little-prince', src: '/assets/landing/the-little-prince-featured.webp', alt: 'The Little Prince beneath a vast night sky' },
   { slug: 'the-adventures-of-sherlock-holmes', src: '/assets/landing/the-adventures-of-sherlock-holmes-featured.webp', alt: 'Sherlock Holmes in a shadowed London study' },
-  { slug: 'the-cartographer-of-ithaca', src: '/assets/landing/the-cartographer-of-ithaca-featured.webp', alt: 'A cartographer studying a map of Ithaca' },
-  { slug: 'letters-from-the-wine-dark-sea', src: '/assets/landing/letters-from-the-wine-dark-sea-featured.webp', alt: 'Letters beside the wine-dark sea' },
+  { slug: 'alices-adventures-in-wonderland', src: '/covers/alices-adventures-in-wonderland.webp', alt: 'Cover of Alice’s Adventures in Wonderland' },
+  { slug: 'the-great-gatsby', src: '/covers/the-great-gatsby.webp', alt: 'Cover of The Great Gatsby' },
 ]
 
 const secondRow = [
-  { slug: 'olivewood-astronomy', src: '/assets/landing/olivewood-astronomy-featured.webp', alt: 'An astronomer reading the night sky' },
+  { slug: 'the-hobbit', src: '/covers/the-hobbit.webp', alt: 'Cover of The Hobbit' },
   { slug: 'twenty-thousand-leagues-under-the-sea', src: '/assets/landing/twenty-thousand-leagues-under-the-sea-featured.webp', alt: 'A submarine voyage beneath the sea' },
   { slug: 'romeo-and-juliet', src: '/assets/landing/romeo-and-juliet-featured.webp', alt: 'Romeo and Juliet in a moonlit garden' },
-  { slug: 'a-house-for-the-north-wind', src: '/assets/landing/a-house-for-the-north-wind-featured.webp', alt: 'A house standing against the north wind' },
+  { slug: 'the-picture-of-dorian-gray', src: '/covers/the-picture-of-dorian-gray.webp', alt: 'Cover of The Picture of Dorian Gray' },
 ]
 
 function ArtworkTile({ slug, src, alt, duplicate }: { slug: string; src: string; alt: string; duplicate: boolean }) {
