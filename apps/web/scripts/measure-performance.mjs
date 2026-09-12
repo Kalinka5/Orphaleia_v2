@@ -17,7 +17,7 @@ const routes = [
     name: 'Catalog',
     path: '/books',
     interact: async (page) => {
-      const genre = page.getByRole('button', { name: /Genre All genres/i })
+      const genre = page.getByRole('combobox', { name: 'Genre' })
       await genre.click()
       await genre.press('Escape')
     },

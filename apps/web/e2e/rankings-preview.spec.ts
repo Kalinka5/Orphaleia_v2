@@ -14,7 +14,7 @@ test('concept is explicit, interactive and isolated from live data', async ({ pa
   await expect(chart.getByRole('listitem')).toHaveCount(8)
   await expect(chart.getByRole('link')).toHaveCount(0)
   expect(salesRequests).toBe(0)
-  await page.getByRole('button', { name: /Category/ }).click()
+  await page.getByRole('combobox', { name: 'Category' }).click()
   await page.getByRole('option', { name: 'Fantasy', exact: true }).click()
   await expect(chart.getByRole('listitem')).toHaveCount(2)
   await expect(page).toHaveURL(/genre=fantasy/)

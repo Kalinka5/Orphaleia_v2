@@ -160,6 +160,25 @@ describe('AccountHub', () => {
     fireEvent.change(screen.getByLabelText('Confirm new password'), { target: { value: 'A-Different-Password!2026' } })
     fireEvent.click(screen.getByRole('button', { name: 'Update password' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('New passwords do not match.')
+    expect(screen.getByLabelText('Confirm new password')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByLabelText('Confirm new password')).toHaveAttribute('aria-describedby', 'password-confirm-error')
+    await waitFor(() => expect(screen.getByLabelText('Confirm new password')).toHaveFocus())
     await waitFor(() => expect(fetchMock).not.toHaveBeenCalled())
+  })
+
+  it('associates API delivery validation with the affected field', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
+      message: 'Check the highlighted fields',
+      field_errors: { line1: 'Address must contain at least 3 characters' },
+    }), { status: 422, headers: { 'Content-Type': 'application/json' } })))
+    renderHub('/account?section=delivery')
+    fireEvent.change(screen.getByLabelText('Address'), { target: { value: '14 Library Lane' } })
+    fireEvent.change(screen.getByLabelText('City'), { target: { value: 'Madrid' } })
+    fireEvent.change(screen.getByLabelText('Postal code'), { target: { value: '28001' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save delivery address' }))
+    const address = screen.getByLabelText('Address')
+    expect(await screen.findByText('Address must contain at least 3 characters')).toBeInTheDocument()
+    expect(address).toHaveAttribute('aria-invalid', 'true')
+    expect(address).toHaveAccessibleDescription('Address must contain at least 3 characters')
   })
 })

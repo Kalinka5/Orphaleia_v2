@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { ArrowSquareOut, BookOpenText, Camera, CaretDown, Check, LockKey, MapPin, ShieldCheck, Trash, UserCircle } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ApiRequestError, api, money } from '../api'
+import { api, apiFieldError, money } from '../api'
 import { addressFields, countryOptions, emptyAddress } from '../address'
 import { orderJourney, orderStatusLabel } from '../orderStatus'
 import type { Address, Order, User } from '../types'
@@ -22,7 +22,7 @@ const sections: Array<{ id: AccountSection; label: string; description: string }
 ]
 
 function fieldError(error: unknown, field: string) {
-  return error instanceof ApiRequestError ? error.fieldErrors?.[field] : undefined
+  return apiFieldError(error, field)
 }
 
 function SectionIcon({ section }: { section: AccountSection }) {
@@ -93,6 +93,7 @@ export function AccountHub({ user, refresh }: { user: User; refresh: () => Promi
   const [profileError, setProfileError] = useState<unknown>(null)
   const [profileBusy, setProfileBusy] = useState(false)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [avatarValidationError, setAvatarValidationError] = useState('')
   const [deliveryAddress, setDeliveryAddress] = useState<Address>(() => user.default_shipping_address ?? emptyAddress(user.full_name))
   const [hasSavedDeliveryAddress, setHasSavedDeliveryAddress] = useState(Boolean(user.default_shipping_address))
   const [deliveryNotice, setDeliveryNotice] = useState('')
@@ -103,6 +104,7 @@ export function AccountHub({ user, refresh }: { user: User; refresh: () => Promi
   const [emailBusy, setEmailBusy] = useState(false)
   const [passwordNotice, setPasswordNotice] = useState('')
   const [passwordError, setPasswordError] = useState<unknown>(null)
+  const [passwordConfirmationError, setPasswordConfirmationError] = useState('')
   const [passwordBusy, setPasswordBusy] = useState(false)
   const avatarPreview = useMemo(() => avatarFile ? URL.createObjectURL(avatarFile) : null, [avatarFile])
 
@@ -137,15 +139,16 @@ export function AccountHub({ user, refresh }: { user: User; refresh: () => Promi
   async function saveAvatar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = event.currentTarget
-    if (!avatarFile) { setProfileError(new Error('Choose an image before saving.')); return }
-    if (avatarFile.size > 5 * 1024 * 1024) { setProfileError(new Error('Choose an image smaller than 5 MB.')); return }
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(avatarFile.type)) { setProfileError(new Error('Choose a JPEG, PNG, or WebP image.')); return }
+    if (!avatarFile) { setAvatarValidationError('Choose an image before saving.'); return }
+    if (avatarFile.size > 5 * 1024 * 1024) { setAvatarValidationError('Choose an image smaller than 5 MB.'); return }
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(avatarFile.type)) { setAvatarValidationError('Choose a JPEG, PNG, or WebP image.'); return }
     const payload = new FormData(); payload.set('file', avatarFile)
     setProfileBusy(true); setProfileNotice(''); setProfileError(null)
     try {
       const nextUser = await api<User>('/users/me/avatar', { method: 'PUT', body: payload })
       rememberUser(nextUser)
       setAvatarFile(null)
+      setAvatarValidationError('')
       form.reset()
       setProfileNotice('Reader portrait updated.')
     } catch (error) { setProfileError(error) } finally { setProfileBusy(false) }
@@ -210,8 +213,12 @@ export function AccountHub({ user, refresh }: { user: User; refresh: () => Promi
     event.preventDefault()
     const form = event.currentTarget
     const data = new FormData(form)
-    if (data.get('new_password') !== data.get('confirm_password')) { setEmailNotice(''); setEmailError(null); setPasswordError(new Error('New passwords do not match.')); setPasswordNotice(''); return }
-    setPasswordBusy(true); setPasswordNotice(''); setPasswordError(null); setEmailNotice(''); setEmailError(null)
+    if (data.get('new_password') !== data.get('confirm_password')) {
+      setEmailNotice(''); setEmailError(null); setPasswordError(null); setPasswordNotice(''); setPasswordConfirmationError('New passwords do not match.')
+      requestAnimationFrame(() => document.getElementById('password-confirm')?.focus())
+      return
+    }
+    setPasswordBusy(true); setPasswordNotice(''); setPasswordError(null); setPasswordConfirmationError(''); setEmailNotice(''); setEmailError(null)
     try {
       const result = await api<{ message: string }>('/users/me/password', { method: 'POST', body: JSON.stringify({ current_password: data.get('current_password'), new_password: data.get('new_password') }) })
       form.reset()
@@ -226,7 +233,7 @@ export function AccountHub({ user, refresh }: { user: User; refresh: () => Promi
       : section === 'security'
         ? emailError || emailNotice
           ? { notice: emailNotice, error: emailError, title: 'Email settings updated', errorTitle: 'Email settings not updated', close: () => { setEmailNotice(''); setEmailError(null) } }
-          : { notice: passwordNotice, error: passwordError, title: 'Password updated', errorTitle: 'Password not updated', close: () => { setPasswordNotice(''); setPasswordError(null) } }
+          : { notice: passwordNotice, error: passwordError || (passwordConfirmationError ? new Error(passwordConfirmationError) : null), title: 'Password updated', errorTitle: 'Password not updated', close: () => { setPasswordNotice(''); setPasswordError(null); setPasswordConfirmationError('') } }
         : null
 
   return <section className={s.page} aria-labelledby="account-title">
@@ -265,21 +272,25 @@ export function AccountHub({ user, refresh }: { user: User; refresh: () => Promi
           <div className={s.profileGrid}>
             <form className={s.avatarForm} onSubmit={(event) => void saveAvatar(event)} aria-busy={profileBusy || undefined}>
               <ReaderAvatar name={user.full_name} src={avatarPreview || user.avatar_url} size="account" />
-              <div><h3>Reader portrait</h3><p>JPEG, PNG, or WebP. Up to 5 MB. Images are cropped to a square.</p><label className={s.fileButton}><Camera size={18} aria-hidden="true" /> Choose image<input name="avatar" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setAvatarFile(event.target.files?.[0] || null)} /></label>{avatarFile && <small>{avatarFile.name}</small>}</div>
+              <div><h3>Reader portrait</h3><p id="avatar-help">JPEG, PNG, or WebP. Up to 5 MB. Images are cropped to a square.</p><label className={s.fileButton}><Camera size={18} aria-hidden="true" /> Choose image<input name="avatar" type="file" accept="image/jpeg,image/png,image/webp" aria-describedby={`avatar-help${avatarValidationError ? ' avatar-error' : ''}`} aria-invalid={Boolean(avatarValidationError) || undefined} onChange={(event) => { setAvatarFile(event.target.files?.[0] || null); setAvatarValidationError('') }} /></label>{avatarFile && <small>{avatarFile.name}</small>}{avatarValidationError && <small className={s.fieldError} id="avatar-error">{avatarValidationError}</small>}</div>
               <div className={s.buttonRow}><button className={s.primaryButton} disabled={profileBusy || !avatarFile}>{profileBusy ? 'Saving…' : 'Save portrait'}</button>{user.avatar_url && <button className={s.textButton} type="button" disabled={profileBusy} onClick={() => void removeAvatar()}><Trash size={16} aria-hidden="true" /> Remove</button>}</div>
             </form>
             <form className={s.form} onSubmit={(event) => void saveDisplayName(event)} aria-busy={profileBusy || undefined}>
               <h3>Display name</h3><p>This is public and does not need to be unique.</p>
-              <label htmlFor="account-display-name">Display name<input id="account-display-name" name="full_name" defaultValue={user.full_name} minLength={2} maxLength={120} autoComplete="name" required aria-invalid={Boolean(fieldError(profileError, 'full_name')) || undefined} /></label>
-              {fieldError(profileError, 'full_name') && <p className={s.fieldError}>{fieldError(profileError, 'full_name')}</p>}
+              <label htmlFor="account-display-name">Display name<input id="account-display-name" name="full_name" defaultValue={user.full_name} minLength={2} maxLength={120} autoComplete="name" required aria-invalid={Boolean(fieldError(profileError, 'full_name')) || undefined} aria-describedby={fieldError(profileError, 'full_name') ? 'account-display-name-error' : undefined} /></label>
+              {fieldError(profileError, 'full_name') && <p className={s.fieldError} id="account-display-name-error">{fieldError(profileError, 'full_name')}</p>}
               <button className={s.primaryButton} disabled={profileBusy}>{profileBusy ? 'Saving…' : 'Save display name'}</button>
             </form>
           </div>
         </section>}
         {section === 'delivery' && <section aria-labelledby="delivery-title"><div className={s.sectionHeading}><span>Private delivery details</span><h2 id="delivery-title">Where your books usually find you</h2><p>Save one default address to prefill checkout. You can still change it for any individual order.</p></div>
           <form className={`${s.form} ${s.deliveryForm}`} onSubmit={(event) => void saveDeliveryAddress(event)} aria-busy={deliveryBusy || undefined}>
-            {addressFields.map(({ key, label, required, autoComplete }) => <label key={key} htmlFor={`delivery-${key}`}>{label}<input id={`delivery-${key}`} value={deliveryAddress[key]} required={required} autoComplete={autoComplete} onChange={(event) => setDeliveryAddress({ ...deliveryAddress, [key]: event.target.value })} aria-invalid={Boolean(fieldError(deliveryError, key)) || undefined} />{fieldError(deliveryError, key) && <span className={s.fieldError}>{fieldError(deliveryError, key)}</span>}</label>)}
-            <SelectControl label="Country" labelMode="stacked" value={deliveryAddress.country} options={countryOptions} onChange={(country) => setDeliveryAddress({ ...deliveryAddress, country })} />
+            {addressFields.map(({ key, label, required, autoComplete, minLength, maxLength }) => {
+              const error = fieldError(deliveryError, key)
+              const errorId = `delivery-${key}-error`
+              return <div className={s.fieldGroup} key={key}><label htmlFor={`delivery-${key}`}>{label}<input id={`delivery-${key}`} name={key} value={deliveryAddress[key]} required={required} minLength={minLength} maxLength={maxLength} autoComplete={autoComplete} onChange={(event) => setDeliveryAddress({ ...deliveryAddress, [key]: event.target.value })} aria-invalid={Boolean(error) || undefined} aria-describedby={error ? errorId : undefined} /></label>{error && <span className={s.fieldError} id={errorId}>{error}</span>}</div>
+            })}
+            <SelectControl label="Country" labelMode="stacked" value={deliveryAddress.country} options={countryOptions} required onChange={(country) => setDeliveryAddress({ ...deliveryAddress, country })} />
             <div className={s.deliveryActions}><button className={s.primaryButton} disabled={deliveryBusy}>{deliveryBusy ? 'Saving…' : 'Save delivery address'}</button>{hasSavedDeliveryAddress && <button className={s.textButton} type="button" disabled={deliveryBusy} onClick={() => void removeDeliveryAddress()}><Trash size={16} aria-hidden="true" /> Remove saved address</button>}</div>
           </form>
         </section>}
@@ -288,15 +299,15 @@ export function AccountHub({ user, refresh }: { user: User; refresh: () => Promi
             <form className={s.form} onSubmit={(event) => void requestEmailChange(event)} aria-busy={emailBusy || undefined}>
               <div className={s.formTitle}><ShieldCheck size={24} aria-hidden="true" /><div><h3>Sign-in email</h3><p>Current address: <strong>{user.email}</strong></p></div></div>
               {user.pending_email && <div className={s.pending}><div><b>Waiting for confirmation</b><span>{user.pending_email}</span></div><button type="button" className={s.textButton} disabled={emailBusy} onClick={() => void cancelEmailChange()}>Cancel request</button></div>}
-              <label htmlFor="new-email">New email address<input id="new-email" name="email" type="email" defaultValue={user.pending_email || ''} autoComplete="email" required aria-invalid={Boolean(fieldError(emailError, 'email')) || undefined} /></label>
+              <div className={s.fieldGroup}><label htmlFor="new-email">New email address<input id="new-email" name="email" type="email" defaultValue={user.pending_email || ''} maxLength={320} autoComplete="email" required aria-invalid={Boolean(fieldError(emailError, 'email')) || undefined} aria-describedby={fieldError(emailError, 'email') ? 'new-email-error' : undefined} /></label>{fieldError(emailError, 'email') && <span className={s.fieldError} id="new-email-error">{fieldError(emailError, 'email')}</span>}</div>
               <label htmlFor="email-current-password">Current password<input id="email-current-password" name="current_password" type="password" autoComplete="current-password" required /></label>
               <button className={s.primaryButton} disabled={emailBusy}>{emailBusy ? 'Sending…' : user.pending_email ? 'Resend confirmation' : 'Send confirmation'}</button>
             </form>
             <form className={s.form} onSubmit={(event) => void changePassword(event)} aria-busy={passwordBusy || undefined}>
               <div className={s.formTitle}><LockKey size={24} aria-hidden="true" /><div><h3>Change password</h3><p>Other signed-in devices will be logged out.</p></div></div>
               <label htmlFor="password-current">Current password<input id="password-current" name="current_password" type="password" autoComplete="current-password" required /></label>
-              <label htmlFor="password-new">New password<input id="password-new" name="new_password" type="password" minLength={10} maxLength={128} autoComplete="new-password" required aria-describedby="password-help" /></label><small id="password-help">Use at least 10 characters.</small>
-              <label htmlFor="password-confirm">Confirm new password<input id="password-confirm" name="confirm_password" type="password" minLength={10} maxLength={128} autoComplete="new-password" required /></label>
+              <div className={s.fieldGroup}><label htmlFor="password-new">New password<input id="password-new" name="new_password" type="password" minLength={10} maxLength={128} autoComplete="new-password" required aria-invalid={Boolean(fieldError(passwordError, 'new_password')) || undefined} aria-describedby={`password-help${fieldError(passwordError, 'new_password') ? ' password-new-error' : ''}`} /></label>{fieldError(passwordError, 'new_password') && <span className={s.fieldError} id="password-new-error">{fieldError(passwordError, 'new_password')}</span>}</div><small id="password-help">Use at least 10 characters.</small>
+              <div className={s.fieldGroup}><label htmlFor="password-confirm">Confirm new password<input id="password-confirm" name="confirm_password" type="password" minLength={10} maxLength={128} autoComplete="new-password" required aria-invalid={Boolean(passwordConfirmationError) || undefined} aria-describedby={passwordConfirmationError ? 'password-confirm-error' : undefined} onChange={() => setPasswordConfirmationError('')} /></label>{passwordConfirmationError && <span className={s.fieldError} id="password-confirm-error">{passwordConfirmationError}</span>}</div>
               <button className={s.primaryButton} disabled={passwordBusy}>{passwordBusy ? 'Updating…' : 'Update password'}</button>
             </form>
           </div>

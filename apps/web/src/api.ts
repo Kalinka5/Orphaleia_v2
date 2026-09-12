@@ -18,6 +18,19 @@ export class ApiRequestError extends Error {
   }
 }
 
+export function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'The voyage was interrupted. Try again.'
+}
+
+export function apiFieldError(error: unknown, ...fields: string[]) {
+  if (!(error instanceof ApiRequestError)) return undefined
+  for (const field of fields) {
+    const message = error.fieldErrors?.[field]
+    if (message) return message
+  }
+  return undefined
+}
+
 function cookie(name: string) {
   return document.cookie.split('; ').find((row) => row.startsWith(`${name}=`))?.split('=')[1] || ''
 }

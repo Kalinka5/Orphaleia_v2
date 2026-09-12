@@ -78,8 +78,8 @@ export function AdminOrderOperations({ order }: { order: Order }) {
       variant={confirming ? 'warning' : update.error ? 'error' : 'success'}
       onClose={() => { setConfirming(null); update.reset(); setNotice('') }}
       action={confirming ? <>
-        <button className={s.primaryButton} disabled={update.isPending} onClick={() => update.mutate(confirming)}>{update.isPending ? 'Saving…' : 'Confirm update'}</button>
-        <button className={s.textButton} disabled={update.isPending} onClick={() => setConfirming(null)}>Keep current status</button>
+        <button type="button" className={s.primaryButton} disabled={update.isPending} onClick={() => update.mutate(confirming)}>{update.isPending ? 'Saving…' : 'Confirm update'}</button>
+        <button type="button" className={s.textButton} disabled={update.isPending} onClick={() => setConfirming(null)}>Keep current status</button>
       </> : undefined}
     />
     <button type="button" className={s.adminOrderSummary} aria-expanded={expanded} aria-controls={`admin-order-${order.id}`} onClick={() => setExpanded(!expanded)}>
@@ -100,8 +100,8 @@ export function AdminOrderOperations({ order }: { order: Order }) {
           <label>Carrier<input name="tracking_carrier" defaultValue={order.tracking_carrier ?? ''} maxLength={120} placeholder="Correos" required /></label>
           <label>Tracking reference<input name="tracking_reference" defaultValue={order.tracking_reference ?? ''} maxLength={120} placeholder="PQ48 392 761 ES" required /></label>
           <label>Tracking URL <span>(optional)</span><input name="tracking_url" defaultValue={order.tracking_url ?? ''} type="url" inputMode="url" placeholder="https://carrier.example/track/…" /></label>
-          <button className={s.secondaryButton} disabled={update.isPending}><Truck size={17} aria-hidden="true" /> Review shipment</button>
-        </form> : next ? <button className={s.secondaryButton} disabled={update.isPending} onClick={() => startAction(next)}>{next === 'processing' ? <Package size={17} aria-hidden="true" /> : <CheckCircle size={17} aria-hidden="true" />}{update.isPending ? 'Saving…' : actionLabel(next)}</button> : <p className={s.adminOrderComplete}>No further delivery action is available.</p>}
+          <button type="submit" className={s.secondaryButton} disabled={update.isPending}><Truck size={17} aria-hidden="true" /> Review shipment</button>
+        </form> : next ? <button type="button" className={s.secondaryButton} disabled={update.isPending} onClick={() => startAction(next)}>{next === 'processing' ? <Package size={17} aria-hidden="true" /> : <CheckCircle size={17} aria-hidden="true" />}{update.isPending ? 'Saving…' : actionLabel(next)}</button> : <p className={s.adminOrderComplete}>No further delivery action is available.</p>}
         <div className={s.exceptionActions}>
           {canCancel && <button type="button" disabled={update.isPending} onClick={() => startAction('cancelled')}>Cancel unpaid order</button>}
           {canRefund && <button type="button" disabled={update.isPending} onClick={() => startAction('refunded')}>Record as refunded</button>}

@@ -98,7 +98,7 @@ test('Don Quixote collection introduction visual baseline', async ({ page }) => 
 
 test('catalog open-filter visual baseline', async ({ page }) => {
   await page.goto('/books')
-  await page.getByRole('button', { name: /Genre All genres/i }).click()
+  await page.getByRole('combobox', { name: 'Genre' }).click()
   await expect(page.getByRole('listbox', { name: 'Genre' })).toBeVisible()
   await capture(page, 'catalog-open-filter')
 })

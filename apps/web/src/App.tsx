@@ -2,7 +2,7 @@ import { createContext, FormEvent, ReactNode, useCallback, useContext, useEffect
 import { ArrowLeft, ArrowRight, ArrowUpRight, CaretRight, Check, EnvelopeSimple, Eye, EyeSlash, MagnifyingGlass, Pause, Play, Star } from '@phosphor-icons/react'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { api, money } from './api'
+import { api, apiFieldError, errorMessage, money } from './api'
 import { addressFields, countryOptions, emptyAddress } from './address'
 import { trackAnalytics } from './analytics'
 import { BookDetailExperience } from './components/BookDetailExperience'
@@ -822,26 +822,27 @@ function Rankings() {
 }
 
 function AuthPage({ register = false }: { register?: boolean }) {
-  const { user, refresh } = useAuth(); const navigate = useNavigate(); const location = useLocation(); const [error, setError] = useState(''); const [fieldError, setFieldError] = useState(''); const [sent, setSent] = useState<{ message: string; email: string; previewUrl?: string } | null>(null); const [notificationOpen, setNotificationOpen] = useState(false); const [submitting, setSubmitting] = useState(false); const [showPassword, setShowPassword] = useState(false); const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const { user, refresh } = useAuth(); const navigate = useNavigate(); const location = useLocation(); const [error, setError] = useState<unknown>(null); const [confirmationError, setConfirmationError] = useState(''); const [sent, setSent] = useState<{ message: string; email: string; previewUrl?: string } | null>(null); const [notificationOpen, setNotificationOpen] = useState(false); const [submitting, setSubmitting] = useState(false); const [showPassword, setShowPassword] = useState(false); const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   if (user) return <Navigate to="/account" />
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (submitting) return
-    setError('')
-    setFieldError('')
+    setError(null)
+    setConfirmationError('')
     setSent(null)
     const form = new FormData(e.currentTarget)
     const password = String(form.get('password') || '')
     if (register && password !== String(form.get('confirmPassword') || '')) {
-      setFieldError('Passwords do not match.')
+      setConfirmationError('Passwords do not match.')
       setNotificationOpen(false)
+      requestAnimationFrame(() => document.getElementById('auth-confirm-password')?.focus())
       return
     }
     setSubmitting(true)
     try {
       if (register) {
         const email = String(form.get('email') || '')
-        const result = await api<{ message: string; email_preview_url?: string }>('/auth/register', { method: 'POST', body: JSON.stringify({ email, full_name: form.get('name'), password }) })
+        const result = await api<{ message: string; email_preview_url?: string }>('/auth/register', { method: 'POST', body: JSON.stringify({ email, full_name: form.get('full_name'), password }) })
         setSent({ message: result.message, email, previewUrl: result.email_preview_url })
         setNotificationOpen(false)
       } else {
@@ -850,7 +851,7 @@ function AuthPage({ register = false }: { register?: boolean }) {
         navigate((location.state as { from?: string })?.from || '/account')
       }
     } catch (err) {
-      setError((err as Error).message)
+      setError(err)
       setNotificationOpen(true)
     } finally {
       setSubmitting(false)
@@ -870,9 +871,9 @@ function AuthPage({ register = false }: { register?: boolean }) {
   return <section className={`${s.authPage} ${register ? s.authRegister : s.authLogin}`} aria-labelledby="auth-title" data-testid="auth-shell">
     <FormNotification
       title={register ? 'Account not created' : 'Sign-in failed'}
-      message={notificationOpen ? error : ''}
+      message={notificationOpen ? errorMessage(error) : ''}
       variant="error"
-      onClose={() => { setNotificationOpen(false); setError(''); setFieldError('') }}
+      onClose={() => { setNotificationOpen(false); setError(null); setConfirmationError('') }}
     />
     <div className={s.authFormPanel} data-testid="auth-form-panel">
       <form className={s.authForm} onSubmit={submit} aria-busy={submitting}>
@@ -887,12 +888,12 @@ function AuthPage({ register = false }: { register?: boolean }) {
           {sent.previewUrl && <a className={`${s.primaryButton} ${s.authSubmit}`} href={sent.previewUrl} target="_blank" rel="noreferrer">Open development inbox <ArrowUpRight size={16} aria-hidden="true" /></a>}
           <p className={s.authSwitch}>Already verified? <Link to="/sign-in">Sign in</Link></p>
         </div> : <>
-          {register && <label>Your name<input name="name" placeholder="Your name" required minLength={2} autoComplete="name" /></label>}
-          <label>Email address<input name="email" type="email" placeholder="reader@orphaleia.com" required autoComplete="email" aria-invalid={Boolean(error) || undefined} /></label>
-          <label>Password<span className={s.passwordField}><input id="auth-password" name="password" type={showPassword ? 'text' : 'password'} placeholder="Enter your password" required minLength={10} autoComplete={register ? 'new-password' : 'current-password'} aria-invalid={Boolean(error) || Boolean(fieldError) || undefined} aria-describedby={fieldError ? 'auth-password-error' : undefined} /><button type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? 'Hide password' : 'Show password'} aria-controls="auth-password">{showPassword ? <EyeSlash size={19} aria-hidden="true" /> : <Eye size={19} aria-hidden="true" />}</button></span></label>
+          {register && <><label htmlFor="auth-name">Your name<input id="auth-name" name="full_name" placeholder="Your name" required minLength={2} maxLength={120} autoComplete="name" aria-invalid={Boolean(apiFieldError(error, 'full_name')) || undefined} aria-describedby={apiFieldError(error, 'full_name') ? 'auth-name-error' : undefined} /></label>{apiFieldError(error, 'full_name') && <span className={s.authFieldError} id="auth-name-error">{apiFieldError(error, 'full_name')}</span>}</>}
+          <label htmlFor="auth-email">Email address<input id="auth-email" name="email" type="email" placeholder="reader@orphaleia.com" required maxLength={320} autoComplete="email" aria-invalid={Boolean(apiFieldError(error, 'email')) || undefined} aria-describedby={apiFieldError(error, 'email') ? 'auth-email-error' : undefined} /></label>{apiFieldError(error, 'email') && <span className={s.authFieldError} id="auth-email-error">{apiFieldError(error, 'email')}</span>}
+          <label htmlFor="auth-password">Password<span className={s.passwordField}><input id="auth-password" name="password" type={showPassword ? 'text' : 'password'} placeholder="Enter your password" required minLength={register ? 10 : undefined} maxLength={128} autoComplete={register ? 'new-password' : 'current-password'} aria-invalid={Boolean(apiFieldError(error, 'password')) || undefined} aria-describedby={apiFieldError(error, 'password') ? 'auth-password-server-error' : undefined} /><button type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? 'Hide password' : 'Show password'} aria-controls="auth-password">{showPassword ? <EyeSlash size={19} aria-hidden="true" /> : <Eye size={19} aria-hidden="true" />}</button></span></label>{apiFieldError(error, 'password') && <span className={s.authFieldError} id="auth-password-server-error">{apiFieldError(error, 'password')}</span>}
           {!register && <Link className={s.authForgot} to="/forgot-password">Forgot your password?</Link>}
-          {register && <label>Confirm password<span className={s.passwordField}><input id="auth-confirm-password" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} placeholder="Repeat your password" required minLength={10} autoComplete="new-password" aria-invalid={Boolean(fieldError) || undefined} aria-describedby={fieldError ? 'auth-password-error' : undefined} /><button type="button" onClick={() => setShowConfirmPassword((visible) => !visible)} aria-label={showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'} aria-controls="auth-confirm-password">{showConfirmPassword ? <EyeSlash size={19} aria-hidden="true" /> : <Eye size={19} aria-hidden="true" />}</button></span></label>}
-          {fieldError && <p className={s.authFieldError} id="auth-password-error" role="alert">{fieldError}</p>}
+          {register && <label htmlFor="auth-confirm-password">Confirm password<span className={s.passwordField}><input id="auth-confirm-password" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} placeholder="Repeat your password" required minLength={10} maxLength={128} autoComplete="new-password" aria-invalid={Boolean(confirmationError) || undefined} aria-describedby={confirmationError ? 'auth-password-error' : undefined} onChange={() => setConfirmationError('')} /><button type="button" onClick={() => setShowConfirmPassword((visible) => !visible)} aria-label={showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'} aria-controls="auth-confirm-password">{showConfirmPassword ? <EyeSlash size={19} aria-hidden="true" /> : <Eye size={19} aria-hidden="true" />}</button></span></label>}
+          {confirmationError && <p className={s.authFieldError} id="auth-password-error" role="alert">{confirmationError}</p>}
           {register && <p className={s.legalAcknowledgement}>By creating an account, you agree to our <Link to="/terms">Terms and Conditions</Link> and acknowledge our <Link to="/privacy">Privacy Policy</Link>.</p>}
           <button className={`${s.primaryButton} ${s.authSubmit}`} disabled={submitting}>{submitting ? register ? 'Creating account…' : 'Signing in…' : register ? 'Create account' : 'Sign in'} {!submitting && <ArrowRight size={16} aria-hidden="true" />}</button>
           <p className={s.authSwitch}>{register ? <>Already aboard? <Link to="/sign-in">Sign in</Link></> : <>New to Orphaleia? <Link to="/register">Create an account</Link></>}</p>
@@ -928,9 +929,9 @@ function TokenPage({ mode }: { mode: 'verify' | 'reset' | 'forgot' | 'email-chan
   }
   if (mode === 'verify') return <VerificationPassage busy={busy} message={message} error={error} />
   if (mode === 'email-change') return <section className={s.narrowPage}><span className={s.eyebrow}>ACCOUNT SECURITY</span><h1>Confirm your new email</h1>{busy ? <State title="Checking your link…" loading compact /> : message ? <p className={s.notice} role="status">{message}</p> : error ? <p className={s.formError} role="alert">{error}</p> : null}<Link className={s.primaryButton} to="/sign-in">Continue to sign in</Link></section>
-  return <section className={s.narrowPage}>
+  return <section className={s.narrowPage} aria-labelledby="recovery-title">
     <FormNotification title={error ? 'Request failed' : mode === 'forgot' ? 'Reset email sent' : 'Password updated'} message={error || message} variant={error ? 'error' : 'success'} onClose={() => { setError(''); setMessage('') }} />
-    <span className={s.eyebrow}>ACCOUNT PASSAGE</span><h1>{mode === 'forgot' ? 'Find your way back' : 'Choose a new password'}</h1><form className={s.stackForm} aria-busy={busy || undefined} onSubmit={submit}><label>{mode === 'forgot' ? 'Email address' : 'New password'}<input name={mode === 'forgot' ? 'email' : 'password'} type={mode === 'forgot' ? 'email' : 'password'} required minLength={mode === 'forgot' ? undefined : 10} autoComplete={mode === 'forgot' ? 'email' : 'new-password'} /></label><button className={s.primaryButton} disabled={busy}>{busy ? 'Sending…' : mode === 'forgot' ? 'Send reset link' : 'Save new password'}</button></form>
+    <span className={s.eyebrow}>ACCOUNT PASSAGE</span><h1 id="recovery-title">{mode === 'forgot' ? 'Find your way back' : 'Choose a new password'}</h1><form className={s.stackForm} aria-busy={busy || undefined} aria-labelledby="recovery-title" onSubmit={submit}><label htmlFor="recovery-credential">{mode === 'forgot' ? 'Email address' : 'New password'}<input id="recovery-credential" name={mode === 'forgot' ? 'email' : 'password'} type={mode === 'forgot' ? 'email' : 'password'} required minLength={mode === 'forgot' ? undefined : 10} maxLength={mode === 'forgot' ? 320 : 128} autoComplete={mode === 'forgot' ? 'email' : 'new-password'} aria-describedby={mode === 'reset' ? 'recovery-password-help' : undefined} /></label>{mode === 'reset' && <small id="recovery-password-help">Use 10 to 128 characters.</small>}<button type="submit" className={s.primaryButton} disabled={busy}>{busy ? mode === 'forgot' ? 'Sending…' : 'Saving…' : mode === 'forgot' ? 'Send reset link' : 'Save new password'}</button></form>
   </section>
 }
 
@@ -942,25 +943,31 @@ function CartPage() {
 }
 
 function Checkout() {
-  const { user } = useAuth(); const navigate = useNavigate(); const client = useQueryClient(); const [address, setAddress] = useState<Address>(() => user?.default_shipping_address ?? emptyAddress(user?.full_name)); const [saveAsDefault, setSaveAsDefault] = useState(false); const [quote, setQuote] = useState<{ subtotal_cents: number; shipping_cents: number; total_cents: number; currency?: string } | null>(null); const [quoteNotice, setQuoteNotice] = useState(false); const [error, setError] = useState(''); const [busy, setBusy] = useState(false); const checkoutAttempt = useRef<{ payload: string; key: string } | null>(null)
+  const { user } = useAuth(); const navigate = useNavigate(); const client = useQueryClient(); const [address, setAddress] = useState<Address>(() => user?.default_shipping_address ?? emptyAddress(user?.full_name)); const [saveAsDefault, setSaveAsDefault] = useState(false); const [quote, setQuote] = useState<{ subtotal_cents: number; shipping_cents: number; total_cents: number; currency?: string } | null>(null); const [quoteNotice, setQuoteNotice] = useState(false); const [error, setError] = useState<unknown>(null); const [busy, setBusy] = useState(false); const checkoutAttempt = useRef<{ payload: string; key: string } | null>(null)
   if (!user) return <Navigate to="/sign-in" state={{ from: '/checkout' }} />
-  async function quoteOrder(e: FormEvent) { e.preventDefault(); setBusy(true); setError(''); setQuoteNotice(false); try { const nextQuote = await api<{ subtotal_cents: number; shipping_cents: number; total_cents: number; currency?: string }>('/checkout/quote', { method: 'POST', body: JSON.stringify({ address }) }); setQuote(nextQuote); setQuoteNotice(true); trackAnalytics('delivery_quoted', { subtotal: nextQuote.subtotal_cents / 100, shipping: nextQuote.shipping_cents / 100, value: nextQuote.total_cents / 100, currency: nextQuote.currency || 'EUR' }) } catch (err) { setError((err as Error).message) } finally { setBusy(false) } }
-  async function pay(provider: 'stripe' | 'paypal') { setBusy(true); setError(''); try { if (saveAsDefault) { const nextUser = await api<User>('/users/me/delivery-address', { method: 'PUT', body: JSON.stringify(address) }); client.setQueryData(['me'], nextUser) } const payload = JSON.stringify({ address }); if (!checkoutAttempt.current || checkoutAttempt.current.payload !== payload) checkoutAttempt.current = { payload, key: crypto.randomUUID() }; const order = await api<Order>('/orders', { method: 'POST', headers: { 'Idempotency-Key': checkoutAttempt.current.key }, body: payload }); trackAnalytics('payment_selected', { provider, value: order.total_cents / 100, currency: order.currency || quote?.currency || 'EUR' }); const payment = await api<{ redirect_url: string }>(`/payments/${provider}/start?order_id=${order.id}`, { method: 'POST' }); window.location.assign(payment.redirect_url) } catch (err) { setError((err as Error).message); setBusy(false) } }
+  async function quoteOrder(e: FormEvent<HTMLFormElement>) { e.preventDefault(); setBusy(true); setError(null); setQuoteNotice(false); try { const nextQuote = await api<{ subtotal_cents: number; shipping_cents: number; total_cents: number; currency?: string }>('/checkout/quote', { method: 'POST', body: JSON.stringify({ address }) }); setQuote(nextQuote); setQuoteNotice(true); trackAnalytics('delivery_quoted', { subtotal: nextQuote.subtotal_cents / 100, shipping: nextQuote.shipping_cents / 100, value: nextQuote.total_cents / 100, currency: nextQuote.currency || 'EUR' }) } catch (err) { setError(err) } finally { setBusy(false) } }
+  async function pay(provider: 'stripe' | 'paypal') { setBusy(true); setError(null); try { if (saveAsDefault) { const nextUser = await api<User>('/users/me/delivery-address', { method: 'PUT', body: JSON.stringify(address) }); client.setQueryData(['me'], nextUser) } const payload = JSON.stringify({ address }); if (!checkoutAttempt.current || checkoutAttempt.current.payload !== payload) checkoutAttempt.current = { payload, key: crypto.randomUUID() }; const order = await api<Order>('/orders', { method: 'POST', headers: { 'Idempotency-Key': checkoutAttempt.current.key }, body: payload }); trackAnalytics('payment_selected', { provider, value: order.total_cents / 100, currency: order.currency || quote?.currency || 'EUR' }); const payment = await api<{ redirect_url: string }>(`/payments/${provider}/start?order_id=${order.id}`, { method: 'POST' }); window.location.assign(payment.redirect_url) } catch (err) { setError(err); setBusy(false) } }
   return <section className={s.checkoutPage}>
-    <FormNotification title={error ? 'Checkout could not continue' : 'Delivery calculated'} message={error || (quoteNotice ? 'Your delivery rate and order total are ready.' : '')} variant={error ? 'error' : 'success'} onClose={() => { setError(''); setQuoteNotice(false) }} />
+    <FormNotification title={error ? 'Checkout could not continue' : 'Delivery calculated'} message={error ? errorMessage(error) : quoteNotice ? 'Your delivery rate and order total are ready.' : ''} variant={error ? 'error' : 'success'} onClose={() => { setError(null); setQuoteNotice(false) }} />
     <div><span className={s.eyebrow}>DELIVERY</span><h1>Where should these stories find you?</h1>
       <form className={s.checkoutForm} onSubmit={quoteOrder} aria-busy={busy || undefined}>
-        {addressFields.map(({ key, label, required, autoComplete }) => <label key={key}>{label}<input value={address[key]} required={required} autoComplete={autoComplete} onChange={(e) => { setAddress({ ...address, [key]: e.target.value }); setQuote(null); setQuoteNotice(false) }} /></label>)}
-        <SelectControl label="Country" labelMode="stacked" value={address.country} options={countryOptions} onChange={(value) => { setAddress({ ...address, country: value }); setQuote(null); setQuoteNotice(false) }} />
-        <label className={s.checkoutSaveAddress}><input type="checkbox" checked={saveAsDefault} onChange={(event) => setSaveAsDefault(event.target.checked)} /> <span><b>Save as my default delivery address</b><small>Use these details to prefill future checkouts.</small></span></label>
-        <button className={s.secondaryButton} disabled={busy}>{busy ? 'Calculating…' : 'Calculate delivery'}</button>
+        {addressFields.map(({ key, label, required, autoComplete, minLength, maxLength }) => {
+          const fieldError = apiFieldError(error, `address.${key}`, key)
+          const fieldId = `checkout-${key}`
+          const errorId = `${fieldId}-error`
+          return <div className={`${s.formField}${key === 'line1' || key === 'line2' ? ` ${s.checkoutWideField}` : ''}`} key={key}><label htmlFor={fieldId}>{label}<input id={fieldId} name={key} value={address[key]} required={required} minLength={minLength} maxLength={maxLength} autoComplete={autoComplete} aria-invalid={Boolean(fieldError) || undefined} aria-describedby={fieldError ? errorId : undefined} onChange={(e) => { setAddress({ ...address, [key]: e.target.value }); setQuote(null); setQuoteNotice(false); setError(null) }} /></label>{fieldError && <span className={s.inlineFieldError} id={errorId}>{fieldError}</span>}</div>
+        })}
+        <SelectControl label="Country" labelMode="stacked" value={address.country} options={countryOptions} required invalid={Boolean(apiFieldError(error, 'address.country', 'country'))} describedBy={apiFieldError(error, 'address.country', 'country') ? 'checkout-country-error' : undefined} onChange={(value) => { setAddress({ ...address, country: value }); setQuote(null); setQuoteNotice(false); setError(null) }} />
+        {apiFieldError(error, 'address.country', 'country') && <span className={s.inlineFieldError} id="checkout-country-error">{apiFieldError(error, 'address.country', 'country')}</span>}
+        <label className={s.checkoutSaveAddress}><input type="checkbox" checked={saveAsDefault} onChange={(event) => { setSaveAsDefault(event.target.checked); setError(null) }} /> <span><b>Save as my default delivery address</b><small>Use these details to prefill future checkouts.</small></span></label>
+        <button type="submit" className={s.secondaryButton} disabled={busy}>{busy ? 'Calculating…' : 'Calculate delivery'}</button>
       </form>
     </div>
     <aside className={s.orderCard}><h2>Final passage</h2>{quote ? <>
       <div><span>Books</span><b>{money(quote.subtotal_cents)}</b></div><div><span>Delivery</span><b>{money(quote.shipping_cents)}</b></div><hr /><div className={s.total}><span>Total</span><b>{money(quote.total_cents)}</b></div>
       <p className={s.legalAcknowledgement}>By selecting a payment option, you agree to our <Link to="/terms">Terms and Conditions</Link>, acknowledge our <Link to="/privacy">Privacy Policy</Link>, and confirm an obligation to pay.</p>
-      <button className={s.stripeButton} disabled={busy} onClick={() => void pay('stripe')}>{busy ? 'Opening payment…' : 'Pay securely with Stripe'}</button>
-      <button className={s.paypalButton} disabled={busy} onClick={() => void pay('paypal')}>{busy ? 'Opening payment…' : 'Pay with PayPal'}</button>
+      <button type="button" className={s.stripeButton} disabled={busy} onClick={() => void pay('stripe')}>{busy ? 'Opening payment…' : 'Pay securely with Stripe'}</button>
+      <button type="button" className={s.paypalButton} disabled={busy} onClick={() => void pay('paypal')}>{busy ? 'Opening payment…' : 'Pay with PayPal'}</button>
     </> : <p>Enter your address to see delivery and the final total.</p>}
       <button type="button" className={s.textButton} onClick={() => navigate('/cart')}><ArrowLeft size={15} aria-hidden="true" /> Return to bag</button>
     </aside>
@@ -986,7 +993,7 @@ function Account() {
 }
 
 function Admin() {
-  const { user, loading } = useAuth(); const client = useQueryClient(); const [tab, setTab] = useState('overview'); const [message, setMessage] = useState(''); const [messageVariant, setMessageVariant] = useState<NotificationVariant>('success'); const [taxonomyBusy, setTaxonomyBusy] = useState(false)
+  const { user, loading } = useAuth(); const client = useQueryClient(); const [tab, setTab] = useState('overview'); const [message, setMessage] = useState(''); const [messageVariant, setMessageVariant] = useState<NotificationVariant>('success'); const [taxonomyBusy, setTaxonomyBusy] = useState(false); const [zoneBusy, setZoneBusy] = useState(false)
   const overview = useQuery({ queryKey: ['admin-overview'], queryFn: () => api<Record<string, number>>('/admin/overview'), enabled: user?.role === 'admin' })
   const books = useQuery({ queryKey: ['admin-books'], queryFn: () => api<{ items: Book[] }>('/admin/books'), enabled: user?.role === 'admin' && tab === 'books' })
   const orders = useQuery({ queryKey: ['admin-orders'], queryFn: () => api<{ items: Order[] }>('/admin/orders'), enabled: user?.role === 'admin' && tab === 'orders' })
@@ -1021,7 +1028,7 @@ function Admin() {
     }
   }
   async function createGenre(e: FormEvent<HTMLFormElement>) { e.preventDefault(); const form = e.currentTarget; const f = new FormData(form); setTaxonomyBusy(true); setMessage(''); try { await api('/admin/genres', { method: 'POST', body: JSON.stringify({ name: f.get('name'), slug: f.get('slug'), description: f.get('description') }) }); form.reset(); await client.invalidateQueries({ queryKey: ['genres'] }); setMessageVariant('success'); setMessage('Genre added.') } catch (err) { setMessageVariant('error'); setMessage((err as Error).message) } finally { setTaxonomyBusy(false) } }
-  async function createZone(e: FormEvent<HTMLFormElement>) { e.preventDefault(); const f = new FormData(e.currentTarget); setMessage(''); try { await api('/admin/shipping-zones', { method: 'POST', body: JSON.stringify({ name: f.get('name'), country_codes: String(f.get('countries')).split(',').map((x) => x.trim()), rate_cents: Math.round(Number(f.get('rate')) * 100), free_over_cents: f.get('free') ? Math.round(Number(f.get('free')) * 100) : null, active: true }) }); e.currentTarget.reset(); client.invalidateQueries({ queryKey: ['admin-zones'] }); setMessageVariant('success'); setMessage('Shipping zone added.') } catch (err) { setMessageVariant('error'); setMessage((err as Error).message) } }
+  async function createZone(e: FormEvent<HTMLFormElement>) { e.preventDefault(); if (zoneBusy) return; const form = e.currentTarget; const f = new FormData(form); setZoneBusy(true); setMessage(''); try { await api('/admin/shipping-zones', { method: 'POST', body: JSON.stringify({ name: f.get('name'), country_codes: String(f.get('countries')).split(',').map((x) => x.trim().toUpperCase()), rate_cents: Math.round(Number(f.get('rate')) * 100), free_over_cents: f.get('free') ? Math.round(Number(f.get('free')) * 100) : null, active: true }) }); form.reset(); await client.invalidateQueries({ queryKey: ['admin-zones'] }); setMessageVariant('success'); setMessage('Shipping zone added.') } catch (err) { setMessageVariant('error'); setMessage((err as Error).message) } finally { setZoneBusy(false) } }
   if (loading) return <State title="Checking the keeper’s seal…" loading />; if (user?.role !== 'admin') return <Navigate to="/" />
   const mutationError = moderate.error || resetAvatar.error
   return <section className={s.adminPage}>
@@ -1029,8 +1036,8 @@ function Admin() {
     <aside className={s.adminNav}><span className={s.eyebrow}>KEEPER’S DESK</span><h1>Shop admin</h1>{['overview','books','taxonomy','shipping','orders','comments','readers'].map((x) => <button type="button" className={tab === x ? s.activeTab : ''} aria-current={tab === x ? 'page' : undefined} key={x} onClick={() => setTab(x)}>{x}</button>)}</aside><div className={s.adminContent}>
     {tab === 'overview' && <><h2>Today at Orphaleia</h2>{overview.isLoading ? <State title="Loading the overview…" loading compact /> : overview.error ? <ErrorState error={overview.error} retry={() => void overview.refetch()} compact /> : <><div className={s.stats}>{overview.data && Object.entries(overview.data).map(([key,value]) => <article key={key}><span>{key.replace('_',' ')}</span><b>{value}</b></article>)}</div><div className={s.adminNote}><h3>Operations note</h3><p>Payment events are replay-safe, stock reservations expire after 30 minutes, and outbound messages are handled by the worker.</p></div></>}</>}
     {tab === 'books' && <><div className={s.adminTitle}><h2>Catalog</h2><Link className={s.secondaryButton} to="/admin/books/new">Add book</Link></div>{books.isLoading ? <State title="Loading the catalog…" loading compact /> : books.error ? <ErrorState error={books.error} retry={() => void books.refetch()} compact /> : books.data?.items.length ? <div className={s.table}>{books.data.items.map((book) => <div className={s.tableRow} key={book.id}><img src={book.cover_url} alt={`Cover of ${book.title}`} width="42" height="64" loading="lazy" /><div><b>{book.title}</b><small>{book.authors.map((x) => x.name).join(', ')} · <Link to={`/admin/books/${book.slug}/edit`}>Edit</Link></small></div><span>{money(book.price_cents)}</span><span>{book.stock_qty} in stock</span><span className={book.active ? s.live : s.draft}>{book.active ? 'Live' : 'Hidden'}</span></div>)}</div> : <State title="No catalog books" compact />}</>}
-    {tab === 'taxonomy' && <><h2>Authors and shelves</h2>{authors.isLoading || genres.isLoading ? <State title="Loading taxonomy…" loading compact /> : authors.error || genres.error ? <ErrorState error={authors.error || genres.error} retry={() => { void authors.refetch(); void genres.refetch() }} compact /> : <div className={s.adminForms}><form className={s.stackForm} aria-busy={taxonomyBusy || undefined} onSubmit={(e) => void createAuthor(e)}><h3>Add author</h3><label>Name<input name="name" required /></label><label>Slug<input name="slug" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" /></label><label>Biography<textarea name="description" /></label><label>Upload portrait<input name="portrait_file" type="file" accept="image/png,image/jpeg,image/webp" /></label><label>Or use a portrait URL<input name="image_url" placeholder="https://… or /media/…" /></label><button className={s.secondaryButton} disabled={taxonomyBusy}>{taxonomyBusy ? 'Adding…' : 'Add author'}</button><small>{authors.data?.items.length ?? 0} authors currently available</small></form><form className={s.stackForm} aria-busy={taxonomyBusy || undefined} onSubmit={(e) => void createGenre(e)}><h3>Add genre</h3><label>Name<input name="name" required /></label><label>Slug<input name="slug" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" /></label><label>Description<textarea name="description" /></label><button className={s.secondaryButton} disabled={taxonomyBusy}>{taxonomyBusy ? 'Adding…' : 'Add genre'}</button><small>{genres.data?.items.length ?? 0} shelves currently available</small></form></div>}</>}
-    {tab === 'shipping' && <><h2>Shipping zones</h2>{zones.isLoading ? <State title="Loading shipping zones…" loading compact /> : zones.error ? <ErrorState error={zones.error} retry={() => void zones.refetch()} compact /> : <><div className={s.shippingList}>{zones.data?.items.length ? zones.data.items.map((zone) => <article key={zone.id}><div><b>{zone.name}</b><small>{zone.country_codes.join(', ')}</small></div><span>{money(zone.rate_cents)} delivery</span><span>{zone.free_over_cents ? `Free over ${money(zone.free_over_cents)}` : 'No free threshold'}</span></article>) : <State title="No shipping zones" compact />}</div><form className={s.inlineForm} onSubmit={(e) => void createZone(e)}><label>Zone name<input name="name" required /></label><label>Country codes<input name="countries" placeholder="ES, PT" required /></label><label>Rate in EUR<input name="rate" type="number" min="0" step="0.01" required /></label><label>Free over EUR<input name="free" type="number" min="0" step="0.01" /></label><button className={s.primaryButton}>Add zone</button></form></>}</>}
+    {tab === 'taxonomy' && <><h2>Authors and shelves</h2>{authors.isLoading || genres.isLoading ? <State title="Loading taxonomy…" loading compact /> : authors.error || genres.error ? <ErrorState error={authors.error || genres.error} retry={() => { void authors.refetch(); void genres.refetch() }} compact /> : <div className={s.adminForms}><form className={s.stackForm} aria-busy={taxonomyBusy || undefined} aria-labelledby="add-author-title" onSubmit={(e) => void createAuthor(e)}><h3 id="add-author-title">Add author</h3><label>Name<input name="name" required minLength={2} maxLength={160} /></label><label>Slug<input name="slug" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" title="Use lowercase letters, numbers, and single hyphens only." /></label><label>Biography<textarea name="description" maxLength={5000} /></label><label>Upload portrait<input name="portrait_file" type="file" accept="image/png,image/jpeg,image/webp" /></label><label>Or use a portrait URL<input name="image_url" placeholder="https://… or /media/…" maxLength={500} /></label><button type="submit" className={s.secondaryButton} disabled={taxonomyBusy}>{taxonomyBusy ? 'Adding…' : 'Add author'}</button><small>{authors.data?.items.length ?? 0} authors currently available</small></form><form className={s.stackForm} aria-busy={taxonomyBusy || undefined} aria-labelledby="add-genre-title" onSubmit={(e) => void createGenre(e)}><h3 id="add-genre-title">Add genre</h3><label>Name<input name="name" required minLength={2} maxLength={100} /></label><label>Slug<input name="slug" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" title="Use lowercase letters, numbers, and single hyphens only." /></label><label>Description<textarea name="description" maxLength={2000} /></label><button type="submit" className={s.secondaryButton} disabled={taxonomyBusy}>{taxonomyBusy ? 'Adding…' : 'Add genre'}</button><small>{genres.data?.items.length ?? 0} shelves currently available</small></form></div>}</>}
+    {tab === 'shipping' && <><h2>Shipping zones</h2>{zones.isLoading ? <State title="Loading shipping zones…" loading compact /> : zones.error ? <ErrorState error={zones.error} retry={() => void zones.refetch()} compact /> : <><div className={s.shippingList}>{zones.data?.items.length ? zones.data.items.map((zone) => <article key={zone.id}><div><b>{zone.name}</b><small>{zone.country_codes.join(', ')}</small></div><span>{money(zone.rate_cents)} delivery</span><span>{zone.free_over_cents ? `Free over ${money(zone.free_over_cents)}` : 'No free threshold'}</span></article>) : <State title="No shipping zones" compact />}</div><form className={s.inlineForm} aria-busy={zoneBusy || undefined} onSubmit={(e) => void createZone(e)}><label>Zone name<input name="name" required /></label><label>Country codes<input name="countries" placeholder="ES, PT" required pattern="[A-Za-z]{2}(?:\s*,\s*[A-Za-z]{2})*" title="Enter two-letter country codes separated by commas, for example ES, PT." /></label><label>Rate in EUR<input name="rate" type="number" min="0" step="0.01" required inputMode="decimal" /></label><label>Free over EUR<input name="free" type="number" min="0" step="0.01" inputMode="decimal" /></label><button type="submit" className={s.primaryButton} disabled={zoneBusy}>{zoneBusy ? 'Adding…' : 'Add zone'}</button></form></>}</>}
     {tab === 'orders' && <><h2>Orders</h2><p className={s.muted}>Advance fulfilment one step at a time. Shipment and delivery milestones notify the reader.</p>{orders.isLoading ? <State title="Loading orders…" loading compact /> : orders.error ? <ErrorState error={orders.error} retry={() => void orders.refetch()} compact /> : orders.data?.items.length ? <div className={s.adminOrders}>{orders.data.items.map((order) => <AdminOrderOperations order={order} key={order.id} />)}</div> : <State title="No orders yet" compact />}</>}
     {tab === 'comments' && <><h2>Reader comments</h2>{comments.isLoading ? <State title="Loading comments…" loading compact /> : comments.error ? <ErrorState error={comments.error} retry={() => void comments.refetch()} compact /> : comments.data?.items.length ? <div className={s.moderation}>{comments.data.items.map((item) => <article key={item.id}><div><b>{item.author} on {item.book}</b><p>{item.body}</p></div><button className={s.secondaryButton} disabled={moderate.isPending} onClick={() => { setMessage(''); moderate.mutate({ id: item.id, visible: !item.visible }) }}>{moderate.isPending ? 'Saving…' : item.visible ? 'Hide' : 'Publish'}</button></article>)}</div> : <State title="No comments to moderate" compact />}</>}
     {tab === 'readers' && <><h2>Readers</h2><p className={s.muted}>Remove public portraits that do not belong in the reading room.</p>{readers.isLoading ? <State title="Loading readers…" loading compact /> : readers.error ? <ErrorState error={readers.error} retry={() => void readers.refetch()} compact /> : readers.data?.items.length ? <div className={s.readerRows}>{readers.data.items.map((reader) => <article key={reader.id}><ReaderAvatar name={reader.full_name} src={reader.avatar_url} size="admin" /><div><b>{reader.full_name}</b><small>{reader.email} · {reader.role}</small></div>{reader.avatar_url ? <button className={s.secondaryButton} disabled={resetAvatar.isPending} onClick={() => { setMessage(''); resetAvatar.mutate(reader.id) }}>{resetAvatar.isPending ? 'Removing…' : 'Remove portrait'}</button> : <span className={s.muted}>Initials in use</span>}</article>)}</div> : <State title="No readers yet" compact />}</>}
@@ -1112,10 +1119,10 @@ function BookEditor({ edit = false }: { edit?: boolean }) {
     <FormNotification title={edit ? 'Book not updated' : 'Book not published'} message={error} variant="error" onClose={() => setError('')} />
     <span className={s.eyebrow}>KEEPER’S DESK</span>
     <h1>{title}</h1>
-    <form key={book?.id || 'new-book'} className={s.stackForm} aria-busy={busy || undefined} onSubmit={submit}>
-      <label>Title<input name="title" defaultValue={book?.title} required /></label>
-      <label>Slug<input name="slug" defaultValue={book?.slug} pattern="[a-z0-9]+(?:-[a-z0-9]+)*" required /></label>
-      <label>ISBN<input name="isbn" defaultValue={book?.isbn} required /></label>
+    <form key={book?.id || 'new-book'} className={s.stackForm} aria-busy={busy || undefined} aria-label={title} onSubmit={submit}>
+      <label>Title<input name="title" defaultValue={book?.title} maxLength={240} required /></label>
+      <label>Slug<input name="slug" defaultValue={book?.slug} pattern="[a-z0-9]+(?:-[a-z0-9]+)*" title="Use lowercase letters, numbers, and single hyphens only." required /></label>
+      <label>ISBN<input name="isbn" defaultValue={book?.isbn} minLength={10} maxLength={20} required /></label>
       <label>Description<textarea name="description" defaultValue={book?.description} minLength={20} required /></label>
       <div className={s.formColumns}>
         <label>Publication year<input name="year" type="number" defaultValue={book?.publication_year} min="1450" max="2100" required /></label>
@@ -1123,21 +1130,21 @@ function BookEditor({ edit = false }: { edit?: boolean }) {
         <label>Stock<input name="stock" type="number" defaultValue={book?.stock_qty} min="0" required /></label>
       </div>
       <label>Upload cover<input name="cover_file" type="file" accept="image/png,image/jpeg,image/webp" /></label>
-      <label>Or use a cover URL<input name="cover" defaultValue={book?.cover_url} /></label>
+      <label>Or use a cover URL<input name="cover" defaultValue={book?.cover_url} maxLength={500} /></label>
       <fieldset className={s.editorialFields}>
         <legend>Interactive book spread</legend>
         <p>Add optional artwork and a short phrase for the inside page. The cover and first description sentence are used when these are blank.</p>
         <label>Upload interior artwork<input name="interior_file" type="file" accept="image/png,image/jpeg,image/webp" /></label>
-        <label>Or use an interior artwork URL<input name="interior_image_url" defaultValue={book?.interior_image_url} /></label>
+        <label>Or use an interior artwork URL<input name="interior_image_url" defaultValue={book?.interior_image_url} maxLength={500} /></label>
         <label>Interior artwork description<input name="interior_image_alt" defaultValue={book?.interior_image_alt} maxLength={300} placeholder="A watercolor night sky over a small asteroid" /></label>
         <label>Pull quote<textarea name="pull_quote" defaultValue={book?.pull_quote} maxLength={280} placeholder="A brief, spoiler-free line for the illustrated page" /></label>
       </fieldset>
       <label>Video URL<input name="video" type="url" defaultValue={book?.video_url} /></label>
-      <SelectControl label="Author" labelMode="stacked" name="author" value={authorId} options={authorOptions} busy={authors.isLoading} onChange={setAuthorId} />
-      <SelectControl label="Genre" labelMode="stacked" name="genre" value={genreId} options={genreOptions} busy={genres.isLoading} onChange={setGenreId} />
+      <SelectControl label="Author" labelMode="stacked" name="author" value={authorId} options={authorOptions} busy={authors.isLoading} required onChange={setAuthorId} />
+      <SelectControl label="Genre" labelMode="stacked" name="genre" value={genreId} options={genreOptions} busy={genres.isLoading} required onChange={setGenreId} />
       <label className={s.check}><input name="featured" type="checkbox" defaultChecked={book?.featured} /> Feature on home</label>
       <label className={s.check}><input name="active" type="checkbox" defaultChecked={book?.active ?? true} /> Visible in catalog</label>
-      <button className={s.primaryButton} disabled={busy || !authorId || !genreId}>{busy ? 'Saving…' : edit ? 'Save changes' : 'Publish book'}</button>
+      <button type="submit" className={s.primaryButton} disabled={busy || !authorId || !genreId}>{busy ? 'Saving…' : edit ? 'Save changes' : 'Publish book'}</button>
     </form>
   </section>
 }

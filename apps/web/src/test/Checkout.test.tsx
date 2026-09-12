@@ -92,6 +92,26 @@ describe('Checkout saved delivery address', () => {
     expect(orderCreated).toBe(false)
   })
 
+  it('associates nested checkout validation with the affected address field', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/users/me')) return new Response(JSON.stringify(user), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      if (url.endsWith('/cart')) return new Response(JSON.stringify({ id: 'cart-1', items: [], subtotal_cents: 0, currency: 'EUR' }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      if (url.endsWith('/checkout/quote')) return new Response(JSON.stringify({
+        message: 'Check the highlighted fields',
+        field_errors: { 'address.postal_code': 'Postal code is not valid for this address' },
+      }), { status: 422, headers: { 'Content-Type': 'application/json' } })
+      throw new Error(`Unexpected request: ${url}`)
+    })
+    renderCheckout(fetchMock)
+    await screen.findByLabelText('Address')
+    fireEvent.click(screen.getByRole('button', { name: 'Calculate delivery' }))
+    const postalCode = await screen.findByLabelText('Postal code')
+    expect(await screen.findByText('Postal code is not valid for this address')).toBeInTheDocument()
+    expect(postalCode).toHaveAttribute('aria-invalid', 'true')
+    expect(postalCode).toHaveAccessibleDescription('Postal code is not valid for this address')
+  })
+
   it('reuses the same idempotency key when an order request is retried', async () => {
     const orderKeys: string[] = []
     let attempts = 0

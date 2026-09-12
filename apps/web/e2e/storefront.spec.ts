@@ -60,7 +60,7 @@ test('annual bestseller chart uses sourced exact sales and URL-backed filters', 
   await expect(page.getByRole('link', { name: 'The Test Passage' })).toHaveAttribute('href', '/books/the-test-passage')
   await expect(page.getByRole('link', { name: 'A Quiet Atlas' })).toHaveCount(0)
 
-  await page.getByRole('button', { name: /Category Every category/i }).click()
+  await page.getByRole('combobox', { name: 'Category' }).click()
   await page.getByRole('option', { name: 'Fantasy' }).click()
   await expect(page).toHaveURL(/genre=fantasy/)
   await expect(page.getByText('934,221')).toBeVisible()
@@ -807,7 +807,7 @@ test('registration infrastructure errors float without shifting the form', async
   const alert = page.getByRole('alert')
   await expect(alert).toContainText('Account not created')
   await expect(alert).toContainText('Request protection is temporarily unavailable')
-  await expect(page.getByLabel('Email address')).toHaveAttribute('aria-invalid', 'true')
+  await expect(page.getByLabel('Email address')).not.toHaveAttribute('aria-invalid', 'true')
   const headingAfter = await page.getByRole('heading', { name: 'Register' }).boundingBox()
   expect(headingBefore).not.toBeNull()
   expect(headingAfter).not.toBeNull()

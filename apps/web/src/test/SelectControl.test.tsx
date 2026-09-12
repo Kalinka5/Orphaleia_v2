@@ -27,7 +27,7 @@ describe('SelectControl', () => {
     const onChange = vi.fn()
     render(<ControlledSelect onChange={onChange} />)
 
-    const trigger = screen.getByRole('button', { name: /genre all genres/i })
+    const trigger = screen.getByRole('combobox', { name: 'Genre' })
     fireEvent.keyDown(trigger, { key: 'ArrowDown' })
     expect(screen.getByRole('listbox', { name: 'Genre' })).toBeInTheDocument()
     fireEvent.keyDown(trigger, { key: 'ArrowDown' })
@@ -41,11 +41,22 @@ describe('SelectControl', () => {
 
   it('supports typeahead and Escape focus restoration', async () => {
     render(<ControlledSelect />)
-    const trigger = screen.getByRole('button', { name: /genre all genres/i })
+    const trigger = screen.getByRole('combobox', { name: 'Genre' })
     fireEvent.keyDown(trigger, { key: 'f' })
     expect(trigger).toHaveAttribute('aria-activedescendant', expect.stringMatching(/option-2$/))
     fireEvent.keyDown(trigger, { key: 'Escape' })
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
     await waitFor(() => expect(trigger).toHaveFocus())
+  })
+
+  it('exposes required and invalid states and disables an empty option set', () => {
+    const { rerender } = render(<SelectControl label="Country" value="" options={options} onChange={() => {}} required invalid describedBy="country-error" />)
+    const trigger = screen.getByRole('combobox', { name: 'Country' })
+    expect(trigger).toHaveAttribute('aria-required', 'true')
+    expect(trigger).toHaveAttribute('aria-invalid', 'true')
+    expect(trigger).toHaveAttribute('aria-describedby', 'country-error')
+
+    rerender(<SelectControl label="Country" value="" options={[]} onChange={() => {}} />)
+    expect(screen.getByRole('combobox', { name: 'Country' })).toBeDisabled()
   })
 })

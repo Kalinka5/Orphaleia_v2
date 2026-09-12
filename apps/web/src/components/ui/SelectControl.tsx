@@ -17,6 +17,9 @@ export type SelectControlProps = {
   name?: string
   disabled?: boolean
   busy?: boolean
+  required?: boolean
+  invalid?: boolean
+  describedBy?: string
   placement?: 'auto' | 'top' | 'bottom'
   labelMode?: 'hidden' | 'stacked' | 'inline'
   className?: string
@@ -40,6 +43,9 @@ export function SelectControl({
   name,
   disabled = false,
   busy = false,
+  required = false,
+  invalid = false,
+  describedBy,
   placement = 'auto',
   labelMode = 'hidden',
   className = '',
@@ -190,13 +196,17 @@ export function SelectControl({
       id={buttonId}
       className={styles.trigger}
       type="button"
+      role="combobox"
       aria-haspopup="listbox"
       aria-expanded={open}
       aria-controls={open ? listboxId : undefined}
       aria-labelledby={`${id}-label ${buttonId}`}
       aria-activedescendant={open ? `${id}-option-${activeIndex}` : undefined}
-      disabled={disabled || busy}
+      disabled={disabled || busy || options.length === 0}
       aria-busy={busy || undefined}
+      aria-required={required || undefined}
+      aria-invalid={invalid || undefined}
+      aria-describedby={describedBy}
       onClick={() => {
         if (open) close()
         else {

@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 
 test('catalog custom filters are keyboard accessible and URL driven', async ({ page }) => {
   await page.goto('/books')
-  const genre = page.getByRole('button', { name: /Genre All genres/i })
+  const genre = page.getByRole('combobox', { name: 'Genre' })
   await genre.focus()
   await genre.press('ArrowDown')
   await genre.press('ArrowDown')
@@ -48,8 +48,8 @@ test('registration shows password mismatch beside the fields', async ({ page }, 
 
   const error = page.locator('#auth-password-error')
   await expect(error).toHaveText('Passwords do not match.')
-  await expect(page.getByLabel('Password', { exact: true })).toHaveAttribute('aria-describedby', 'auth-password-error')
   await expect(page.getByLabel('Confirm password')).toHaveAttribute('aria-describedby', 'auth-password-error')
+  await expect(page.getByLabel('Confirm password')).toBeFocused()
 })
 
 test('author portraits reveal color from synchronized pointer and focus states', async ({ page }) => {

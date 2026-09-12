@@ -28,6 +28,7 @@
 .fileButton:has(input:focus-visible) { outline: 2px solid #285f4c; outline-offset: 2px; }
 .buttonRow { grid-column: 1 / -1; display: flex; align-items: center; gap: 16px; }
 .form { display: flex; flex-direction: column; gap: 17px; }
+.fieldGroup { display: flex; flex-direction: column; gap: 7px; }
 .form label { display: flex; flex-direction: column; gap: 7px; color: #26352e; font-size: 12px; font-weight: 600; }
 .form input { min-height: 48px; width: 100%; padding: 0 13px; border: 1px solid #cfd7d2; border-radius: 0; color: #111827; background: #fdfbf7; }
 .form input:focus { border-color: #285f4c; box-shadow: 0 0 0 3px rgba(40, 95, 76, .12); outline: 0; }
@@ -39,7 +40,7 @@
 .notice { color: #24402f; border-left: 3px solid #6b9881; background: #e8f0eb; }
 .error, .fieldError { color: #8b302b; }
 .error { border-left: 3px solid #a53c24; background: #f5ded8; }
-.fieldError { margin: -10px 0 0; font-size: 11px; }
+.fieldError { margin: 0; font-size: 11px; }
 .securityStack { display: grid; gap: 18px; }
 .deliveryForm { max-width: 760px; }
 .deliveryActions { display: flex; align-items: center; gap: 16px; }
