@@ -20,6 +20,12 @@ test('home exposes the discovery route', async ({ page }) => {
     : ['twenty-thousand-leagues-under-the-sea', 'romeo-and-juliet', 'the-adventures-of-sherlock-holmes', 'the-little-prince', 'the-hobbit']
   await expect(stage.locator('[data-hero-book-slug]')).toHaveCount(expectedHeroSlugs.length)
   expect(await stage.locator('[data-hero-book-slug]').evaluateAll((items) => items.map((item) => item.getAttribute('data-hero-book-slug')))).toEqual(expectedHeroSlugs)
+  const heroCoverImages = stage.locator('[data-hero-book-slug] img')
+  const centerCoverIndex = Math.floor(expectedHeroSlugs.length / 2)
+  await expect(heroCoverImages.nth(centerCoverIndex)).toHaveAttribute('fetchpriority', 'high')
+  for (let index = 0; index < expectedHeroSlugs.length; index += 1) {
+    if (index !== centerCoverIndex) await expect(heroCoverImages.nth(index)).toHaveAttribute('fetchpriority', 'low')
+  }
   await expect(stage.getByRole('link')).toHaveCount(0)
   await expect(stage.getByRole('button')).toHaveCount(0)
   await expect(hero.locator('video')).toHaveCount(0)
@@ -380,7 +386,8 @@ test('Wonderland tea party sits below the genre accordion without overflow', asy
   expect(await image.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBeGreaterThan(0)
 
   const mobile = (page.viewportSize()?.width ?? 0) <= 760
-  expect(await image.evaluate((element: HTMLImageElement) => element.currentSrc)).toContain(`wonderland-tea-party-${mobile ? 'mobile' : 'desktop'}.png`)
+  expect(await image.evaluate((element: HTMLImageElement) => element.currentSrc)).toContain(`wonderland-tea-party-${mobile ? 'mobile' : 'desktop'}`)
+  expect(await image.evaluate((element: HTMLImageElement) => element.currentSrc)).toContain('.webp')
 
   const accordionBox = await accordion.boundingBox()
   const tableauBox = await tableau.boundingBox()
@@ -490,7 +497,8 @@ test('Don Quixote tableau supports the collection introduction without obscuring
   expect(await image.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBeGreaterThan(0)
 
   const compact = (page.viewportSize()?.width ?? 0) <= 1050
-  expect(await image.evaluate((element: HTMLImageElement) => element.currentSrc)).toContain(`don-quixote-tableau-${compact ? 'mobile' : 'desktop'}.png`)
+  expect(await image.evaluate((element: HTMLImageElement) => element.currentSrc)).toContain(`don-quixote-tableau-${compact ? 'mobile' : 'desktop'}`)
+  expect(await image.evaluate((element: HTMLImageElement) => element.currentSrc)).toContain('.webp')
   await expect(tableau).toHaveCSS('pointer-events', 'none')
   await expect(tableau).toHaveCSS('opacity', '1')
   await expect(tableau).toHaveCSS('transform', 'none')

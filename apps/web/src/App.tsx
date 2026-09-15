@@ -1,11 +1,10 @@
-import { createContext, FormEvent, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, FormEvent, lazy, ReactNode, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, ArrowRight, ArrowUpRight, CaretRight, Check, EnvelopeSimple, Eye, EyeSlash, MagnifyingGlass, Pause, Play, Star } from '@phosphor-icons/react'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { api, apiFieldError, errorMessage, money } from './api'
 import { addressFields, countryOptions, emptyAddress } from './address'
 import { trackAnalytics } from './analytics'
-import { BookDetailExperience } from './components/BookDetailExperience'
 import { BookHeroScene, type HeroBook } from './components/BookHeroScene'
 import { AuthorShowcase } from './components/AuthorShowcase'
 import { GenreDirectory } from './components/GenreDirectory'
@@ -24,15 +23,19 @@ import { getCanonicalPath } from './seo'
 import { MarketGlobe } from './components/MarketGlobe'
 import { CartEmptyState } from './components/CartEmptyState'
 import { VerificationPassage } from './components/VerificationPassage'
-import { AccountHub } from './components/AccountHub'
 import { ReaderAvatar } from './components/ReaderAvatar'
-import { AdminOrderOperations } from './components/AdminOrderOperations'
-import { NotFoundPage } from './components/NotFoundPage'
 import { FormNotification, type NotificationVariant } from './components/ui/FormNotification'
 import { ExternalVideo } from './components/ExternalVideo'
-import { PrivacyPolicyPage, TermsPage } from './components/LegalPages'
+import { responsiveCoverProps } from './responsiveImages'
 import type { Address, Author, Book, Cart, Genre, Order, Page, SalesRankingResponse, User } from './types'
 import s from './styles.module.css'
+
+const BookDetailExperience = lazy(() => import('./components/BookDetailExperience').then((module) => ({ default: module.BookDetailExperience })))
+const AccountHub = lazy(() => import('./components/AccountHub').then((module) => ({ default: module.AccountHub })))
+const AdminOrderOperations = lazy(() => import('./components/AdminOrderOperations').then((module) => ({ default: module.AdminOrderOperations })))
+const NotFoundPage = lazy(() => import('./components/NotFoundPage').then((module) => ({ default: module.NotFoundPage })))
+const PrivacyPolicyPage = lazy(() => import('./components/LegalPages').then((module) => ({ default: module.PrivacyPolicyPage })))
+const TermsPage = lazy(() => import('./components/LegalPages').then((module) => ({ default: module.TermsPage })))
 
 type AuthValue = { user: User | null; loading: boolean; signOut: () => Promise<void>; refresh: () => Promise<void> }
 const AuthContext = createContext<AuthValue>({ user: null, loading: true, signOut: async () => {}, refresh: async () => {} })
@@ -152,7 +155,7 @@ function getRouteMeta(pathname: string) {
 function RequireUser({ children, admin = false }: { children: ReactNode; admin?: boolean }) {
   const { user, loading } = useAuth()
   const location = useLocation()
-  if (loading) return <State title="Checking your reader’s pass…" loading />
+  if (loading) return <State title="Checking your reader’s pass…" loading viewport />
   if (!user) return <Navigate to="/sign-in" state={{ from: location.pathname }} replace />
   if (admin && user.role !== 'admin') return <Navigate to="/" replace />
   return children
@@ -246,7 +249,7 @@ function Testimonials() {
   return <section className={s.testimonialsSection} aria-labelledby="reader-notes-title" data-home-motion="section">
     <div className={s.testimonialsHeadingStage} data-testid="reader-notes-characters" data-home-motion="heading">
       <figure className={`${s.readerNotesCharacter} ${s.readerNotesPeter}`} data-testid="reader-notes-peter" aria-hidden="true">
-        <img src="/assets/landing/peter-pan-reader-notes.png" alt="" width="1024" height="1536" loading="lazy" decoding="async" />
+        <img src="/assets/landing/peter-pan-reader-notes.webp" srcSet="/assets/landing/peter-pan-reader-notes-480w.webp 480w, /assets/landing/peter-pan-reader-notes-768w.webp 768w, /assets/landing/peter-pan-reader-notes.webp 1024w" sizes="(max-width: 760px) 42vw, 18vw" alt="" width="1024" height="1536" loading="lazy" decoding="async" />
       </figure>
       <div className={s.testimonialsHeading}>
         <p>Notes from the reading room</p>
@@ -258,7 +261,7 @@ function Testimonials() {
         </button>
       </div>
       <figure className={`${s.readerNotesCharacter} ${s.readerNotesHook}`} data-testid="reader-notes-hook" aria-hidden="true">
-        <img src="/assets/landing/captain-hook-reader-notes.png" alt="" width="1024" height="1536" loading="lazy" decoding="async" />
+        <img src="/assets/landing/captain-hook-reader-notes.webp" srcSet="/assets/landing/captain-hook-reader-notes-480w.webp 480w, /assets/landing/captain-hook-reader-notes-768w.webp 768w, /assets/landing/captain-hook-reader-notes.webp 1024w" sizes="(max-width: 760px) 42vw, 18vw" alt="" width="1024" height="1536" loading="lazy" decoding="async" />
       </figure>
     </div>
     <div className={s.testimonialsColumns} data-home-motion="columns">
@@ -272,7 +275,7 @@ function Testimonials() {
 function BookCard({ book, routeIndex }: { book: Book; routeIndex?: number }) {
   return <article className={s.bookCard}>
     {routeIndex !== undefined && <span className={s.routeIndex}>PORT {String(routeIndex + 1).padStart(2, '0')}</span>}
-    <Link className={s.coverWrap} to={`/books/${book.slug}`}><img src={book.cover_url} alt={`Cover of ${book.title}`} loading="lazy" /></Link>
+    <Link className={s.coverWrap} to={`/books/${book.slug}`}><img src={book.cover_url} alt={`Cover of ${book.title}`} loading="lazy" {...responsiveCoverProps(book.cover_url, '(max-width: 760px) 44vw, (max-width: 1200px) 28vw, 320px')} /></Link>
     <div className={s.cardBody}>
       <div className={s.eyebrow}>{book.genres[0]?.name} · {book.publication_year}</div>
       <h3><Link to={`/books/${book.slug}`}>{book.title}</Link></h3>
@@ -505,9 +508,11 @@ function Home() {
         <Link to="/genres">Explore all collections <ArrowUpRight size={15} aria-hidden="true" /></Link>
         <figure className={s.quixoteTableau} data-testid="don-quixote-tableau" aria-hidden="true">
           <picture>
-            <source media="(max-width: 1050px)" srcSet="/assets/landing/don-quixote-tableau-mobile.png" width="1254" height="1254" />
+            <source media="(max-width: 1050px)" srcSet="/assets/landing/don-quixote-tableau-mobile-640w.webp 640w, /assets/landing/don-quixote-tableau-mobile-960w.webp 960w, /assets/landing/don-quixote-tableau-mobile.webp 1254w" sizes="100vw" width="1254" height="1254" />
             <img
-              src="/assets/landing/don-quixote-tableau-desktop.png"
+              src="/assets/landing/don-quixote-tableau-desktop.webp"
+              srcSet="/assets/landing/don-quixote-tableau-desktop-768w.webp 768w, /assets/landing/don-quixote-tableau-desktop-1200w.webp 1200w, /assets/landing/don-quixote-tableau-desktop.webp 1536w"
+              sizes="100vw"
               alt=""
               width="1536"
               height="1024"
@@ -533,7 +538,7 @@ function Home() {
         <h2 id="genre-section-title">Follow your<br />reading instinct.</h2>
         <div className={s.genreCompanion} data-testid="genre-companion">
           <figure className={s.cheshireCat} aria-hidden="true">
-            <img src="/assets/landing/cheshire-cat-flying.png" alt="" loading="lazy" decoding="async" />
+            <img src="/assets/landing/cheshire-cat-flying.webp" srcSet="/assets/landing/cheshire-cat-flying-640w.webp 640w, /assets/landing/cheshire-cat-flying-1024w.webp 1024w, /assets/landing/cheshire-cat-flying.webp 1536w" sizes="(max-width: 760px) 78vw, 38vw" alt="" width="1536" height="1024" loading="lazy" decoding="async" />
           </figure>
           <p>Move sideways through the shelves. The collection that opens is the one asking for your attention.</p>
         </div>
@@ -563,9 +568,11 @@ function Home() {
       })}</div>
       <figure className={s.wonderlandTeaParty} data-testid="wonderland-tea-party" aria-hidden="true">
         <picture>
-          <source media="(max-width: 760px)" srcSet="/assets/landing/wonderland-tea-party-mobile.png" />
+          <source media="(max-width: 760px)" srcSet="/assets/landing/wonderland-tea-party-mobile-640w.webp 640w, /assets/landing/wonderland-tea-party-mobile.webp 1000w" sizes="100vw" />
           <img
-            src="/assets/landing/wonderland-tea-party-desktop.png"
+            src="/assets/landing/wonderland-tea-party-desktop.webp"
+            srcSet="/assets/landing/wonderland-tea-party-desktop-768w.webp 768w, /assets/landing/wonderland-tea-party-desktop-1200w.webp 1200w, /assets/landing/wonderland-tea-party-desktop.webp 1672w"
+            sizes="100vw"
             alt=""
             width="1672"
             height="941"
@@ -660,7 +667,7 @@ function BookPage() {
   const cart = useMutation({ mutationFn: (bookId: string) => api('/cart/items', { method: 'POST', body: JSON.stringify({ book_id: bookId, quantity: 1 }) }), onSuccess: (_, bookId) => { const addedBook = query.data; if (addedBook?.id === bookId) trackAnalytics('add_to_bag', { book_slug: addedBook.slug, quantity: 1, value: addedBook.price_cents / 100, currency: addedBook.currency }); client.invalidateQueries({ queryKey: ['cart'] }); setNotice('Added to your bag') }, onError: (e) => setNotice(e.message) })
   const rate = useMutation({ mutationFn: ({ id, value }: { id: string; value: number }) => api(`/books/${id}/ratings`, { method: 'PUT', body: JSON.stringify({ value }) }), onSuccess: () => { setFormNotice('Your rating has been saved.'); client.invalidateQueries({ queryKey: ['book', slug] }); client.invalidateQueries({ queryKey: ['trend'] }) } })
   const post = useMutation({ mutationFn: ({ id, body }: { id: string; body: string }) => api(`/books/${id}/comments`, { method: 'POST', body: JSON.stringify({ body }) }), onSuccess: () => { setComment(''); setFormNotice('Your note has been published.'); client.invalidateQueries({ queryKey: ['book', slug] }) } })
-  if (query.isLoading) return <State title="Opening the book…" loading />; if (query.error) return <ErrorState error={query.error} retry={() => void query.refetch()} />; const book = query.data!
+  if (query.isLoading) return <State title="Opening the book…" loading viewport />; if (query.error) return <ErrorState error={query.error} retry={() => void query.refetch()} viewport />; const book = query.data!
   function needsUser(action: () => void) {
     if (user) action()
     else navigate('/sign-in', { state: { from: `/books/${slug}` } })
@@ -697,7 +704,7 @@ function Directory({ kind }: { kind: 'genres' | 'authors' }) {
       <div className={s.pageHeading}><span className={s.eyebrow}>THE WRITERS’ ROOM</span><h1>Follow a voice</h1><p>Meet the people behind the passages.</p></div>
       <figure className={s.authorsCharacter}>
         <span className={s.sleepMarks} aria-hidden="true"><i>Z</i><i>Z</i><i>Z</i></span>
-        <img src="/assets/authors/puss-in-boots-sleeping.png" alt="A three-dimensional storybook cat in boots sleeping with his feathered hat tipped over his eyes." width="1774" height="887" loading="eager" fetchPriority="high" decoding="async" />
+        <img src="/assets/authors/puss-in-boots-sleeping.webp" srcSet="/assets/authors/puss-in-boots-sleeping-768w.webp 768w, /assets/authors/puss-in-boots-sleeping-1280w.webp 1280w, /assets/authors/puss-in-boots-sleeping.webp 1774w" sizes="(max-width: 1050px) 100vw, 55vw" alt="A three-dimensional storybook cat in boots sleeping with his feathered hat tipped over his eyes." width="1774" height="887" loading="eager" fetchPriority="high" decoding="async" />
       </figure>
     </div> : <div className={s.genresHero}>
       <div className={s.pageHeading}><span className={s.eyebrow}>SHELVES BY MOOD</span><h1>Choose a current</h1><p>A shelf is a direction, never a boundary.</p></div>
@@ -711,7 +718,7 @@ function Directory({ kind }: { kind: 'genres' | 'authors' }) {
 
 function Shelf({ kind }: { kind: 'genres' | 'authors' }) {
   const { slug = '' } = useParams(); const query = useQuery({ queryKey: [kind, slug], queryFn: () => api<(Genre | Author) & { books: Book[] }>(`/${kind}/${slug}`) })
-  if (query.isLoading) return <State title="Opening the shelf…" loading />; if (query.error) return <ErrorState error={query.error} retry={() => void query.refetch()} />
+  if (query.isLoading) return <State title="Opening the shelf…" loading viewport />; if (query.error) return <ErrorState error={query.error} retry={() => void query.refetch()} viewport />
   return <section className={s.page}><PageMeta title={query.data?.name ?? 'Shelf'} description={'description' in query.data! ? query.data.description : query.data?.bio ?? 'Browse this Orphaleia shelf.'} /><div className={s.pageHeading}><span className={s.eyebrow}>{kind === 'genres' ? 'GENRE SHELF' : 'AUTHOR SHELF'}</span><h1>{query.data?.name}</h1><p>{'description' in query.data! ? query.data.description : query.data?.bio}</p></div>{query.data?.books.length ? <div className={s.bookGrid}>{query.data.books.map((book) => <BookCard key={book.id} book={book} />)}</div> : <State title="This shelf is waiting" text="No books are currently assigned here." />}</section>
 }
 
@@ -938,7 +945,7 @@ function TokenPage({ mode }: { mode: 'verify' | 'reset' | 'forgot' | 'email-chan
 function CartPage() {
   const { user, loading } = useAuth(); const client = useQueryClient(); const query = useQuery({ queryKey: ['cart'], queryFn: () => api<Cart>('/cart'), enabled: !!user })
   const remove = useMutation({ mutationFn: (item: Cart['items'][number]) => api(`/cart/items/${item.id}`, { method: 'DELETE' }), onSuccess: (_, item) => { trackAnalytics('remove_from_bag', { book_slug: item.book.slug, quantity: item.quantity, value: item.book.price_cents * item.quantity / 100, currency: query.data?.currency ?? 'EUR' }); client.invalidateQueries({ queryKey: ['cart'] }) } })
-  if (loading) return <State title="Finding your bag…" loading />; if (!user) return <Navigate to="/sign-in" state={{ from: '/cart' }} />; if (query.isLoading) return <State title="Opening your bag…" loading />; if (query.error) return <ErrorState error={query.error} retry={() => void query.refetch()} />
+  if (loading) return <State title="Finding your bag…" loading viewport />; if (!user) return <Navigate to="/sign-in" state={{ from: '/cart' }} />; if (query.isLoading) return <State title="Opening your bag…" loading viewport />; if (query.error) return <ErrorState error={query.error} retry={() => void query.refetch()} viewport />
   const cart = query.data!; const itemCount = cart.items.reduce((sum, item) => sum + item.quantity, 0); return <section className={s.page}><div className={s.pageHeading}><span className={s.eyebrow}>YOUR BOOK BAG</span><h1>Books for the crossing</h1></div>{cart.items.length ? <div className={s.cartLayout}><div className={s.cartItems}>{cart.items.map((item) => <article key={item.id}><img src={item.book.cover_url} alt={`Cover of ${item.book.title}`} width="80" height="120" /><div><h2><Link to={`/books/${item.book.slug}`}>{item.book.title}</Link></h2><p>Quantity: {item.quantity}</p><button className={s.textButton} disabled={remove.isPending} onClick={() => remove.mutate(item)}>{remove.isPending ? 'Removing…' : 'Remove'}</button></div><b>{money(item.book.price_cents * item.quantity)}</b></article>)}</div><aside className={s.orderCard}><h2>Order summary</h2><div><span>Books</span><b>{money(cart.subtotal_cents)}</b></div><div><span>Shipping</span><span>Calculated next</span></div><hr /><div className={s.total}><span>Subtotal</span><b>{money(cart.subtotal_cents)}</b></div><Link className={s.primaryButton} to="/checkout" onClick={() => trackAnalytics('checkout_started', { item_count: itemCount, value: cart.subtotal_cents / 100, currency: cart.currency })}>Continue to delivery <ArrowRight size={16} aria-hidden="true" /></Link><small>VAT included · Secure checkout</small>{remove.error && <p className={s.formError} role="alert">{remove.error.message}</p>}</aside></div> : <CartEmptyState />}</section>
 }
 
@@ -1068,8 +1075,8 @@ function BookEditor({ edit = false }: { edit?: boolean }) {
   }, [authorId, authors.data, book, edit, genreId, genres.data])
 
   if (user?.role !== 'admin') return <Navigate to="/" />
-  if (edit && bookQuery.isLoading) return <State title="Opening the catalog record…" loading />
-  if (edit && bookQuery.error) return <ErrorState error={bookQuery.error} retry={() => void bookQuery.refetch()} />
+  if (edit && bookQuery.isLoading) return <State title="Opening the catalog record…" loading viewport />
+  if (edit && bookQuery.error) return <ErrorState error={bookQuery.error} retry={() => void bookQuery.refetch()} viewport />
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -1150,12 +1157,12 @@ function BookEditor({ edit = false }: { edit?: boolean }) {
 }
 
 export default function App() {
-  return <AuthProvider><Layout><Routes>
+  return <AuthProvider><Layout><Suspense fallback={<State title="Opening this passage…" loading viewport />}><Routes>
     <Route path="/" element={<Home />} /><Route path="/books" element={<Catalog />} /><Route path="/all-books" element={<Catalog />} /><Route path="/books/:slug" element={<BookPage />} />
     <Route path="/genres" element={<Directory kind="genres" />} /><Route path="/genres/:slug" element={<Shelf kind="genres" />} /><Route path="/authors" element={<Directory kind="authors" />} /><Route path="/authors/:slug" element={<Shelf kind="authors" />} /><Route path="/rankings" element={<Rankings />} />
     <Route path="/sign-in" element={<AuthPage key="sign-in" />} /><Route path="/register" element={<AuthPage key="register" register />} /><Route path="/verify" element={<TokenPage mode="verify" />} /><Route path="/forgot-password" element={<TokenPage mode="forgot" />} /><Route path="/reset-password" element={<TokenPage mode="reset" />} /><Route path="/confirm-email-change" element={<TokenPage mode="email-change" />} />
     <Route path="/cart" element={<RequireUser><CartPage /></RequireUser>} /><Route path="/checkout" element={<RequireUser><Checkout /></RequireUser>} /><Route path="/payment/return" element={<PaymentReturn />} /><Route path="/account" element={<RequireUser><Account /></RequireUser>} />
     <Route path="/privacy" element={<PrivacyPolicyPage />} /><Route path="/terms" element={<TermsPage />} />
     <Route path="/admin" element={<RequireUser admin><Admin /></RequireUser>} /><Route path="/admin/books/new" element={<RequireUser admin><BookEditor /></RequireUser>} /><Route path="/admin/books/:slug/edit" element={<RequireUser admin><BookEditor edit /></RequireUser>} /><Route path="*" element={<NotFoundPage />} />
-  </Routes></Layout></AuthProvider>
+  </Routes></Suspense></Layout></AuthProvider>
 }

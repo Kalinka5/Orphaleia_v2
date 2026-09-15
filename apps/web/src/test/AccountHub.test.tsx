@@ -52,7 +52,8 @@ describe('AccountHub', () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ items: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } })))
     renderHub()
     expect(screen.getByRole('heading', { name: 'Welcome, Test' })).toBeInTheDocument()
-    expect(screen.getByAltText(/Dorian Gray leans against the page/)).toHaveAttribute('src', '/assets/account/dorian-gray-account-header-v3.png')
+    const portrait = screen.getByAltText(/Dorian Gray leans against the page/)
+    expect(portrait.closest('picture')?.querySelector('source')).toHaveAttribute('srcset', expect.stringContaining('/assets/account/dorian-gray-account-header-v3-480w.webp'))
   })
 
   it('defaults invalid sections to the order history', async () => {

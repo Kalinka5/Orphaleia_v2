@@ -11,7 +11,7 @@ describe('catalog character scene', () => {
 
     const images = scene.querySelectorAll('img')
     expect(images).toHaveLength(1)
-    expect(images[0]).toHaveAttribute('src', '/assets/catalog/winnie-the-pooh-friends-scene-pointing-fixed.png')
+    expect(images[0]).toHaveAttribute('src', '/assets/catalog/winnie-the-pooh-friends-scene-pointing-fixed.webp')
     expect(images[0]).toHaveAttribute('alt', '')
   })
 })

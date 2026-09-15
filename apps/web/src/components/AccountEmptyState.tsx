@@ -6,7 +6,9 @@ export function AccountEmptyState() {
   return <section className={`${styles.emptyState} ${styles.accountCard}`} aria-labelledby="empty-orders-title">
     <figure className={styles.character} aria-hidden="true">
       <img
-        src="/assets/account/little-prince-empty-orders.png"
+        src="/assets/account/little-prince-empty-orders.webp"
+        srcSet="/assets/account/little-prince-empty-orders-480w.webp 480w, /assets/account/little-prince-empty-orders-768w.webp 768w"
+        sizes="(max-width: 760px) 92vw, 42vw"
         alt=""
         width="1234"
         height="1275"

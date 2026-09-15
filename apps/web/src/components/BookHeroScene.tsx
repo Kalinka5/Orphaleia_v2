@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import type { Group, Material, Mesh, Object3D, PerspectiveCamera, Scene, Texture, WebGLRenderer } from 'three'
+import { coverTextureSrc, responsiveCoverProps } from '../responsiveImages'
 import type { Book } from '../types'
 import s from '../styles.module.css'
 
@@ -226,7 +227,7 @@ export function BookHeroScene({ books }: { books: HeroBook[] }) {
 
         const textureLoader = new THREE.TextureLoader()
         const textures = await Promise.all(sceneBooks.map(async (book) => {
-          const texture = await textureLoader.loadAsync(book.cover_url).catch(() => {
+          const texture = await textureLoader.loadAsync(coverTextureSrc(book.cover_url)).catch(() => {
             throw new Error('texture-load-failed')
           })
           texture.colorSpace = THREE.SRGBColorSpace
@@ -646,7 +647,7 @@ export function BookHeroScene({ books }: { books: HeroBook[] }) {
     aria-label={`A hovering fan of ${sceneBooks.length === 5 ? 'five' : 'three'} featured books: ${sceneBooks.map((book) => book.title).join(', ')}.`}
   >
     <div className={s.heroBookFallback} data-testid="hero-book-fallback" aria-hidden="true">
-      {sceneBooks.map((book) => <span
+      {sceneBooks.map((book, index) => <span
         className={s.heroFallbackBook}
         data-hero-book-slug={book.slug}
         key={book.slug}
@@ -657,7 +658,15 @@ export function BookHeroScene({ books }: { books: HeroBook[] }) {
         <span className={s.heroFallbackBookShell} data-hero-book-visual>
           <span className={s.heroFallbackPages} />
           <span className={s.heroFallbackFront}>
-            <img src={book.cover_url} alt="" width="1024" height="1536" fetchPriority="high" decoding="async" />
+            <img
+              src={book.cover_url}
+              alt=""
+              width="1024"
+              height="1536"
+              fetchPriority={index === Math.floor(sceneBooks.length / 2) ? 'high' : 'low'}
+              decoding="async"
+              {...responsiveCoverProps(book.cover_url, '(max-width: 760px) 46vw, 23vw')}
+            />
           </span>
         </span>
       </span>)}

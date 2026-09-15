@@ -19,7 +19,7 @@ describe('legal routes', () => {
   it('renders the privacy policy with metadata, contents, identity, and cookie details', async () => {
     renderRoute('/privacy')
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Privacy Policy' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Privacy Policy' })).toBeInTheDocument()
     expect(screen.getByRole('navigation', { name: 'Privacy Policy contents' })).toHaveTextContent('Who is responsible for your data')
     expect(screen.getAllByText('Kalina Ent., trading as Orphaleia').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Calle Sinai 12, 41007 Sevilla, Spain').length).toBeGreaterThan(0)
@@ -34,7 +34,7 @@ describe('legal routes', () => {
   it('renders the terms with consumer rights, withdrawal form, and dispute information', async () => {
     renderRoute('/terms')
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Terms and Conditions' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Terms and Conditions' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Your 14-day right of withdrawal' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Model withdrawal notice' })).toBeInTheDocument()
     expect(screen.getByText(/three-year legal conformity period/)).toBeInTheDocument()

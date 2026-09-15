@@ -11,6 +11,8 @@ type VerificationPassageProps = {
 export function VerificationPassage({ busy, message, error }: VerificationPassageProps) {
   const state = busy ? 'checking' : message ? 'success' : 'failed'
   const success = state === 'success'
+  const artwork = success ? 'four-musketeers-welcome' : 'four-musketeers-guard'
+  const artworkWidth = success ? 1635 : 1570
 
   return <section className={`${s.page} ${success ? s.success : state === 'failed' ? s.failed : s.checking}`} aria-labelledby="verification-title">
     <div className={s.copy}>
@@ -33,11 +35,13 @@ export function VerificationPassage({ busy, message, error }: VerificationPassag
 
     {!busy && <figure className={s.artwork} data-testid={`verification-${state}-artwork`}>
       <img
-        src={success ? '/assets/verification/four-musketeers-welcome.png' : '/assets/verification/four-musketeers-guard.png'}
+        src={`/assets/verification/${artwork}.webp`}
+        srcSet={`/assets/verification/${artwork}-640w.webp 640w, /assets/verification/${artwork}-1024w.webp 1024w, /assets/verification/${artwork}.webp ${artworkWidth}w`}
+        sizes="(max-width: 760px) 100vw, 55vw"
         alt={success
           ? 'd’Artagnan bows with his hat as Athos, Porthos, and Aramis welcome the reader through a glowing library archway.'
           : 'd’Artagnan, Athos, Porthos, and Aramis stand guard before a closed library gateway.'}
-        width={success ? 1635 : 1570}
+        width={artworkWidth}
         height={success ? 962 : 1002}
         loading="eager"
         fetchPriority="high"

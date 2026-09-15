@@ -2,6 +2,7 @@ import { CSSProperties, PointerEvent as ReactPointerEvent, useEffect, useMemo, u
 import { ArrowLeft, ArrowRight, Feather, HandSwipeLeft, Sailboat, ShoppingBag, Star } from '@phosphor-icons/react'
 import { Link } from 'react-router-dom'
 import { money } from '../api'
+import { responsiveCoverProps } from '../responsiveImages'
 import type { Book } from '../types'
 import BookSlider, { type BookSliderHandle, type BookSliderState } from './ui/book-slider'
 import s from './BookDetailExperience.module.css'
@@ -232,7 +233,7 @@ export function BookDetailExperience({ book, adding, notice, onAdd }: Props) {
           onInteractionStateChange={handlePageState}
         >
           <article className={`${s.flipPage} ${s.coverPage}`} aria-hidden={spread === 1}>
-            <img src={book.cover_url} alt={`Cover of ${book.title}`} width="720" height="1080" fetchPriority="high" />
+            <img src={book.cover_url} alt={`Cover of ${book.title}`} width="720" height="1080" fetchPriority="high" {...responsiveCoverProps(book.cover_url, '(max-width: 900px) 88vw, 50vw')} />
             {book.featured && <span>Keeper’s choice</span>}
           </article>
           <article className={`${s.flipPage} ${s.titleFlipPage}`} aria-hidden={spread === 1}>
@@ -270,7 +271,7 @@ export function BookDetailExperience({ book, adding, notice, onAdd }: Props) {
       >
         <span className={s.mobilePageBlock} aria-hidden="true" />
         <div className={s.mobileTrack}>
-          <article className={`${s.mobilePage} ${s.mobileCover}`} aria-hidden={mobilePage !== 0}><img src={book.cover_url} alt={`Cover of ${book.title}`} width="720" height="1080" /></article>
+          <article className={`${s.mobilePage} ${s.mobileCover}`} aria-hidden={mobilePage !== 0}><img src={book.cover_url} alt={`Cover of ${book.title}`} width="720" height="1080" {...responsiveCoverProps(book.cover_url, '88vw')} /></article>
           <article className={s.mobilePage} aria-hidden={mobilePage !== 1}>
             <TitlePage book={book} focusable={mobilePage === 1} />
             <span className={`${s.pageCorner} ${s.mobileCorner}`} aria-hidden="true" />

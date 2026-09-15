@@ -9,7 +9,7 @@ describe('verification passage', () => {
 
     expect(screen.getByRole('heading', { name: 'Welcome, fellow reader' })).toBeInTheDocument()
     expect(screen.getByRole('status')).toHaveTextContent('Email verified.')
-    expect(screen.getByRole('img')).toHaveAttribute('src', '/assets/verification/four-musketeers-welcome.png')
+    expect(screen.getByRole('img')).toHaveAttribute('src', '/assets/verification/four-musketeers-welcome.webp')
     expect(screen.getByRole('link', { name: /continue to sign in/i })).toHaveAttribute('href', '/sign-in')
   })
 
@@ -18,7 +18,7 @@ describe('verification passage', () => {
 
     expect(screen.getByRole('heading', { name: 'We could not verify this link' })).toBeInTheDocument()
     expect(screen.getByRole('alert')).toHaveTextContent('This link has expired.')
-    expect(screen.getByRole('img')).toHaveAttribute('src', '/assets/verification/four-musketeers-guard.png')
+    expect(screen.getByRole('img')).toHaveAttribute('src', '/assets/verification/four-musketeers-guard.webp')
     expect(screen.getByRole('link', { name: /return to sign in/i })).toHaveAttribute('href', '/sign-in')
   })
 

@@ -247,7 +247,20 @@ export function AccountHub({ user, refresh }: { user: User; refresh: () => Promi
       <ReaderAvatar name={user.full_name} src={user.avatar_url} size="account" />
       <div className={s.greeting}><span className={s.kicker}>Reader’s account</span><h1 id="account-title">Welcome, {user.full_name.split(' ')[0]}</h1><p>{user.email}<span aria-hidden="true"> · </span>{user.is_verified ? 'Verified reader' : 'Email verification pending'}</p></div>
       <figure className={s.dorian}>
-        <img src="/assets/account/dorian-gray-account-header-v3.png" alt="Dorian Gray leans against the page and presents a golden frame containing his frightening, corrupted portrait." width="1024" height="1536" decoding="async" />
+        <picture>
+          <source
+            media="(min-width: 901px)"
+            srcSet="/assets/account/dorian-gray-account-header-v3-480w.webp 480w, /assets/account/dorian-gray-account-header-v3-768w.webp 768w, /assets/account/dorian-gray-account-header-v3.webp 1024w"
+            sizes="230px"
+          />
+          <img
+            src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1' height='1'/%3E"
+            alt="Dorian Gray leans against the page and presents a golden frame containing his frightening, corrupted portrait."
+            width="1024"
+            height="1536"
+            decoding="async"
+          />
+        </picture>
       </figure>
     </header>
     <div className={s.folio}>

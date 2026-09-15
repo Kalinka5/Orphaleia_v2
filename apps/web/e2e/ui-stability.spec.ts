@@ -126,13 +126,17 @@ test('customer and admin route guards wait for auth and render stable states', a
 
   await page.goto('/cart')
   await expect(page.getByRole('heading', { name: 'Your bag is waiting' })).toBeVisible()
-  await expect(page.locator('img[src="/assets/cart/paddington-empty-bag.png"]')).toHaveJSProperty('naturalWidth', 1216)
+  const cartArtwork = page.locator('img[src="/assets/cart/paddington-empty-bag.webp"]')
+  await expect(cartArtwork).toHaveJSProperty('complete', true)
+  expect(await cartArtwork.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0)
   await expect(page.getByRole('link', { name: /browse the catalog/i })).toHaveAttribute('href', '/all-books')
 
   await page.goto('/account')
   await expect(page.getByRole('heading', { name: 'Welcome, Admin' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'No orders yet' })).toBeVisible()
-  await expect(page.locator('img[src="/assets/account/little-prince-empty-orders.png"]')).toHaveJSProperty('naturalWidth', 1234)
+  const accountArtwork = page.locator('img[src="/assets/account/little-prince-empty-orders.webp"]')
+  await expect(accountArtwork).toHaveJSProperty('complete', true)
+  expect(await accountArtwork.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0)
   await expect(page.getByRole('link', { name: /browse the catalog/i })).toHaveAttribute('href', '/all-books')
   await expect(page).toHaveURL('/account')
 
