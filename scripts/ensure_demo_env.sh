@@ -8,12 +8,13 @@ if [ -f .env ]; then
     /^APP_ENV=development$/ { development = 1 }
     /^ALLOW_DEMO_SEED=true$/ { seed = 1 }
     /^PAYMENTS_MOCK=true$/ { mock = 1 }
+    /^PORTFOLIO_DEMO=true$/ { portfolio = 1 }
     /^SECRET_KEY=.{32,}$/ { secret = 1 }
     /^ADMIN_PASSWORD=.{16,}$/ { password = 1 }
-    END { exit !(development && seed && mock && secret && password) }
+    END { exit !(development && seed && mock && portfolio && secret && password) }
   ' .env; then
     echo ".env exists but is not an explicit safe demo profile."
-    echo "Set APP_ENV=development, ALLOW_DEMO_SEED=true, PAYMENTS_MOCK=true, and strong SECRET_KEY/ADMIN_PASSWORD values, or move the file and rerun make demo."
+    echo "Set APP_ENV=development, ALLOW_DEMO_SEED=true, PAYMENTS_MOCK=true, PORTFOLIO_DEMO=true, and strong SECRET_KEY/ADMIN_PASSWORD values, or move the file and rerun make demo."
     exit 1
   fi
   echo ".env already contains an explicit demo profile; leaving it unchanged."

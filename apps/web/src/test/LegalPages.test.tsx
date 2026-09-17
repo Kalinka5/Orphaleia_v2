@@ -5,51 +5,41 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
 
 function renderRoute(path: string) {
-  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ message: 'Sign in required' }), {
-    status: 401,
-    headers: { 'Content-Type': 'application/json' },
-  })))
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ message: 'Sign in required' }), { status: 401, headers: { 'Content-Type': 'application/json' } })))
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(<QueryClientProvider client={client}><MemoryRouter initialEntries={[path]}><App /></MemoryRouter></QueryClientProvider>)
 }
 
 afterEach(() => vi.unstubAllGlobals())
 
-describe('legal routes', () => {
-  it('renders the privacy policy with metadata, contents, identity, and cookie details', async () => {
-    renderRoute('/privacy')
-
-    expect(await screen.findByRole('heading', { level: 1, name: 'Privacy Policy' })).toBeInTheDocument()
-    expect(screen.getByRole('navigation', { name: 'Privacy Policy contents' })).toHaveTextContent('Who is responsible for your data')
-    expect(screen.getAllByText('Kalina Ent., trading as Orphaleia').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('Calle Sinai 12, 41007 Sevilla, Spain').length).toBeGreaterThan(0)
-    expect(screen.getByText('access_token')).toBeInTheDocument()
-    expect(screen.getByText('refresh_token')).toBeInTheDocument()
-    expect(screen.getByText('csrf_token')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Terms and Conditions' })).toHaveAttribute('href', '/terms')
-    await waitFor(() => expect(document.title).toBe('Privacy Policy · Orphaleia'))
-    expect(document.querySelector('meta[name="description"]')).toHaveAttribute('content', 'Learn how Orphaleia collects, uses, shares, and protects personal information.')
-  })
-
-  it('renders the terms with consumer rights, withdrawal form, and dispute information', async () => {
+describe('portfolio information routes', () => {
+  it('replaces commercial terms and business identity with a portfolio notice', async () => {
     renderRoute('/terms')
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Terms and Conditions' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Your 14-day right of withdrawal' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Model withdrawal notice' })).toBeInTheDocument()
-    expect(screen.getByText(/three-year legal conformity period/)).toBeInTheDocument()
-    expect(screen.getByText(/We do not require consumers to bring proceedings exclusively in Sevilla/)).toBeInTheDocument()
-    expect(screen.getAllByRole('link', { name: 'Privacy Policy' }).every((link) => link.getAttribute('href') === '/privacy')).toBe(true)
-    await waitFor(() => expect(document.title).toBe('Terms and Conditions · Orphaleia'))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Portfolio Demo Notice' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'No sales, payments, or delivery' })).toBeInTheDocument()
+    expect(screen.getByText(/not an operating bookseller, registered trading business/)).toBeInTheDocument()
+    expect(screen.getByText(/No contract, order, invoice, shipment/)).toBeInTheDocument()
+    expect(screen.queryByText(/NIF/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Registro Mercantil/)).not.toBeInTheDocument()
+    await waitFor(() => expect(document.title).toBe('Portfolio Demo Notice · Orphaleia'))
   })
 
-  it('shows linked legal acknowledgement on registration', async () => {
-    renderRoute('/register')
+  it('tells visitors to use fictional details and avoid real personal data', async () => {
+    renderRoute('/privacy')
 
-    expect(await screen.findByRole('heading', { name: 'Register' })).toBeInTheDocument()
-    const acknowledgement = screen.getByText(/By creating an account/)
-    expect(acknowledgement).toHaveTextContent('agree to our Terms and Conditions')
-    expect(screen.getByRole('link', { name: 'Terms and Conditions' })).toHaveAttribute('href', '/terms')
-    expect(screen.getByRole('link', { name: 'Privacy Policy' })).toHaveAttribute('href', '/privacy')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Demo Privacy Note' })).toBeInTheDocument()
+    expect(screen.getByText(/without providing a real identity, email, postal address, or payment information/)).toBeInTheDocument()
+    expect(screen.getByText(/random local demo identity/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Portfolio Demo Notice' })).toHaveAttribute('href', '/terms')
+    await waitFor(() => expect(document.title).toBe('Demo Privacy Note · Orphaleia'))
+  })
+
+  it('redirects registration and recovery routes to one-click demo access', async () => {
+    renderRoute('/register')
+    expect(await screen.findByRole('heading', { name: 'Enter the demo' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Explore as demo reader/ })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Email address')).not.toBeInTheDocument()
+    expect(screen.getByText('Portfolio demonstration — no books are sold and no payments are taken.')).toBeInTheDocument()
   })
 })

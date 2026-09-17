@@ -81,11 +81,12 @@ function OrderDetails({ order }: { order: Order }) {
   </div>
 }
 
-export function AccountHub({ user, refresh }: { user: User; refresh: () => Promise<void> }) {
+export function AccountHub({ user, refresh, portfolioDemo = false }: { user: User; refresh: () => Promise<void>; portfolioDemo?: boolean }) {
   const [params, setParams] = useSearchParams()
   const requestedSection = params.get('section')
   const requestedOrder = params.get('order')
-  const section: AccountSection = requestedSection === 'profile' || requestedSection === 'delivery' || requestedSection === 'security' ? requestedSection : 'orders'
+  const section: AccountSection = portfolioDemo ? 'orders' : requestedSection === 'profile' || requestedSection === 'delivery' || requestedSection === 'security' ? requestedSection : 'orders'
+  const visibleSections = portfolioDemo ? [{ id: 'orders' as const, label: 'Demo orders', description: 'Fictional fulfilment interface' }] : sections
   const client = useQueryClient()
   const orders = useQuery({ queryKey: ['orders'], queryFn: () => api<{ items: Order[] }>('/orders'), enabled: section === 'orders' })
   const [expandedOrder, setExpandedOrder] = useState<string | null>(() => requestedOrder)
@@ -245,7 +246,7 @@ export function AccountHub({ user, refresh }: { user: User; refresh: () => Promi
     />}
     <header className={s.header}>
       <ReaderAvatar name={user.full_name} src={user.avatar_url} size="account" />
-      <div className={s.greeting}><span className={s.kicker}>Reader’s account</span><h1 id="account-title">Welcome, {user.full_name.split(' ')[0]}</h1><p>{user.email}<span aria-hidden="true"> · </span>{user.is_verified ? 'Verified reader' : 'Email verification pending'}</p></div>
+      <div className={s.greeting}><span className={s.kicker}>{portfolioDemo ? 'Fictional demo account' : 'Reader’s account'}</span><h1 id="account-title">Welcome, {user.full_name.split(' ')[0]}</h1><p>{portfolioDemo ? 'Temporary interface demonstration. No real email or address is attached.' : <>{user.email}<span aria-hidden="true"> · </span>{user.is_verified ? 'Verified reader' : 'Email verification pending'}</>}</p></div>
       <figure className={s.dorian}>
         <picture>
           <source
@@ -265,12 +266,12 @@ export function AccountHub({ user, refresh }: { user: User; refresh: () => Promi
     </header>
     <div className={s.folio}>
       <nav className={s.navigation} aria-label="Account sections">
-        {sections.map((item) => <Link key={item.id} to={`/account?section=${item.id}`} aria-current={section === item.id ? 'page' : undefined}>
+        {visibleSections.map((item) => <Link key={item.id} to={`/account?section=${item.id}`} aria-current={section === item.id ? 'page' : undefined}>
           <SectionIcon section={item.id} /><span><b>{item.label}</b><small>{item.description}</small></span>
         </Link>)}
       </nav>
       <div className={s.content}>
-        {section === 'orders' && <section aria-labelledby="orders-title"><div className={s.sectionHeading}><span>Order history</span><h2 id="orders-title">Books on their way and on your shelf</h2><p>Open an order to follow each step from confirmation to your door.</p></div>{orders.isLoading ? <State title="Loading your orders…" loading /> : orders.error ? <ErrorState error={orders.error} retry={() => void orders.refetch()} /> : orders.data?.items.length ? <div className={s.orders}>{orders.data.items.map((order) => {
+        {section === 'orders' && <section aria-labelledby="orders-title"><div className={s.sectionHeading}><span>{portfolioDemo ? 'Interface demonstration' : 'Order history'}</span><h2 id="orders-title">{portfolioDemo ? 'Simulated order journeys' : 'Books on their way and on your shelf'}</h2><p>{portfolioDemo ? 'These records are fictional UI examples. No purchase, payment, shipment, or delivery exists.' : 'Open an order to follow each step from confirmation to your door.'}</p></div>{orders.isLoading ? <State title="Loading your orders…" loading /> : orders.error ? <ErrorState error={orders.error} retry={() => void orders.refetch()} /> : orders.data?.items.length ? <div className={s.orders}>{orders.data.items.map((order) => {
           const expanded = expandedOrder === order.id
           return <article key={order.id} data-expanded={expanded || undefined}>
             <button type="button" className={s.orderSummary} aria-expanded={expanded} aria-controls={`order-details-${order.id}`} onClick={() => toggleOrder(order.id)}>

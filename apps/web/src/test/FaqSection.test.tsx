@@ -6,10 +6,10 @@ import { FaqSection } from '../components/FaqSection'
 const questions = [
   'How does Orphaleia choose its books?',
   'Can I browse without an account?',
-  'Where does Orphaleia deliver?',
+  'Does Orphaleia deliver books?',
   'Are prices shown with VAT?',
   'How can I pay?',
-  'How do I track my order?',
+  'Why is there an order timeline?',
   'Can I change or cancel an order?',
   'What is the returns policy?',
 ]
@@ -37,14 +37,14 @@ describe('FaqSection', () => {
     expect(buttons[4]).toHaveAttribute('aria-expanded', 'true')
   })
 
-  it('provides the documented cancellation, returns, and contact destinations', () => {
+  it('explains that simulated orders cannot be cancelled or returned', () => {
     render(<MemoryRouter><FaqSection /></MemoryRouter>)
 
     fireEvent.click(screen.getByRole('button', { name: 'Can I change or cancel an order?' }))
     fireEvent.click(screen.getByRole('button', { name: 'What is the returns policy?' }))
 
-    expect(screen.getByRole('link', { name: 'Read the cancellation terms' })).toHaveAttribute('href', '/terms#cancellation')
-    expect(screen.getByRole('link', { name: 'Read the full returns terms' })).toHaveAttribute('href', '/terms#withdrawal')
-    expect(screen.getByRole('link', { name: 'customer@orphaleia.com' })).toHaveAttribute('href', 'mailto:customer@orphaleia.com')
+    expect(screen.getByRole('region', { name: 'Can I change or cancel an order?' })).toHaveTextContent('No real order is created')
+    expect(screen.getByRole('region', { name: 'What is the returns policy?' })).toHaveTextContent('There are no sales, deliveries, or returns')
+    expect(screen.queryByRole('link')).not.toBeInTheDocument()
   })
 })

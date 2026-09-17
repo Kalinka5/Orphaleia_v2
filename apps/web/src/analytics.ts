@@ -9,6 +9,10 @@ export type AnalyticsEventProperties = {
   payment_selected: { provider: PaymentProvider; value: number; currency: string }
   purchase: { provider: PaymentProvider; revenue: number; currency: string; item_count: number }
   payment_review: { provider: PaymentProvider; value: number; currency: string; item_count: number }
+  demo_checkout_started: { item_count: number; value: number; currency: string }
+  demo_delivery_quoted: { subtotal: number; shipping: number; value: number; currency: string }
+  demo_payment_selected: { provider: PaymentProvider; value: number; currency: string }
+  demo_checkout_completed: { provider: PaymentProvider; item_count: number }
 }
 
 export type AnalyticsEventName = keyof AnalyticsEventProperties
@@ -50,6 +54,10 @@ const EVENT_PROPERTY_KEYS: { [K in AnalyticsEventName]: ReadonlyArray<keyof Anal
   payment_selected: ['provider', 'value', 'currency'],
   purchase: ['provider', 'revenue', 'currency', 'item_count'],
   payment_review: ['provider', 'value', 'currency', 'item_count'],
+  demo_checkout_started: ['item_count', 'value', 'currency'],
+  demo_delivery_quoted: ['subtotal', 'shipping', 'value', 'currency'],
+  demo_payment_selected: ['provider', 'value', 'currency'],
+  demo_checkout_completed: ['provider', 'item_count'],
 }
 
 const UTM_PARAMETERS = new Set(['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'])

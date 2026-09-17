@@ -26,4 +26,7 @@ lint:
 	docker compose exec web npm run build
 
 openapi:
-	docker compose exec web npm run openapi
+	docker compose exec -T api python scripts/export_openapi.py /tmp/orphaleia-openapi.json
+	docker compose cp api:/tmp/orphaleia-openapi.json /tmp/orphaleia-openapi.json
+	docker compose cp /tmp/orphaleia-openapi.json web:/tmp/orphaleia-openapi.json
+	docker compose exec -T web npx openapi-typescript /tmp/orphaleia-openapi.json -o src/generated/api.d.ts

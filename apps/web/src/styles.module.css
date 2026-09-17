@@ -1,3 +1,4 @@
+.portfolioBanner { min-height: 38px; padding: 8px 20px; display: grid; place-items: center; position: sticky; top: 0; z-index: 100; color: #f7f2e7; background: #9b4a2f; border-bottom: 1px solid rgba(255,255,255,.24); font: 600 11px/1.45 'IBM Plex Mono', monospace; letter-spacing: .045em; text-align: center; }
 .header { height: 88px; padding: 0 clamp(24px, 5vw, 78px); background: var(--night); color: var(--marble); display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 42px; border-bottom: 1px solid rgba(240,231,211,.18); position: relative; z-index: 20; }
 .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
 .brandMark { display: grid; place-items: center; width: 42px; height: 42px; flex: 0 0 42px; }
@@ -154,6 +155,10 @@
 
 .cartLayout, .checkoutPage { display: grid; grid-template-columns: 1fr 380px; gap: clamp(40px, 7vw, 100px); align-items: start; }.cartItems { border-top: 1px solid var(--line); }.cartItems article { display: grid; grid-template-columns: 90px 1fr auto; gap: 20px; align-items: center; padding: 22px 0; border-bottom: 1px solid var(--line); }.cartItems img { width: 80px; height: 120px; object-fit: cover; }.cartItems h2 { font: 27px 'GFS Didot'; margin: 0 0 7px; }.cartItems h2 a { text-decoration: none; }.cartItems p { color: var(--ink-muted); }.orderCard { padding: 30px; border: 1px solid var(--line); background: var(--marble); position: sticky; top: 20px; }.orderCard h2 { font: 34px 'GFS Didot'; margin: 0 0 24px; }.orderCard > div { display: flex; justify-content: space-between; gap: 20px; margin: 12px 0; font-size: 13px; }.orderCard hr { border: 0; border-top: 1px solid var(--line); margin: 22px 0; }.orderCard .total { font-size: 18px; }.orderCard .primaryButton, .stripeButton, .paypalButton { width: 100%; margin-top: 20px; }.orderCard small { display: block; text-align: center; margin-top: 12px; color: var(--ink-muted); }.orderCard .textButton { color: var(--ink-muted); margin-top: 12px; }
 .checkoutPage { min-height: 75vh; padding: 90px clamp(28px, 8vw, 130px); background: var(--paper); }.checkoutPage h1 { font-size: clamp(52px, 6vw, 82px); max-width: 760px; }.checkoutForm { display: grid; grid-template-columns: 1fr 1fr; }.checkoutWideField, .checkoutForm .secondaryButton { grid-column: 1 / -1; }.stripeButton, .paypalButton { min-height: 48px; border: 0; color: white; font-weight: 600; }.stripeButton { background: #635bff; }.paypalButton { background: #0875c1; }
+.demoAddress { max-width: 620px; margin: 28px 0 22px; padding: 28px; border: 1px solid var(--line); border-left: 4px solid var(--bronze); background: var(--marble); }
+.demoAddress > span { color: var(--bronze); font: 600 9px/1.4 'IBM Plex Mono', monospace; letter-spacing: .14em; text-transform: uppercase; }
+.demoAddress address { margin: 14px 0; color: var(--night); font-style: normal; line-height: 1.7; }
+.demoAddress p { margin: 0; color: var(--ink-muted); font-size: 13px; line-height: 1.6; }
 .checkoutForm .checkoutSaveAddress { grid-column: 1 / -1; min-height: 48px; display: flex; flex-direction: row; align-items: flex-start; gap: 11px; color: var(--night); cursor: pointer; }
 .checkoutForm .checkoutSaveAddress input { flex: 0 0 auto; width: 18px; min-height: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--green); }
 .checkoutSaveAddress b, .checkoutSaveAddress small { display: block; }
@@ -1096,6 +1101,14 @@
 .authSuccess p { margin: 0; color: #62655f; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
 .authSuccess .authSubmit { margin-top: 4px; }
 .authSuccess > p.authSwitch { text-align: center; }
+.demoAccessCard { display: grid; gap: 7px; margin-top: 8px; padding: 22px; border: 1px solid #d6cdbd; border-radius: 12px; background: rgba(255,255,255,.68); }
+.demoAccessCard > strong { color: #18201d; font: 500 1.45rem/1.1 'Iowan Old Style', 'Palatino Linotype', Baskerville, Georgia, serif; }
+.demoAccessCard > span, .demoAccessCard > small { color: #62655f; }
+.demoAccessCard > small { margin-top: 4px; font-size: 11px; line-height: 1.55; }
+.ownerAccess { margin-top: 4px; padding-top: 14px; border-top: 1px solid #d6cdbd; color: #62655f; font-size: 12px; }
+.ownerAccess summary { min-height: 36px; display: flex; align-items: center; cursor: pointer; color: #285f4c; font-weight: 600; }
+.ownerAccess form { display: grid; gap: 13px; padding-top: 13px; }
+.ownerAccess .secondaryButton { width: 100%; color: #285f4c; }
 .authArtwork {
   grid-area: artwork;
   min-width: 0;

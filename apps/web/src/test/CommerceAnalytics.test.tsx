@@ -87,8 +87,8 @@ describe('commerce analytics events', () => {
     })
     renderRoute(fetchMock, '/cart')
 
-    fireEvent.click(await screen.findByRole('link', { name: /Continue to delivery/ }))
-    expect(analytics.track).toHaveBeenCalledWith('checkout_started', { item_count: 2, value: 25, currency: 'EUR' })
+    fireEvent.click(await screen.findByRole('link', { name: /Continue to demo checkout/ }))
+    expect(analytics.track).toHaveBeenCalledWith('demo_checkout_started', { item_count: 2, value: 25, currency: 'EUR' })
   })
 
   it('records removal only after the server accepts it', async () => {

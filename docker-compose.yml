@@ -44,6 +44,7 @@ services:
       SMTP_STARTTLS: ${SMTP_STARTTLS:-false}
       MAIL_PREVIEW_URL: ${MAIL_PREVIEW_URL-http://localhost:8025}
       PAYMENTS_MOCK: ${PAYMENTS_MOCK:-false}
+      PORTFOLIO_DEMO: ${PORTFOLIO_DEMO:-true}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
       PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID:-}
@@ -84,6 +85,7 @@ services:
       SMTP_USERNAME: ${SMTP_USERNAME:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_STARTTLS: ${SMTP_STARTTLS:-false}
+      PORTFOLIO_DEMO: ${PORTFOLIO_DEMO:-true}
     command: python -m app.worker
     volumes:
       - ./apps/api:/app

@@ -1,6 +1,5 @@
 import { Minus, Plus, Question } from '@phosphor-icons/react'
 import { type ReactNode, useId, useState } from 'react'
-import { Link } from 'react-router-dom'
 import styles from './FaqSection.module.css'
 
 type Faq = {
@@ -12,37 +11,37 @@ const faqColumns: Faq[][] = [
   [
     {
       question: 'How does Orphaleia choose its books?',
-      answer: <>Every title is selected by booksellers for its writing, the conversations it can open, and the quality of the edition. We keep the catalogue intentionally edited so each book has a reason to be here.</>,
+      answer: <>The catalogue is fictional demonstration content, curated to show how an editorial bookshop could organize discovery, detail pages, and recommendations.</>,
     },
     {
       question: 'Can I browse without an account?',
-      answer: <>Yes. You can explore the catalogue, collections, authors, and bestseller charts without signing in. An account is needed to place an order, save delivery details, follow orders, and share ratings or comments.</>,
+      answer: <>Yes. The catalogue, collections, authors, and charts are public. A one-click fictional demo account unlocks the bag, simulated checkout, and account interface without asking for your email or address.</>,
     },
     {
-      question: 'Where does Orphaleia deliver?',
-      answer: <>We currently deliver to Spain and the European Union destinations available at checkout. The available delivery options, charge, and any free-delivery threshold appear before you pay.</>,
+      question: 'Does Orphaleia deliver books?',
+      answer: <>No. This is a portfolio demonstration, not an operating bookshop. The delivery address, rate, tracking steps, and order states are fictional interface examples.</>,
     },
     {
       question: 'Are prices shown with VAT?',
-      answer: <>Yes. Book prices are shown in euros and include applicable VAT. Any delivery charge is calculated separately from your destination and shown in the order total before payment.</>,
+      answer: <>The euro prices and totals are illustrative interface content. They are not offers for sale, invoices, or amounts that a visitor can pay.</>,
     },
   ],
   [
     {
       question: 'How can I pay?',
-      answer: <>You can pay securely with Stripe or PayPal. Payment details are entered with your chosen provider; Orphaleia receives the payment status and reference, not your complete card or PayPal credentials.</>,
+      answer: <>You cannot make a payment. The Stripe and PayPal buttons run a local simulation only and never ask for card, bank, or PayPal credentials.</>,
     },
     {
-      question: 'How do I track my order?',
-      answer: <>Open Orders in your account to see the latest fulfilment stage and timeline. We also send order updates by email and add the carrier and tracking link when they become available.</>,
+      question: 'Why is there an order timeline?',
+      answer: <>It demonstrates the product design for an order history and fulfilment journey. Any order number, status, address, carrier, or tracking information shown is fictional.</>,
     },
     {
       question: 'Can I change or cancel an order?',
-      answer: <>Email <a href="mailto:customer@orphaleia.com">customer@orphaleia.com</a> as soon as possible. We will try to make the change before dispatch, but cannot guarantee interception once fulfilment has started. <Link to="/terms#cancellation">Read the cancellation terms</Link>.</>,
+      answer: <>No real order is created, so there is nothing to change or cancel. Demo records exist only to make the portfolio interface explorable.</>,
     },
     {
       question: 'What is the returns policy?',
-      answer: <>Consumers may withdraw from an online purchase within 14 calendar days after receiving the books. Contact us before returning them; ordinary change-of-mind postage is your responsibility, while we cover reasonable return costs for faulty, damaged, or incorrect books. <Link to="/terms#withdrawal">Read the full returns terms</Link>.</>,
+      answer: <>There are no sales, deliveries, or returns in this demonstration. If the concept becomes a real store later, commercial policies would need to be written for that separate service.</>,
     },
   ],
 ]
@@ -86,7 +85,7 @@ export function FaqSection() {
       <header className={styles.heading}>
         <p className={styles.eyebrow}><Question size={16} weight="fill" aria-hidden="true" /><span>FAQ</span></p>
         <h2 id="home-faq-title">Frequently asked questions.</h2>
-        <p className={styles.intro}>The useful details about choosing, ordering, and receiving books from Orphaleia.</p>
+        <p className={styles.intro}>What is real, what is fictional, and how to explore this portfolio demonstration safely.</p>
       </header>
 
       <div className={styles.columns} data-testid="faq-columns">

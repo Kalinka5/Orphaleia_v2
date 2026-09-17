@@ -98,6 +98,31 @@ from .throttle import rate_limit_health, throttle, throttle_email
 
 logger = logging.getLogger(__name__)
 
+PORTFOLIO_DEMO_ADDRESS = {
+    "name": "Ariadne Demo",
+    "line1": "12 Library Lane",
+    "line2": "Fictional address",
+    "city": "Madrid",
+    "postal_code": "28014",
+    "country": "ES",
+}
+
+
+def require_personal_data_features() -> None:
+    if settings.portfolio_demo:
+        raise HTTPException(
+            403,
+            "Personal account and address features are disabled in this portfolio demonstration",
+        )
+
+
+def require_demo_address(data: CheckoutInput) -> None:
+    if settings.portfolio_demo and data.address.model_dump() != PORTFOLIO_DEMO_ADDRESS:
+        raise HTTPException(
+            422,
+            "This portfolio demonstration accepts only its fixed fictional address",
+        )
+
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
@@ -225,6 +250,7 @@ def clear_user_avatar(db: Session, user: User):
 
 @app.post("/api/v1/auth/register", status_code=202, dependencies=[Depends(throttle(5, 60, "auth:register:ip"))])
 def register(data: RegisterInput, db: Session = Depends(get_db)):
+    require_personal_data_features()
     email = data.email.lower()
     throttle_email("auth:register:email", email, 5, 60)
     password_hash = hash_password(data.password)
@@ -267,6 +293,7 @@ def register(data: RegisterInput, db: Session = Depends(get_db)):
 
 @app.post("/api/v1/auth/verify")
 def verify_email(data: TokenInput, db: Session = Depends(get_db)):
+    require_personal_data_features()
     digest = token_hash(data.token)
     user_id = db.scalar(
         select(ActionToken.user_id).where(
@@ -299,6 +326,24 @@ def login(data: LoginInput, response: Response, db: Session = Depends(get_db)):
     access, refresh, csrf = create_session(db, user)
     db.commit()
     set_auth_cookies(response, access, refresh, csrf)
+    return {"user": user_out(user)}
+
+
+@app.post("/api/v1/auth/demo", dependencies=[Depends(throttle(20, 60, "auth:demo:ip"))])
+def demo_login(response: Response, db: Session = Depends(get_db)):
+    if not settings.portfolio_demo:
+        raise HTTPException(404, "Demo access is not enabled")
+    user = User(
+        email=f"portfolio-{uuid.uuid4().hex}@orphaleia.local",
+        full_name="Ariadne Demo",
+        password_hash=hash_password(secrets.token_urlsafe(32)),
+        is_verified=True,
+    )
+    db.add(user)
+    db.flush()
+    access, refresh_token, csrf = create_session(db, user)
+    db.commit()
+    set_auth_cookies(response, access, refresh_token, csrf)
     return {"user": user_out(user)}
 
 
@@ -345,6 +390,7 @@ def logout(request: Request, response: Response, db: Session = Depends(get_db)):
 
 @app.post("/api/v1/auth/request-reset", dependencies=[Depends(throttle(5, 300, "auth:reset:ip"))])
 def request_reset(data: EmailInput, db: Session = Depends(get_db)):
+    require_personal_data_features()
     email = data.email.lower()
     throttle_email("auth:reset:email", email, 5, 300)
     candidate = db.scalar(select(User.id).where(func.lower(User.email) == email))
@@ -360,6 +406,7 @@ def request_reset(data: EmailInput, db: Session = Depends(get_db)):
 
 @app.post("/api/v1/auth/reset")
 def reset_password(data: ResetInput, db: Session = Depends(get_db)):
+    require_personal_data_features()
     digest = token_hash(data.token)
     user_id = db.scalar(
         select(ActionToken.user_id).where(
@@ -393,6 +440,7 @@ def me(user: User = Depends(current_user)):
 
 @app.patch("/api/v1/users/me/profile", dependencies=[Depends(require_csrf)])
 def update_profile(data: ProfileInput, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    require_personal_data_features()
     user.full_name = data.full_name
     db.commit()
     return user_out(user)
@@ -400,6 +448,7 @@ def update_profile(data: ProfileInput, user: User = Depends(current_user), db: S
 
 @app.put("/api/v1/users/me/delivery-address", dependencies=[Depends(require_csrf)])
 def update_delivery_address(data: AddressInput, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    require_personal_data_features()
     address = user.default_shipping_address
     if address is None:
         address = SavedAddress(user_id=user.id)
@@ -412,6 +461,7 @@ def update_delivery_address(data: AddressInput, user: User = Depends(current_use
 
 @app.delete("/api/v1/users/me/delivery-address", dependencies=[Depends(require_csrf)])
 def remove_delivery_address(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    require_personal_data_features()
     if user.default_shipping_address is not None:
         user.default_shipping_address = None
         db.commit()
@@ -420,6 +470,7 @@ def remove_delivery_address(user: User = Depends(current_user), db: Session = De
 
 @app.put("/api/v1/users/me/avatar", dependencies=[Depends(require_csrf), Depends(throttle(10, 600))])
 async def update_avatar(file: UploadFile = File(...), user: User = Depends(current_user), db: Session = Depends(get_db)):
+    require_personal_data_features()
     content = await read_limited_upload(file, 5 * 1024 * 1024)
     try:
         url, size = save_avatar(content, file.content_type or "", user.id)
@@ -444,11 +495,13 @@ async def update_avatar(file: UploadFile = File(...), user: User = Depends(curre
 
 @app.delete("/api/v1/users/me/avatar", dependencies=[Depends(require_csrf)])
 def remove_avatar(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    require_personal_data_features()
     return clear_user_avatar(db, user)
 
 
 @app.post("/api/v1/users/me/email-change", status_code=202, dependencies=[Depends(require_csrf), Depends(throttle(5, 300))])
 def request_email_change(data: EmailChangeInput, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    require_personal_data_features()
     user = db.scalar(select(User).where(User.id == user.id).with_for_update())
     if not verify_password(data.current_password, user.password_hash):
         raise HTTPException(401, "Current password is incorrect")
@@ -473,6 +526,7 @@ def request_email_change(data: EmailChangeInput, user: User = Depends(current_us
 
 @app.delete("/api/v1/users/me/email-change", dependencies=[Depends(require_csrf)])
 def cancel_email_change(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    require_personal_data_features()
     user = db.scalar(select(User).where(User.id == user.id).with_for_update())
     invalidate_action_tokens(db, user, "email_change")
     user.pending_email = None
@@ -482,6 +536,7 @@ def cancel_email_change(user: User = Depends(current_user), db: Session = Depend
 
 @app.post("/api/v1/auth/confirm-email-change")
 def confirm_email_change(data: TokenInput, response: Response, db: Session = Depends(get_db)):
+    require_personal_data_features()
     digest = token_hash(data.token)
     user_id = db.scalar(
         select(ActionToken.user_id).where(
@@ -521,6 +576,7 @@ def confirm_email_change(data: TokenInput, response: Response, db: Session = Dep
 
 @app.post("/api/v1/users/me/password", dependencies=[Depends(require_csrf), Depends(throttle(5, 300))])
 def change_password(data: PasswordChangeInput, response: Response, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    require_personal_data_features()
     user = db.scalar(select(User).where(User.id == user.id).with_for_update())
     if not verify_password(data.current_password, user.password_hash):
         raise HTTPException(401, "Current password is incorrect")
@@ -820,6 +876,7 @@ def delete_cart_item(item_id: str, user: User = Depends(verified_user), db: Sess
 
 @app.post("/api/v1/checkout/quote")
 def checkout_quote(data: CheckoutInput, user: User = Depends(verified_user), db: Session = Depends(get_db)):
+    require_demo_address(data)
     cart = get_cart(db, user)
     if not cart.items:
         raise HTTPException(422, "Your cart is empty")
@@ -889,6 +946,7 @@ def create_order(
     user: User = Depends(verified_user),
     db: Session = Depends(get_db),
 ):
+    require_demo_address(data)
     user = db.scalar(select(User).where(User.id == user.id).with_for_update())
     keyed_order = db.scalar(
         select(Order)
@@ -1012,6 +1070,8 @@ def order_for_user(order_id: str, user: User = Depends(current_user), db: Sessio
 
 @app.post("/api/v1/payments/{provider}/start", dependencies=[Depends(require_csrf)])
 async def start_payment(provider: str, order_id: str, user: User = Depends(verified_user), db: Session = Depends(get_db)):
+    if settings.portfolio_demo and not settings.payments_mock:
+        raise HTTPException(503, "Real payments are disabled in this portfolio demonstration")
     if provider not in PROVIDERS:
         raise HTTPException(404, "Payment provider not supported")
     order = db.scalar(

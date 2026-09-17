@@ -28,3 +28,12 @@ export const countryOptions: SelectOption[] = [
 export function emptyAddress(name = ''): Address {
   return { name, line1: '', line2: '', city: '', postal_code: '', country: 'ES' }
 }
+
+export const portfolioDemoAddress: Address = {
+  name: 'Ariadne Demo',
+  line1: '12 Library Lane',
+  line2: 'Fictional address',
+  city: 'Madrid',
+  postal_code: '28014',
+  country: 'ES',
+}

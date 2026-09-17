@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     smtp_starttls: bool = False
     mail_preview_url: str = "http://localhost:8025"
     payments_mock: bool = False
+    portfolio_demo: bool = False
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
     paypal_client_id: str = ""
@@ -90,7 +91,10 @@ class Settings(BaseSettings):
                 errors.append("FRONTEND_URL must use HTTPS")
             if not self.cookie_secure:
                 errors.append("COOKIE_SECURE must be true")
-            if self.payments_mock:
+            if self.portfolio_demo:
+                if not self.payments_mock:
+                    errors.append("PAYMENTS_MOCK must be true in portfolio demo mode")
+            elif self.payments_mock:
                 errors.append("PAYMENTS_MOCK must be false")
             if self.allow_demo_seed:
                 errors.append("ALLOW_DEMO_SEED must be false")
@@ -100,21 +104,22 @@ class Settings(BaseSettings):
                 errors.append("DATABASE_URL must not use the documented database credential")
             if not self.trusted_proxy_cidrs.strip():
                 errors.append("TRUSTED_PROXY_CIDRS must identify the production ingress")
-            required_provider_values = {
-                "STRIPE_SECRET_KEY": self.stripe_secret_key,
-                "STRIPE_WEBHOOK_SECRET": self.stripe_webhook_secret,
-                "PAYPAL_CLIENT_ID": self.paypal_client_id,
-                "PAYPAL_CLIENT_SECRET": self.paypal_client_secret,
-                "PAYPAL_WEBHOOK_ID": self.paypal_webhook_id,
-            }
-            errors.extend(f"{name} is required" for name, value in required_provider_values.items() if not value)
-            if self.stripe_secret_key and not self.stripe_secret_key.startswith("sk_live_"):
-                errors.append("STRIPE_SECRET_KEY must be a live Stripe key")
-            for name, value in required_provider_values.items():
-                if value and any(marker in value.lower() for marker in UNSAFE_VALUE_MARKERS):
-                    errors.append(f"{name} must not use a placeholder or sandbox value")
-            if self.paypal_base_url.rstrip("/") != "https://api-m.paypal.com":
-                errors.append("PAYPAL_BASE_URL must use the live PayPal API")
+            if not self.portfolio_demo:
+                required_provider_values = {
+                    "STRIPE_SECRET_KEY": self.stripe_secret_key,
+                    "STRIPE_WEBHOOK_SECRET": self.stripe_webhook_secret,
+                    "PAYPAL_CLIENT_ID": self.paypal_client_id,
+                    "PAYPAL_CLIENT_SECRET": self.paypal_client_secret,
+                    "PAYPAL_WEBHOOK_ID": self.paypal_webhook_id,
+                }
+                errors.extend(f"{name} is required" for name, value in required_provider_values.items() if not value)
+                if self.stripe_secret_key and not self.stripe_secret_key.startswith("sk_live_"):
+                    errors.append("STRIPE_SECRET_KEY must be a live Stripe key")
+                for name, value in required_provider_values.items():
+                    if value and any(marker in value.lower() for marker in UNSAFE_VALUE_MARKERS):
+                        errors.append(f"{name} must not use a placeholder or sandbox value")
+                if self.paypal_base_url.rstrip("/") != "https://api-m.paypal.com":
+                    errors.append("PAYPAL_BASE_URL must use the live PayPal API")
             if errors:
                 raise ValueError("Unsafe production configuration: " + "; ".join(errors))
         return self

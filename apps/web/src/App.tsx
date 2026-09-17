@@ -3,7 +3,7 @@ import { ArrowLeft, ArrowRight, ArrowUpRight, CaretRight, Check, EnvelopeSimple,
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { api, apiFieldError, errorMessage, money } from './api'
-import { addressFields, countryOptions, emptyAddress } from './address'
+import { portfolioDemoAddress } from './address'
 import { trackAnalytics } from './analytics'
 import { BookHeroScene, type HeroBook } from './components/BookHeroScene'
 import { AuthorShowcase } from './components/AuthorShowcase'
@@ -91,9 +91,10 @@ function Layout({ children }: { children: ReactNode }) {
   const routeMeta = getRouteMeta(location.pathname)
   return <>
     <PageMeta title={routeMeta.title} description={routeMeta.description} canonicalPath={getCanonicalPath(location.pathname, location.search)} />
+    <div className={s.portfolioBanner} role="note">Portfolio demonstration — no books are sold and no payments are taken.</div>
     <header className={`${s.header} ${location.pathname === '/' ? s.headerHome : ''} ${isAuthRoute ? s.headerAuth : ''}`}>
       <Link className={s.brand} to="/" aria-label="Orphaleia home">
-        <span className={s.brandMark}><img src="/brand/orphaleia-mark.svg" alt="" /></span><span><b>Orphaleia</b><small>INDEPENDENT BOOKSELLERS</small></span>
+        <span className={s.brandMark}><img src="/brand/orphaleia-mark.svg" alt="" /></span><span><b>Orphaleia</b><small>PORTFOLIO BOOKSHOP</small></span>
       </Link>
       {isAuthRoute ? <>
         <Link className={s.authBack} to="/" aria-label="Back to shop"><ArrowLeft size={18} aria-hidden="true" /><span>Back</span></Link>
@@ -119,17 +120,17 @@ function Layout({ children }: { children: ReactNode }) {
     </header>
     <main id="main" tabIndex={-1} className={`${s.siteMain} ${isAuthRoute ? s.authMain : ''}`}>{children}</main>
     {!isAuthRoute && <footer className={s.footer}>
-      <div className={s.footerLead}><div className={s.footerBrand}>Orphaleia</div><p>Independent bookselling for restless minds and unhurried shelves.</p></div>
+      <div className={s.footerLead}><div className={s.footerBrand}>Orphaleia</div><p>A fictional storefront created to demonstrate product design and engineering.</p></div>
       <div><b>Browse</b><Link to="/books">All books</Link><Link to="/rankings">Bestseller charts</Link><Link to="/genres">Collections</Link></div>
-      <div><b>Elsewhere</b><Link to="/authors">Our authors</Link><Link to="/account">Your account</Link><span>Spain and EU delivery</span></div>
-      <div><b>Legal</b><Link to="/privacy">Privacy Policy</Link><Link to="/terms">Terms and Conditions</Link><a href="mailto:customer@orphaleia.com">Contact us</a></div>
-      <p className={s.copyright}>© 2026 Orphaleia. Built for the long read.</p>
+      <div><b>Explore</b><Link to="/authors">Featured authors</Link><Link to="/account">Demo account</Link><span>No sales or delivery</span></div>
+      <div><b>About</b><Link to="/privacy">Demo privacy note</Link><Link to="/terms">Portfolio demo notice</Link><span>Created for portfolio review</span></div>
+      <p className={s.copyright}>© 2026 Orphaleia concept. Portfolio demonstration only.</p>
     </footer>}
   </>
 }
 
 function getRouteMeta(pathname: string) {
-  if (pathname === '/') return { title: 'Independent bookshop', description: 'Books for curious voyages, chosen with care by Orphaleia.' }
+  if (pathname === '/') return { title: 'Portfolio bookshop concept', description: 'A fictional editorial bookshop interface created to demonstrate product design and engineering.' }
   if (pathname === '/books' || pathname === '/all-books') return { title: 'All books', description: 'Search Orphaleia’s complete catalogue by title, author, genre, rating, and availability.' }
   if (pathname.startsWith('/books/')) return { title: 'Book details', description: 'Read about this Orphaleia edition, reader ratings, and related books.' }
   if (pathname === '/genres') return { title: 'Genres', description: 'Explore literary collections and follow a new reading current.' }
@@ -137,17 +138,17 @@ function getRouteMeta(pathname: string) {
   if (pathname === '/authors') return { title: 'Authors', description: 'Follow the voices represented on Orphaleia’s shelves.' }
   if (pathname.startsWith('/authors/')) return { title: 'Author', description: 'Discover books by this Orphaleia author.' }
   if (pathname === '/rankings') return { title: 'Annual bestsellers', description: 'Explore sourced annual print-sales rankings across explicitly covered BookScan markets.' }
-  if (pathname === '/sign-in') return { title: 'Sign in', description: 'Continue your Orphaleia reading journey.' }
-  if (pathname === '/register') return { title: 'Create an account', description: 'Create an Orphaleia reader account.' }
-  if (pathname.includes('password')) return { title: 'Account recovery', description: 'Recover access to your Orphaleia account.' }
+  if (pathname === '/sign-in') return { title: 'Enter the demo', description: 'Open a fictional Orphaleia reader session without providing personal information.' }
+  if (pathname === '/register') return { title: 'Enter the demo', description: 'Orphaleia uses one-click fictional accounts for portfolio visitors.' }
+  if (pathname.includes('password')) return { title: 'Demo access', description: 'Registration and email recovery are disabled in this portfolio demonstration.' }
   if (pathname === '/confirm-email-change') return { title: 'Confirm email change', description: 'Confirm the new sign-in email for your Orphaleia account.' }
   if (pathname === '/verify') return { title: 'Verify email', description: 'Verify your Orphaleia reader account.' }
   if (pathname === '/cart') return { title: 'Your bag', description: 'Review the books in your Orphaleia bag.' }
-  if (pathname === '/checkout') return { title: 'Checkout', description: 'Choose delivery and complete your Orphaleia order.' }
-  if (pathname === '/payment/return') return { title: 'Payment status', description: 'Review your Orphaleia payment status.' }
+  if (pathname === '/checkout') return { title: 'Simulated checkout', description: 'Explore a fictional checkout without entering an address or making a payment.' }
+  if (pathname === '/payment/return') return { title: 'Demo completed', description: 'The checkout demonstration is complete. No order or payment was made.' }
   if (pathname === '/account') return { title: 'Your account', description: 'View your Orphaleia reader account and orders.' }
-  if (pathname === '/privacy') return { title: 'Privacy Policy', description: 'Learn how Orphaleia collects, uses, shares, and protects personal information.' }
-  if (pathname === '/terms') return { title: 'Terms and Conditions', description: 'Read the terms that apply when you use Orphaleia or order books from us.' }
+  if (pathname === '/privacy') return { title: 'Demo Privacy Note', description: 'Learn how to explore this portfolio demonstration without providing personal information.' }
+  if (pathname === '/terms') return { title: 'Portfolio Demo Notice', description: 'Orphaleia is a fictional portfolio demonstration and does not sell or deliver books.' }
   if (pathname.startsWith('/admin')) return { title: 'Shop admin', description: 'Manage the Orphaleia catalogue and orders.' }
   return { title: 'Page not found', description: 'The page you were looking for is missing. Return safely to the Orphaleia bookshop.' }
 }
@@ -252,9 +253,9 @@ function Testimonials() {
         <img src="/assets/landing/peter-pan-reader-notes.webp" srcSet="/assets/landing/peter-pan-reader-notes-480w.webp 480w, /assets/landing/peter-pan-reader-notes-768w.webp 768w, /assets/landing/peter-pan-reader-notes.webp 1024w" sizes="(max-width: 760px) 42vw, 18vw" alt="" width="1024" height="1536" loading="lazy" decoding="async" />
       </figure>
       <div className={s.testimonialsHeading}>
-        <p>Notes from the reading room</p>
+        <p>Interface demonstration</p>
         <h2 id="reader-notes-title">Books travel farther<br />when readers talk.</h2>
-        <span>Thoughts from people who followed their curiosity through our shelves.</span>
+        <span>Fictional testimonials shown as interface demonstration content. These people and statements are not real customer endorsements.</span>
         <button className={s.motionToggle} type="button" onClick={() => setPaused((value) => !value)} aria-pressed={paused}>
           {paused ? <Play size={15} aria-hidden="true" /> : <Pause size={15} aria-hidden="true" />}
           {paused ? 'Resume reader notes' : 'Pause reader notes'}
@@ -828,7 +829,7 @@ function Rankings() {
   </section>
 }
 
-function AuthPage({ register = false }: { register?: boolean }) {
+function LegacyAuthPage({ register = false }: { register?: boolean }) {
   const { user, refresh } = useAuth(); const navigate = useNavigate(); const location = useLocation(); const [error, setError] = useState<unknown>(null); const [confirmationError, setConfirmationError] = useState(''); const [sent, setSent] = useState<{ message: string; email: string; previewUrl?: string } | null>(null); const [notificationOpen, setNotificationOpen] = useState(false); const [submitting, setSubmitting] = useState(false); const [showPassword, setShowPassword] = useState(false); const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   if (user) return <Navigate to="/account" />
   async function submit(e: FormEvent<HTMLFormElement>) {
@@ -916,6 +917,81 @@ function AuthPage({ register = false }: { register?: boolean }) {
   </section>
 }
 
+function AuthPage() {
+  const { user, refresh } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [error, setError] = useState<unknown>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [ownerSubmitting, setOwnerSubmitting] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  if (user) return <Navigate to="/account" />
+
+  async function startDemo() {
+    if (submitting) return
+    setSubmitting(true)
+    setError(null)
+    try {
+      await api('/auth/demo', { method: 'POST' })
+      await refresh()
+      navigate((location.state as { from?: string })?.from || '/books')
+    } catch (err) {
+      setError(err)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function ownerSignIn(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const form = new FormData(event.currentTarget)
+    setOwnerSubmitting(true)
+    setError(null)
+    try {
+      await api('/auth/login', { method: 'POST', body: JSON.stringify({ email: form.get('email'), password: form.get('password') }) })
+      await refresh()
+      navigate('/admin')
+    } catch (err) {
+      setError(err)
+    } finally {
+      setOwnerSubmitting(false)
+    }
+  }
+
+  return <section className={`${s.authPage} ${s.authLogin}`} aria-labelledby="auth-title" data-testid="auth-shell">
+    <FormNotification title="Demo access failed" message={error ? errorMessage(error) : ''} variant="error" onClose={() => setError(null)} />
+    <div className={s.authFormPanel} data-testid="auth-form-panel">
+      <div className={s.authForm}>
+        <div className={s.authHeading}>
+          <span className={s.eyebrow}>PORTFOLIO PASSAGE</span>
+          <h1 id="auth-title">Enter the demo</h1>
+          <p>Explore the reader journey with a fresh fictional account. No email, password, or personal address is requested.</p>
+        </div>
+        <div className={s.demoAccessCard}>
+          <strong>Ariadne Demo</strong>
+          <span>Temporary fictional reader</span>
+          <button type="button" className={`${s.primaryButton} ${s.authSubmit}`} disabled={submitting} onClick={() => void startDemo()}>{submitting ? 'Opening demo…' : 'Explore as demo reader'} {!submitting && <ArrowRight size={16} aria-hidden="true" />}</button>
+          <small>Demo activity may be reset. Do not enter real personal information anywhere on this site.</small>
+        </div>
+        <details className={s.ownerAccess}>
+          <summary>Portfolio owner sign-in</summary>
+          <form onSubmit={(event) => void ownerSignIn(event)} aria-busy={ownerSubmitting || undefined}>
+            <label htmlFor="owner-email">Owner email<input id="owner-email" name="email" type="email" required autoComplete="username" /></label>
+            <label htmlFor="owner-password">Password<span className={s.passwordField}><input id="owner-password" name="password" type={showPassword ? 'text' : 'password'} required autoComplete="current-password" /><button type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? 'Hide password' : 'Show password'}>{showPassword ? <EyeSlash size={19} aria-hidden="true" /> : <Eye size={19} aria-hidden="true" />}</button></span></label>
+            <button className={s.secondaryButton} disabled={ownerSubmitting}>{ownerSubmitting ? 'Signing in…' : 'Sign in as owner'}</button>
+          </form>
+        </details>
+      </div>
+    </div>
+    <figure className={s.authArtwork} data-testid="auth-artwork">
+      <picture>
+        <source media="(max-width: 760px)" srcSet="/assets/auth/sherlock-holmes-mobile.webp" />
+        <img src="/assets/auth/sherlock-holmes-desktop.webp" alt="A stylized three-dimensional Sherlock Holmes reading with a magnifying glass beside a stack of books." width="1024" height="1536" loading="eager" fetchPriority="high" decoding="async" />
+      </picture>
+    </figure>
+  </section>
+}
+
 function TokenPage({ mode }: { mode: 'verify' | 'reset' | 'forgot' | 'email-change' }) {
   const { refresh } = useAuth(); const [params] = useSearchParams(); const token = params.get('token'); const requestStarted = useRef(false); const [message, setMessage] = useState(''); const [error, setError] = useState(''); const [busy, setBusy] = useState((mode === 'verify' || mode === 'email-change') && Boolean(token))
   useEffect(() => {
@@ -946,36 +1022,30 @@ function CartPage() {
   const { user, loading } = useAuth(); const client = useQueryClient(); const query = useQuery({ queryKey: ['cart'], queryFn: () => api<Cart>('/cart'), enabled: !!user })
   const remove = useMutation({ mutationFn: (item: Cart['items'][number]) => api(`/cart/items/${item.id}`, { method: 'DELETE' }), onSuccess: (_, item) => { trackAnalytics('remove_from_bag', { book_slug: item.book.slug, quantity: item.quantity, value: item.book.price_cents * item.quantity / 100, currency: query.data?.currency ?? 'EUR' }); client.invalidateQueries({ queryKey: ['cart'] }) } })
   if (loading) return <State title="Finding your bag…" loading viewport />; if (!user) return <Navigate to="/sign-in" state={{ from: '/cart' }} />; if (query.isLoading) return <State title="Opening your bag…" loading viewport />; if (query.error) return <ErrorState error={query.error} retry={() => void query.refetch()} viewport />
-  const cart = query.data!; const itemCount = cart.items.reduce((sum, item) => sum + item.quantity, 0); return <section className={s.page}><div className={s.pageHeading}><span className={s.eyebrow}>YOUR BOOK BAG</span><h1>Books for the crossing</h1></div>{cart.items.length ? <div className={s.cartLayout}><div className={s.cartItems}>{cart.items.map((item) => <article key={item.id}><img src={item.book.cover_url} alt={`Cover of ${item.book.title}`} width="80" height="120" /><div><h2><Link to={`/books/${item.book.slug}`}>{item.book.title}</Link></h2><p>Quantity: {item.quantity}</p><button className={s.textButton} disabled={remove.isPending} onClick={() => remove.mutate(item)}>{remove.isPending ? 'Removing…' : 'Remove'}</button></div><b>{money(item.book.price_cents * item.quantity)}</b></article>)}</div><aside className={s.orderCard}><h2>Order summary</h2><div><span>Books</span><b>{money(cart.subtotal_cents)}</b></div><div><span>Shipping</span><span>Calculated next</span></div><hr /><div className={s.total}><span>Subtotal</span><b>{money(cart.subtotal_cents)}</b></div><Link className={s.primaryButton} to="/checkout" onClick={() => trackAnalytics('checkout_started', { item_count: itemCount, value: cart.subtotal_cents / 100, currency: cart.currency })}>Continue to delivery <ArrowRight size={16} aria-hidden="true" /></Link><small>VAT included · Secure checkout</small>{remove.error && <p className={s.formError} role="alert">{remove.error.message}</p>}</aside></div> : <CartEmptyState />}</section>
+  const cart = query.data!; const itemCount = cart.items.reduce((sum, item) => sum + item.quantity, 0); return <section className={s.page}><div className={s.pageHeading}><span className={s.eyebrow}>YOUR DEMO BAG</span><h1>Books for the crossing</h1></div>{cart.items.length ? <div className={s.cartLayout}><div className={s.cartItems}>{cart.items.map((item) => <article key={item.id}><img src={item.book.cover_url} alt={`Cover of ${item.book.title}`} width="80" height="120" /><div><h2><Link to={`/books/${item.book.slug}`}>{item.book.title}</Link></h2><p>Quantity: {item.quantity}</p><button className={s.textButton} disabled={remove.isPending} onClick={() => remove.mutate(item)}>{remove.isPending ? 'Removing…' : 'Remove'}</button></div><b>{money(item.book.price_cents * item.quantity)}</b></article>)}</div><aside className={s.orderCard}><h2>Demo summary</h2><div><span>Books</span><b>{money(cart.subtotal_cents)}</b></div><div><span>Delivery</span><span>Simulated next</span></div><hr /><div className={s.total}><span>Illustrative subtotal</span><b>{money(cart.subtotal_cents)}</b></div><Link className={s.primaryButton} to="/checkout" onClick={() => trackAnalytics('demo_checkout_started', { item_count: itemCount, value: cart.subtotal_cents / 100, currency: cart.currency })}>Continue to demo checkout <ArrowRight size={16} aria-hidden="true" /></Link><small>No order or payment will be made.</small>{remove.error && <p className={s.formError} role="alert">{remove.error.message}</p>}</aside></div> : <CartEmptyState />}</section>
 }
 
 function Checkout() {
-  const { user } = useAuth(); const navigate = useNavigate(); const client = useQueryClient(); const [address, setAddress] = useState<Address>(() => user?.default_shipping_address ?? emptyAddress(user?.full_name)); const [saveAsDefault, setSaveAsDefault] = useState(false); const [quote, setQuote] = useState<{ subtotal_cents: number; shipping_cents: number; total_cents: number; currency?: string } | null>(null); const [quoteNotice, setQuoteNotice] = useState(false); const [error, setError] = useState<unknown>(null); const [busy, setBusy] = useState(false); const checkoutAttempt = useRef<{ payload: string; key: string } | null>(null)
+  const { user } = useAuth(); const navigate = useNavigate(); const [quote, setQuote] = useState<{ subtotal_cents: number; shipping_cents: number; total_cents: number; currency?: string } | null>(null); const [quoteNotice, setQuoteNotice] = useState(false); const [error, setError] = useState<unknown>(null); const [busy, setBusy] = useState(false); const checkoutAttempt = useRef<{ payload: string; key: string } | null>(null)
   if (!user) return <Navigate to="/sign-in" state={{ from: '/checkout' }} />
-  async function quoteOrder(e: FormEvent<HTMLFormElement>) { e.preventDefault(); setBusy(true); setError(null); setQuoteNotice(false); try { const nextQuote = await api<{ subtotal_cents: number; shipping_cents: number; total_cents: number; currency?: string }>('/checkout/quote', { method: 'POST', body: JSON.stringify({ address }) }); setQuote(nextQuote); setQuoteNotice(true); trackAnalytics('delivery_quoted', { subtotal: nextQuote.subtotal_cents / 100, shipping: nextQuote.shipping_cents / 100, value: nextQuote.total_cents / 100, currency: nextQuote.currency || 'EUR' }) } catch (err) { setError(err) } finally { setBusy(false) } }
-  async function pay(provider: 'stripe' | 'paypal') { setBusy(true); setError(null); try { if (saveAsDefault) { const nextUser = await api<User>('/users/me/delivery-address', { method: 'PUT', body: JSON.stringify(address) }); client.setQueryData(['me'], nextUser) } const payload = JSON.stringify({ address }); if (!checkoutAttempt.current || checkoutAttempt.current.payload !== payload) checkoutAttempt.current = { payload, key: crypto.randomUUID() }; const order = await api<Order>('/orders', { method: 'POST', headers: { 'Idempotency-Key': checkoutAttempt.current.key }, body: payload }); trackAnalytics('payment_selected', { provider, value: order.total_cents / 100, currency: order.currency || quote?.currency || 'EUR' }); const payment = await api<{ redirect_url: string }>(`/payments/${provider}/start?order_id=${order.id}`, { method: 'POST' }); window.location.assign(payment.redirect_url) } catch (err) { setError(err); setBusy(false) } }
+  async function quoteOrder() { setBusy(true); setError(null); setQuoteNotice(false); try { const nextQuote = await api<{ subtotal_cents: number; shipping_cents: number; total_cents: number; currency?: string }>('/checkout/quote', { method: 'POST', body: JSON.stringify({ address: portfolioDemoAddress }) }); setQuote(nextQuote); setQuoteNotice(true); trackAnalytics('demo_delivery_quoted', { subtotal: nextQuote.subtotal_cents / 100, shipping: nextQuote.shipping_cents / 100, value: nextQuote.total_cents / 100, currency: nextQuote.currency || 'EUR' }) } catch (err) { setError(err) } finally { setBusy(false) } }
+  async function pay(provider: 'stripe' | 'paypal') { setBusy(true); setError(null); try { const payload = JSON.stringify({ address: portfolioDemoAddress }); if (!checkoutAttempt.current || checkoutAttempt.current.payload !== payload) checkoutAttempt.current = { payload, key: crypto.randomUUID() }; const order = await api<Order>('/orders', { method: 'POST', headers: { 'Idempotency-Key': checkoutAttempt.current.key }, body: payload }); trackAnalytics('demo_payment_selected', { provider, value: order.total_cents / 100, currency: order.currency || quote?.currency || 'EUR' }); const payment = await api<{ redirect_url: string }>(`/payments/${provider}/start?order_id=${order.id}`, { method: 'POST' }); window.location.assign(payment.redirect_url) } catch (err) { setError(err); setBusy(false) } }
   return <section className={s.checkoutPage}>
-    <FormNotification title={error ? 'Checkout could not continue' : 'Delivery calculated'} message={error ? errorMessage(error) : quoteNotice ? 'Your delivery rate and order total are ready.' : ''} variant={error ? 'error' : 'success'} onClose={() => { setError(null); setQuoteNotice(false) }} />
-    <div><span className={s.eyebrow}>DELIVERY</span><h1>Where should these stories find you?</h1>
-      <form className={s.checkoutForm} onSubmit={quoteOrder} aria-busy={busy || undefined}>
-        {addressFields.map(({ key, label, required, autoComplete, minLength, maxLength }) => {
-          const fieldError = apiFieldError(error, `address.${key}`, key)
-          const fieldId = `checkout-${key}`
-          const errorId = `${fieldId}-error`
-          return <div className={`${s.formField}${key === 'line1' || key === 'line2' ? ` ${s.checkoutWideField}` : ''}`} key={key}><label htmlFor={fieldId}>{label}<input id={fieldId} name={key} value={address[key]} required={required} minLength={minLength} maxLength={maxLength} autoComplete={autoComplete} aria-invalid={Boolean(fieldError) || undefined} aria-describedby={fieldError ? errorId : undefined} onChange={(e) => { setAddress({ ...address, [key]: e.target.value }); setQuote(null); setQuoteNotice(false); setError(null) }} /></label>{fieldError && <span className={s.inlineFieldError} id={errorId}>{fieldError}</span>}</div>
-        })}
-        <SelectControl label="Country" labelMode="stacked" value={address.country} options={countryOptions} required invalid={Boolean(apiFieldError(error, 'address.country', 'country'))} describedBy={apiFieldError(error, 'address.country', 'country') ? 'checkout-country-error' : undefined} onChange={(value) => { setAddress({ ...address, country: value }); setQuote(null); setQuoteNotice(false); setError(null) }} />
-        {apiFieldError(error, 'address.country', 'country') && <span className={s.inlineFieldError} id="checkout-country-error">{apiFieldError(error, 'address.country', 'country')}</span>}
-        <label className={s.checkoutSaveAddress}><input type="checkbox" checked={saveAsDefault} onChange={(event) => { setSaveAsDefault(event.target.checked); setError(null) }} /> <span><b>Save as my default delivery address</b><small>Use these details to prefill future checkouts.</small></span></label>
-        <button type="submit" className={s.secondaryButton} disabled={busy}>{busy ? 'Calculating…' : 'Calculate delivery'}</button>
-      </form>
+    <FormNotification title={error ? 'Demo could not continue' : 'Demo total calculated'} message={error ? errorMessage(error) : quoteNotice ? 'The fictional delivery rate and total are ready.' : ''} variant={error ? 'error' : 'success'} onClose={() => { setError(null); setQuoteNotice(false) }} />
+    <div><span className={s.eyebrow}>SIMULATED CHECKOUT</span><h1>Explore the checkout without sharing an address.</h1>
+      <div className={s.demoAddress} aria-label="Fictional address used for this demonstration">
+        <span>Fixed fictional address</span>
+        <address><strong>{portfolioDemoAddress.name}</strong><br />{portfolioDemoAddress.line1}<br />{portfolioDemoAddress.line2}<br />{portfolioDemoAddress.postal_code} {portfolioDemoAddress.city}<br />Spain</address>
+        <p>This address is invented and cannot be edited. Visitors are never asked to provide or save a real address.</p>
+      </div>
+      <button type="button" className={s.secondaryButton} disabled={busy} onClick={() => void quoteOrder()}>{busy ? 'Calculating demo…' : 'Calculate demo total'}</button>
     </div>
     <aside className={s.orderCard}><h2>Final passage</h2>{quote ? <>
-      <div><span>Books</span><b>{money(quote.subtotal_cents)}</b></div><div><span>Delivery</span><b>{money(quote.shipping_cents)}</b></div><hr /><div className={s.total}><span>Total</span><b>{money(quote.total_cents)}</b></div>
-      <p className={s.legalAcknowledgement}>By selecting a payment option, you agree to our <Link to="/terms">Terms and Conditions</Link>, acknowledge our <Link to="/privacy">Privacy Policy</Link>, and confirm an obligation to pay.</p>
-      <button type="button" className={s.stripeButton} disabled={busy} onClick={() => void pay('stripe')}>{busy ? 'Opening payment…' : 'Pay securely with Stripe'}</button>
-      <button type="button" className={s.paypalButton} disabled={busy} onClick={() => void pay('paypal')}>{busy ? 'Opening payment…' : 'Pay with PayPal'}</button>
-    </> : <p>Enter your address to see delivery and the final total.</p>}
+      <div><span>Books, illustrative</span><b>{money(quote.subtotal_cents)}</b></div><div><span>Delivery, illustrative</span><b>{money(quote.shipping_cents)}</b></div><hr /><div className={s.total}><span>Demo total</span><b>{money(quote.total_cents)}</b></div>
+      <p className={s.legalAcknowledgement}>This is an interface simulation. No real order, payment obligation, delivery, or customer contract is created. <Link to="/terms">Read the portfolio demo notice</Link>.</p>
+      <button type="button" className={s.stripeButton} disabled={busy} onClick={() => void pay('stripe')}>{busy ? 'Opening simulation…' : 'Simulate Stripe checkout'}</button>
+      <button type="button" className={s.paypalButton} disabled={busy} onClick={() => void pay('paypal')}>{busy ? 'Opening simulation…' : 'Simulate PayPal checkout'}</button>
+    </> : <p>Calculate the fictional total to reveal both simulated payment paths.</p>}
       <button type="button" className={s.textButton} onClick={() => navigate('/cart')}><ArrowLeft size={15} aria-hidden="true" /> Return to bag</button>
     </aside>
   </section>
@@ -983,20 +1053,20 @@ function Checkout() {
 
 function PaymentReturn() {
   const [params] = useSearchParams(); const navigate = useNavigate(); const client = useQueryClient(); const requestStarted = useRef(false); const order = params.get('order'); const provider = params.get('provider'); const reference = params.get('reference') || params.get('token'); const validProvider = provider === 'stripe' || provider === 'paypal'; const valid = Boolean(order && validProvider && reference)
-  const [status, setStatus] = useState(valid ? 'Confirming your payment…' : 'We could not identify this payment return.'); const [busy, setBusy] = useState(valid); const [confirmed, setConfirmed] = useState(false)
+  const [status, setStatus] = useState(valid ? 'Completing the demonstration…' : 'We could not identify this demo return.'); const [busy, setBusy] = useState(valid); const [confirmed, setConfirmed] = useState(false)
   useEffect(() => {
     if (!order || !reference || (provider !== 'stripe' && provider !== 'paypal')) return
     if (requestStarted.current) return
     requestStarted.current = true
-    api<Order>(`/payments/${provider}/complete?order_id=${order}&reference=${encodeURIComponent(reference)}`, { method: 'POST' }).then((completed) => { const review = completed.status === 'payment_review'; setStatus(review ? 'Your payment was received and needs manual review.' : 'Payment confirmed. Your books are reserved.'); setConfirmed(true); navigate('/payment/return', { replace: true }); const itemCount = completed.items.reduce((sum, item) => sum + item.quantity, 0); if (review) trackAnalytics('payment_review', { provider, value: completed.total_cents / 100, currency: completed.currency, item_count: itemCount }); else if (completed.status === 'paid') trackAnalytics('purchase', { provider, revenue: completed.total_cents / 100, currency: completed.currency, item_count: itemCount }); client.invalidateQueries({ queryKey: ['cart'] }) }).catch((e) => setStatus(e.message)).finally(() => setBusy(false))
+    api<Order>(`/payments/${provider}/complete?order_id=${order}&reference=${encodeURIComponent(reference)}`, { method: 'POST' }).then((completed) => { setStatus('Demo completed. No order was placed and no payment was made.'); setConfirmed(true); navigate('/payment/return', { replace: true }); trackAnalytics('demo_checkout_completed', { provider, item_count: completed.items.reduce((sum, item) => sum + item.quantity, 0) }); client.invalidateQueries({ queryKey: ['cart'] }) }).catch((e) => setStatus(e.message)).finally(() => setBusy(false))
   }, [order, provider, reference, client, navigate])
-  return <section className={s.narrowPage}>{busy ? <State title="Confirming your payment…" loading compact /> : <><div className={s.seal}>{confirmed ? <Check size={42} aria-hidden="true" /> : '?'}</div><span className={s.eyebrow}>{confirmed ? 'ORDER RECEIVED' : 'PAYMENT STATUS'}</span><h1 role="status">{status}</h1><p>{confirmed ? 'You can follow fulfillment from your account.' : 'Return to your bag or contact the shop if a payment was completed.'}</p><Link className={s.primaryButton} to={confirmed ? '/account' : '/cart'}>{confirmed ? 'View my orders' : 'Return to bag'} <ArrowRight size={16} aria-hidden="true" /></Link></>}</section>
+  return <section className={s.narrowPage}>{busy ? <State title="Completing the demonstration…" loading compact /> : <><div className={s.seal}>{confirmed ? <Check size={42} aria-hidden="true" /> : '?'}</div><span className={s.eyebrow}>{confirmed ? 'DEMO COMPLETE' : 'DEMO STATUS'}</span><h1 aria-live="polite">{status}</h1><p>{confirmed ? 'A fictional order may appear in the demo account so reviewers can inspect the interface. It has no commercial effect.' : 'Return to your bag and start the simulation again.'}</p><Link className={s.primaryButton} to={confirmed ? '/account' : '/cart'}>{confirmed ? 'View demo order UI' : 'Return to bag'} <ArrowRight size={16} aria-hidden="true" /></Link></>}</section>
 }
 
 function Account() {
   const { user, loading, refresh } = useAuth()
   if (loading) return <State title="Opening your account…" loading />; if (!user) return <Navigate to="/sign-in" />
-  return <AccountHub user={user} refresh={refresh} />
+  return <AccountHub user={user} refresh={refresh} portfolioDemo />
 }
 
 function Admin() {
@@ -1160,7 +1230,7 @@ export default function App() {
   return <AuthProvider><Layout><Suspense fallback={<State title="Opening this passage…" loading viewport />}><Routes>
     <Route path="/" element={<Home />} /><Route path="/books" element={<Catalog />} /><Route path="/all-books" element={<Catalog />} /><Route path="/books/:slug" element={<BookPage />} />
     <Route path="/genres" element={<Directory kind="genres" />} /><Route path="/genres/:slug" element={<Shelf kind="genres" />} /><Route path="/authors" element={<Directory kind="authors" />} /><Route path="/authors/:slug" element={<Shelf kind="authors" />} /><Route path="/rankings" element={<Rankings />} />
-    <Route path="/sign-in" element={<AuthPage key="sign-in" />} /><Route path="/register" element={<AuthPage key="register" register />} /><Route path="/verify" element={<TokenPage mode="verify" />} /><Route path="/forgot-password" element={<TokenPage mode="forgot" />} /><Route path="/reset-password" element={<TokenPage mode="reset" />} /><Route path="/confirm-email-change" element={<TokenPage mode="email-change" />} />
+    <Route path="/sign-in" element={<AuthPage />} /><Route path="/register" element={<Navigate to="/sign-in" replace />} /><Route path="/verify" element={<Navigate to="/sign-in" replace />} /><Route path="/forgot-password" element={<Navigate to="/sign-in" replace />} /><Route path="/reset-password" element={<Navigate to="/sign-in" replace />} /><Route path="/confirm-email-change" element={<Navigate to="/sign-in" replace />} />
     <Route path="/cart" element={<RequireUser><CartPage /></RequireUser>} /><Route path="/checkout" element={<RequireUser><Checkout /></RequireUser>} /><Route path="/payment/return" element={<PaymentReturn />} /><Route path="/account" element={<RequireUser><Account /></RequireUser>} />
     <Route path="/privacy" element={<PrivacyPolicyPage />} /><Route path="/terms" element={<TermsPage />} />
     <Route path="/admin" element={<RequireUser admin><Admin /></RequireUser>} /><Route path="/admin/books/new" element={<RequireUser admin><BookEditor /></RequireUser>} /><Route path="/admin/books/:slug/edit" element={<RequireUser admin><BookEditor edit /></RequireUser>} /><Route path="*" element={<NotFoundPage />} />

@@ -71,6 +71,22 @@ def test_configuration_profiles_are_explicit_and_fail_closed():
     production = Settings(**PRODUCTION_SETTINGS, _env_file=None)
     assert production.payments_mock is False
 
+    portfolio = Settings(
+        **{
+            **PRODUCTION_SETTINGS,
+            "portfolio_demo": True,
+            "payments_mock": True,
+            "stripe_secret_key": "",
+            "stripe_webhook_secret": "",
+            "paypal_client_id": "",
+            "paypal_client_secret": "",
+            "paypal_webhook_id": "",
+        },
+        _env_file=None,
+    )
+    assert portfolio.portfolio_demo is True
+    assert portfolio.payments_mock is True
+
 
 @pytest.mark.parametrize(
     ("override", "message"),
