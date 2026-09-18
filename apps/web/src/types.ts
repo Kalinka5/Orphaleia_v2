@@ -33,3 +33,50 @@ export type SalesRankingResponse = {
   items: SalesRankingItem[]
 }
 export type ApiError = { code: string; message: string; field_errors?: Record<string, string>; request_id?: string }
+
+export type ReadingCurrentAnswer = { question_id: string; answer_id: string }
+export type ReadingCurrentChoice = { id: string; label: string; description: string }
+export type ReadingCurrentQuestion = {
+  id: string
+  prompt: string
+  hint: string
+  scene: 'moonlit-harbor' | 'doorway-archive' | 'forked-forest' | 'distant-lighthouse'
+  step: number
+  answers: ReadingCurrentChoice[]
+}
+export type ReadingCurrentResult = {
+  version: string
+  completed_at: string
+  primary_genre: Genre
+  related_genres: Genre[]
+  archetype: { id: string; name: string; description: string }
+  explanation: string
+  traits: string[]
+  books: Book[]
+}
+export type ReadingCurrentIntro = {
+  version: string
+  total_steps: number
+  title: string
+  introduction: string
+  first_question: ReadingCurrentQuestion
+}
+export type ReadingCurrentStep =
+  | { status: 'question'; version: string; total_steps: number; question: ReadingCurrentQuestion }
+  | { status: 'complete'; version: string; total_steps: number; result: ReadingCurrentResult }
+export type ReadingCurrentProfile = {
+  version: string
+  result: ReadingCurrentResult
+  updated_at: string
+  is_stale: boolean
+}
+export type ReadingCurrentShare = {
+  id: string
+  url: string
+  display_name: string | null
+  created_at: string
+  expires_at: string
+  revoked_at: string | null
+  revoke_token?: string
+}
+export type ReadingCurrentAccount = { profile: ReadingCurrentProfile | null; shares: ReadingCurrentShare[] }

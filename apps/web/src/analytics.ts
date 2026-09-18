@@ -13,6 +13,10 @@ export type AnalyticsEventProperties = {
   demo_delivery_quoted: { subtotal: number; shipping: number; value: number; currency: string }
   demo_payment_selected: { provider: PaymentProvider; value: number; currency: string }
   demo_checkout_completed: { provider: PaymentProvider; item_count: number }
+  reading_current_started: { source: string }
+  reading_current_completed: { archetype: string; primary_genre: string }
+  reading_current_recommendation_clicked: { destination: 'book' | 'genre'; position: number }
+  reading_current_shared: { account_state: 'guest' | 'member'; named: boolean }
 }
 
 export type AnalyticsEventName = keyof AnalyticsEventProperties
@@ -58,6 +62,10 @@ const EVENT_PROPERTY_KEYS: { [K in AnalyticsEventName]: ReadonlyArray<keyof Anal
   demo_delivery_quoted: ['subtotal', 'shipping', 'value', 'currency'],
   demo_payment_selected: ['provider', 'value', 'currency'],
   demo_checkout_completed: ['provider', 'item_count'],
+  reading_current_started: ['source'],
+  reading_current_completed: ['archetype', 'primary_genre'],
+  reading_current_recommendation_clicked: ['destination', 'position'],
+  reading_current_shared: ['account_state', 'named'],
 }
 
 const UTM_PARAMETERS = new Set(['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'])
@@ -84,6 +92,7 @@ function allowedUrlParameter(pathname: string, key: string) {
 export function sanitizeAnalyticsUrl(rawUrl: string) {
   try {
     const parsed = new URL(rawUrl, 'https://orphaleia.invalid')
+    if (/^\/reading-current\/shared\/[^/]+$/.test(parsed.pathname)) parsed.pathname = '/reading-current/shared/:token'
     const safeParameters = new URLSearchParams()
     parsed.searchParams.forEach((value, key) => {
       if (allowedUrlParameter(parsed.pathname, key)) safeParameters.append(key, value)

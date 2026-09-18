@@ -71,6 +71,20 @@ class CartItemInput(BaseModel):
     quantity: int = Field(ge=1, le=20)
 
 
+class ReadingCurrentAnswerInput(BaseModel):
+    question_id: str = Field(min_length=1, max_length=80, pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+    answer_id: str = Field(min_length=1, max_length=80, pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+
+
+class ReadingCurrentStepInput(BaseModel):
+    version: str = Field(min_length=1, max_length=32)
+    answers: list[ReadingCurrentAnswerInput] = Field(min_length=1, max_length=8)
+
+
+class ReadingCurrentMemberShareInput(BaseModel):
+    include_display_name: bool = False
+
+
 class AddressInput(BaseModel):
     name: str = Field(min_length=2, max_length=160)
     line1: str = Field(min_length=3, max_length=240)

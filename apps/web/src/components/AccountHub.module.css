@@ -103,7 +103,7 @@
   .greeting { max-width: none; }
   .dorian { display: none; }
   .folio { grid-template-columns: 1fr; }
-  .navigation { padding: 0 0 16px; display: grid; grid-template-columns: repeat(4, 1fr); border-right: 0; border-bottom: 1px solid #dfe4e1; }
+  .navigation { padding: 0 0 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); border-right: 0; border-bottom: 1px solid #dfe4e1; }
   .navigation a { min-height: 64px; padding: 12px; border-left: 0; border-bottom: 3px solid transparent; }
   .navigation a[aria-current='page'] { border-bottom-color: #285f4c; }
   .navigation small { display: none; }

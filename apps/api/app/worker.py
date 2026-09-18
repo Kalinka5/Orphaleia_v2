@@ -9,6 +9,7 @@ from sqlalchemy import select
 from .config import settings
 from .database import SessionLocal
 from .models import OutboxMessage
+from .reading_current import purge_old_shares
 from .services import release_expired_reservations
 
 
@@ -44,6 +45,7 @@ def run():
         with SessionLocal() as db:
             release_expired_reservations(db)
             send_pending_mail(db)
+            purge_old_shares(db)
         time.sleep(10)
 
 

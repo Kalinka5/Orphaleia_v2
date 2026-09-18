@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
-import { ArrowSquareOut, BookOpenText, Camera, CaretDown, Check, LockKey, MapPin, ShieldCheck, Trash, UserCircle } from '@phosphor-icons/react'
+import { ArrowSquareOut, BookOpenText, Camera, CaretDown, Check, Compass, LockKey, MapPin, ShieldCheck, Trash, UserCircle } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api, apiFieldError, money } from '../api'
@@ -11,11 +11,13 @@ import { ReaderAvatar } from './ReaderAvatar'
 import { ErrorState, RouteState as State } from './ui/RouteState'
 import { SelectControl } from './ui/SelectControl'
 import { FormNotification } from './ui/FormNotification'
+import { ReadingCurrentAccountSection } from './ReadingCurrentAccountSection'
 import s from './AccountHub.module.css'
 
-type AccountSection = 'orders' | 'profile' | 'delivery' | 'security'
+type AccountSection = 'orders' | 'reading-current' | 'profile' | 'delivery' | 'security'
 const sections: Array<{ id: AccountSection; label: string; description: string }> = [
   { id: 'orders', label: 'Orders', description: 'Purchases and delivery progress' },
+  { id: 'reading-current', label: 'Reading Current', description: 'Latest result and public links' },
   { id: 'profile', label: 'Profile', description: 'Public name and reader portrait' },
   { id: 'delivery', label: 'Delivery', description: 'Private default shipping address' },
   { id: 'security', label: 'Security', description: 'Sign-in email and password' },
@@ -27,6 +29,7 @@ function fieldError(error: unknown, field: string) {
 
 function SectionIcon({ section }: { section: AccountSection }) {
   if (section === 'orders') return <BookOpenText size={21} aria-hidden="true" />
+  if (section === 'reading-current') return <Compass size={21} aria-hidden="true" />
   if (section === 'profile') return <UserCircle size={21} aria-hidden="true" />
   if (section === 'delivery') return <MapPin size={21} aria-hidden="true" />
   return <ShieldCheck size={21} aria-hidden="true" />
@@ -85,8 +88,8 @@ export function AccountHub({ user, refresh, portfolioDemo = false }: { user: Use
   const [params, setParams] = useSearchParams()
   const requestedSection = params.get('section')
   const requestedOrder = params.get('order')
-  const section: AccountSection = portfolioDemo ? 'orders' : requestedSection === 'profile' || requestedSection === 'delivery' || requestedSection === 'security' ? requestedSection : 'orders'
-  const visibleSections = portfolioDemo ? [{ id: 'orders' as const, label: 'Demo orders', description: 'Fictional fulfilment interface' }] : sections
+  const section: AccountSection = requestedSection === 'reading-current' || (!portfolioDemo && (requestedSection === 'profile' || requestedSection === 'delivery' || requestedSection === 'security')) ? requestedSection : 'orders'
+  const visibleSections = portfolioDemo ? [{ id: 'orders' as const, label: 'Demo orders', description: 'Fictional fulfilment interface' }, { id: 'reading-current' as const, label: 'Reading Current', description: 'Latest result and public links' }] : sections
   const client = useQueryClient()
   const orders = useQuery({ queryKey: ['orders'], queryFn: () => api<{ items: Order[] }>('/orders'), enabled: section === 'orders' })
   const [expandedOrder, setExpandedOrder] = useState<string | null>(() => requestedOrder)
@@ -271,6 +274,7 @@ export function AccountHub({ user, refresh, portfolioDemo = false }: { user: Use
         </Link>)}
       </nav>
       <div className={s.content}>
+        {section === 'reading-current' && <ReadingCurrentAccountSection />}
         {section === 'orders' && <section aria-labelledby="orders-title"><div className={s.sectionHeading}><span>{portfolioDemo ? 'Interface demonstration' : 'Order history'}</span><h2 id="orders-title">{portfolioDemo ? 'Simulated order journeys' : 'Books on their way and on your shelf'}</h2><p>{portfolioDemo ? 'These records are fictional UI examples. No purchase, payment, shipment, or delivery exists.' : 'Open an order to follow each step from confirmation to your door.'}</p></div>{orders.isLoading ? <State title="Loading your orders…" loading /> : orders.error ? <ErrorState error={orders.error} retry={() => void orders.refetch()} /> : orders.data?.items.length ? <div className={s.orders}>{orders.data.items.map((order) => {
           const expanded = expandedOrder === order.id
           return <article key={order.id} data-expanded={expanded || undefined}>

@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, Integer, String, Table, Text, UniqueConstraint, text
+from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Index, Integer, String, Table, Text, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -187,6 +187,30 @@ class Comment(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     book: Mapped[Book] = relationship(back_populates="comments")
     user: Mapped[User] = relationship()
+
+
+class ReadingCurrentProfile(Base):
+    __tablename__ = "reading_current_profiles"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    quiz_version: Mapped[str] = mapped_column(String(32))
+    answers_json: Mapped[list[dict]] = mapped_column(JSON)
+    result_json: Mapped[dict] = mapped_column(JSON)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
+    user: Mapped[User] = relationship()
+
+
+class ReadingCurrentShare(Base):
+    __tablename__ = "reading_current_shares"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    owner_user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    public_token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    revoke_token_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    result_json: Mapped[dict] = mapped_column(JSON)
+    display_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    owner: Mapped[User | None] = relationship()
 
 
 class Cart(Base):

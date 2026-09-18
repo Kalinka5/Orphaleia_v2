@@ -6,9 +6,10 @@ type PageMetaProps = {
   title: string
   description: string
   canonicalPath?: string | null
+  noIndex?: boolean
 }
 
-export function PageMeta({ title, description, canonicalPath }: PageMetaProps) {
+export function PageMeta({ title, description, canonicalPath, noIndex = false }: PageMetaProps) {
   useEffect(() => {
     document.title = `${title} · Orphaleia`
     let meta = document.querySelector<HTMLMetaElement>('meta[name="description"]')
@@ -34,6 +35,19 @@ export function PageMeta({ title, description, canonicalPath }: PageMetaProps) {
     canonical.href = new URL(canonicalPath, SITE_ORIGIN).href
     if (!existing) document.head.append(canonical)
   }, [canonicalPath])
+
+  useEffect(() => {
+    const existing = document.querySelector<HTMLMetaElement>('meta[name="robots"]')
+    if (!noIndex) {
+      existing?.remove()
+      return
+    }
+    const robots = existing ?? document.createElement('meta')
+    robots.name = 'robots'
+    robots.content = 'noindex, nofollow'
+    if (!existing) document.head.append(robots)
+    return () => robots.remove()
+  }, [noIndex])
 
   return null
 }

@@ -42,10 +42,23 @@ from .models import (
     RankingEntry,
     Rating,
     RatingEvent,
+    ReadingCurrentProfile,
+    ReadingCurrentShare,
     RefreshSession,
     SavedAddress,
     ShippingZone,
     User,
+)
+from .reading_current import (
+    QUIZ_VERSION,
+    TOTAL_STEPS,
+    create_share,
+    get_share_by_token,
+    next_step,
+    profile_out,
+    revoke_guest_share,
+    save_profile,
+    share_out,
 )
 from .schemas import (
     AddressInput,
@@ -63,6 +76,8 @@ from .schemas import (
     PasswordChangeInput,
     ProfileInput,
     RatingInput,
+    ReadingCurrentMemberShareInput,
+    ReadingCurrentStepInput,
     RegisterInput,
     ResetInput,
     RoleInput,
@@ -137,7 +152,7 @@ app.add_middleware(
     allow_origins=[settings.frontend_url],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "X-CSRF-Token", "Idempotency-Key"],
+    allow_headers=["Content-Type", "X-CSRF-Token", "Idempotency-Key", "X-Share-Revoke-Token"],
 )
 app.add_middleware(RequestBodyLimitMiddleware)
 Path(settings.media_dir).mkdir(parents=True, exist_ok=True)
@@ -680,6 +695,117 @@ def genre_detail(slug: str, db: Session = Depends(get_db)):
     if not genre:
         raise HTTPException(404, "Genre not found")
     return {**genre_out(genre), "books": [book_out(db, x) for x in genre.books if x.active]}
+
+
+@app.get("/api/v1/reading-current")
+def reading_current_intro(db: Session = Depends(get_db)):
+    payload = next_step(db, QUIZ_VERSION, [])
+    return {
+        "version": QUIZ_VERSION,
+        "total_steps": TOTAL_STEPS,
+        "title": "Find Your Reading Current",
+        "introduction": "Eight choices will chart the stories most likely to keep you reading.",
+        "first_question": payload["question"],
+    }
+
+
+@app.post(
+    "/api/v1/reading-current/step",
+    dependencies=[Depends(throttle(120, 60, "reading-current:step:ip"))],
+)
+def reading_current_step(data: ReadingCurrentStepInput, db: Session = Depends(get_db)):
+    return next_step(db, data.version, [answer.model_dump() for answer in data.answers])
+
+
+@app.get("/api/v1/users/me/reading-current")
+def saved_reading_current(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    return profile_out(db, db.get(ReadingCurrentProfile, user.id), user)
+
+
+@app.put("/api/v1/users/me/reading-current", dependencies=[Depends(require_csrf)])
+def save_reading_current(
+    data: ReadingCurrentStepInput,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    profile = save_profile(db, user, data.version, [answer.model_dump() for answer in data.answers])
+    return profile_out(db, profile, user)
+
+
+@app.delete("/api/v1/users/me/reading-current", status_code=204, dependencies=[Depends(require_csrf)])
+def delete_reading_current(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    profile = db.get(ReadingCurrentProfile, user.id)
+    if profile:
+        db.delete(profile)
+        db.commit()
+    return Response(status_code=204)
+
+
+@app.post(
+    "/api/v1/reading-current/shares",
+    status_code=201,
+    dependencies=[Depends(throttle(10, 3600, "reading-current:share:ip"))],
+)
+def create_guest_reading_current_share(data: ReadingCurrentStepInput, db: Session = Depends(get_db)):
+    completed = next_step(db, data.version, [answer.model_dump() for answer in data.answers])
+    if completed["status"] != "complete":
+        raise HTTPException(422, f"Complete all {TOTAL_STEPS} questions before sharing")
+    record, revoke_token = create_share(db, completed["result"])
+    return {**share_out(record), "revoke_token": revoke_token}
+
+
+@app.post("/api/v1/users/me/reading-current/shares", status_code=201, dependencies=[Depends(require_csrf)])
+def create_member_reading_current_share(
+    data: ReadingCurrentMemberShareInput,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    profile = db.get(ReadingCurrentProfile, user.id)
+    if profile is None:
+        raise HTTPException(409, "Complete and save a reading current before sharing")
+    if profile.quiz_version != QUIZ_VERSION:
+        raise HTTPException(409, "Retake the voyage before sharing this older result")
+    record, _ = create_share(db, profile.result_json, owner=user, include_display_name=data.include_display_name)
+    return share_out(record, include_management=True)
+
+
+@app.get("/api/v1/reading-current/shares/{token}")
+def public_reading_current_share(token: str, db: Session = Depends(get_db)):
+    record = get_share_by_token(db, token)
+    return {
+        "result": record.result_json,
+        "display_name": record.display_name,
+        "expires_at": record.expires_at,
+    }
+
+
+@app.delete("/api/v1/reading-current/shares/{token}", status_code=204)
+def delete_guest_reading_current_share(
+    token: str,
+    x_share_revoke_token: str = Header(alias="X-Share-Revoke-Token"),
+    db: Session = Depends(get_db),
+):
+    revoke_guest_share(db, token, x_share_revoke_token)
+    return Response(status_code=204)
+
+
+@app.delete(
+    "/api/v1/users/me/reading-current/shares/{share_id}",
+    status_code=204,
+    dependencies=[Depends(require_csrf)],
+)
+def delete_member_reading_current_share(
+    share_id: str,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    record = db.get(ReadingCurrentShare, share_id)
+    if record is None or record.owner_user_id != user.id:
+        raise HTTPException(404, "Shared reading current not found")
+    if record.revoked_at is None:
+        record.revoked_at = datetime.now(UTC)
+        db.commit()
+    return Response(status_code=204)
 
 
 @app.get("/api/v1/rankings")

@@ -77,6 +77,18 @@ describe('analytics privacy filtering', () => {
       .toBe('/payment/return')
     expect(sanitizeAnalyticsUrl('/reset-password?token=private-token')).toBe('/reset-password')
     expect(sanitizeAnalyticsUrl('/confirm-email-change?token=private-token')).toBe('/confirm-email-change')
+    expect(sanitizeAnalyticsUrl('/reading-current/shared/top-secret-token?utm_source=friend'))
+      .toBe('/reading-current/shared/:token?utm_source=friend')
+  })
+
+  it('allows only non-identifying reading-current measurements', () => {
+    expect(sanitizeAnalyticsPayload('event', {
+      name: 'reading_current_shared',
+      data: { account_state: 'member', named: true, token: 'secret', display_name: 'Private Reader', answers: ['private'] },
+    })).toEqual({
+      name: 'reading_current_shared',
+      data: { account_state: 'member', named: true },
+    })
   })
 
   it('allows only the declared properties for known events', () => {

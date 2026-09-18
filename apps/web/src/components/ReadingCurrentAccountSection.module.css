@@ -1,0 +1,43 @@
+.heading { max-width: 730px; margin-bottom: 36px; }
+.heading > span, .constellation > span, .shares > div > span { color: #285f4c; font: 600 10px/1.4 'JetBrains Mono', monospace; letter-spacing: .13em; text-transform: uppercase; }
+.heading h2 { margin: 8px 0 13px; color: #111827; font: 400 clamp(38px, 4vw, 56px)/1 'GFS Didot', Georgia, serif; letter-spacing: -.025em; text-wrap: balance; }
+.heading p, .empty p, .constellation > p, .shares > p { margin: 0; color: #5f6964; font-size: 13px; line-height: 1.65; }
+.empty { padding: clamp(24px, 4vw, 42px); display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 24px; border: 1px solid #dfe4e1; background: #f8faf7; }
+.empty > svg { color: #527664; }
+.empty h3 { margin: 0 0 7px; font: 400 30px/1.05 'GFS Didot', Georgia, serif; }
+.primary, .secondary { min-height: 46px; padding: 0 18px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid #285f4c; font-size: 12px; font-weight: 650; text-decoration: none; }
+.primary { color: #fff; background: #285f4c; }
+.secondary { color: #285f4c; background: transparent; }
+.primary:hover { background: #173f31; }
+.secondary:hover { background: #eef4f0; }
+.profile { display: grid; grid-template-columns: minmax(0, 1fr) 250px; border: 1px solid #d9dfda; background: #fff; }
+.constellation { padding: clamp(27px, 4vw, 48px); }
+.constellation h3 { margin: 10px 0 5px; font: 400 clamp(48px, 5vw, 70px)/.92 'GFS Didot', Georgia, serif; letter-spacing: -.035em; }
+.constellation .archetype { margin: 0 0 20px; color: #285f4c; font-size: 12px; font-weight: 700; }
+.constellation > p { max-width: 660px; }
+.constellation > div { margin-top: 25px; display: flex; flex-wrap: wrap; gap: 8px; }
+.constellation > div a { padding: 7px 10px; color: #315c49; border: 1px solid #b8c8c0; font-size: 10px; text-decoration: none; }
+.profileAside { padding: 30px 26px; display: flex; align-items: stretch; flex-direction: column; gap: 11px; border-left: 1px solid #d9dfda; background: #f4f3ea; }
+.profileAside small { margin-bottom: 9px; color: #68736d; font-size: 10px; line-height: 1.5; }
+.profileAside p { margin: 0 0 8px; color: #755a37; font-size: 11px; line-height: 1.5; }
+.remove { min-height: 38px; padding: 0; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 0; color: #8b443c; background: transparent; font-size: 11px; cursor: pointer; }
+.remove:hover { text-decoration: underline; text-underline-offset: 3px; }
+.shares { margin-top: 26px; padding-top: 28px; border-top: 1px solid #d9dfda; }
+.shares h3 { margin: 5px 0 18px; font: 400 31px/1 'GFS Didot', Georgia, serif; }
+.shares ul { margin: 0; padding: 0; border-top: 1px solid #d9dfda; list-style: none; }
+.shares li { min-height: 76px; padding: 14px 6px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid #d9dfda; }
+.shares li > div { display: flex; align-items: center; gap: 13px; }
+.shares li > div > svg { color: #527664; }
+.shares a, .shares small { display: block; }
+.shares a { color: #203b30; font-size: 12px; font-weight: 650; }
+.shares small { margin-top: 5px; color: #68736d; font-size: 10px; }
+.shares button { min-height: 38px; padding: 0 9px; display: flex; align-items: center; gap: 6px; border: 0; color: #8b443c; background: transparent; font-size: 11px; cursor: pointer; }
+.shares button:hover { text-decoration: underline; }
+
+@media (max-width: 760px) {
+  .empty { grid-template-columns: auto 1fr; }
+  .empty .primary { grid-column: 1 / -1; }
+  .profile { grid-template-columns: 1fr; }
+  .profileAside { border-top: 1px solid #d9dfda; border-left: 0; }
+  .shares li { align-items: flex-start; flex-direction: column; }
+}

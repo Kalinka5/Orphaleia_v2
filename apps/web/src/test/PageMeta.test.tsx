@@ -5,6 +5,7 @@ import { getCanonicalPath } from '../seo'
 
 afterEach(() => {
   document.querySelector('link[rel="canonical"]')?.remove()
+  document.querySelector('meta[name="robots"]')?.remove()
 })
 
 describe('PageMeta', () => {
@@ -20,6 +21,13 @@ describe('PageMeta', () => {
     await waitFor(() => {
       expect(document.querySelector('link[rel="canonical"]')).not.toBeInTheDocument()
     })
+  })
+
+  it('marks shared results as noindex and restores the default on exit', async () => {
+    const view = render(<PageMeta title="Shared" description="Shared result." canonicalPath={null} noIndex />)
+    await waitFor(() => expect(document.querySelector('meta[name="robots"]')).toHaveAttribute('content', 'noindex, nofollow'))
+    view.rerender(<PageMeta title="Home" description="Home." canonicalPath="/" />)
+    await waitFor(() => expect(document.querySelector('meta[name="robots"]')).not.toBeInTheDocument())
   })
 })
 
