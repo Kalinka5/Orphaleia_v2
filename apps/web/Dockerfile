@@ -21,6 +21,8 @@ RUN npm run build
 RUN find dist/assets -maxdepth 1 -type f \( -name '*.js' -o -name '*.css' \) -exec gzip -k -6 {} \;
 
 FROM nginx:1.29-alpine AS production
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+ENV API_UPSTREAM=api:8000
+ENV NGINX_ENVSUBST_FILTER=^API_UPSTREAM$
+COPY nginx.conf /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 80

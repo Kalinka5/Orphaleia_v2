@@ -56,6 +56,8 @@ For real delivery, replace the Mailpit defaults with the SMTP server of your tra
 
 The production web image is an Nginx-served static build that proxies API and media paths to the FastAPI service. Run migrations as a release step, run one or more API containers, and keep exactly one reservation/email worker active unless adding worker-level locking.
 
+The web container defaults to the Docker Compose upstream `api:8000`. On Railway, set the web service variable `API_UPSTREAM=api.railway.internal:8000` so Nginx uses Railway's private service DNS without exposing the API publicly.
+
 ### Privacy-first analytics
 
 Production analytics uses an optional Umami Cloud EU tracker. Create one EU-region website in Umami, sign the Data Processing Agreement in the Umami account, and set these public build-time values:
