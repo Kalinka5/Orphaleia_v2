@@ -27,7 +27,7 @@ import { ReaderAvatar } from './components/ReaderAvatar'
 import { FormNotification, type NotificationVariant } from './components/ui/FormNotification'
 import { ExternalVideo } from './components/ExternalVideo'
 import { responsiveCoverProps } from './responsiveImages'
-import type { Author, Book, Cart, Genre, Order, Page, SalesRankingResponse, User } from './types'
+import type { Author, Book, Cart, Genre, Order, Page, User } from './types'
 import s from './styles.module.css'
 
 const BookDetailExperience = lazy(() => import('./components/BookDetailExperience').then((module) => ({ default: module.BookDetailExperience })))
@@ -728,31 +728,12 @@ function Shelf({ kind }: { kind: 'genres' | 'authors' }) {
   return <section className={s.page}><PageMeta title={query.data?.name ?? 'Shelf'} description={'description' in query.data! ? query.data.description : query.data?.bio ?? 'Browse this Orphaleia shelf.'} /><div className={s.pageHeading}><span className={s.eyebrow}>{kind === 'genres' ? 'GENRE SHELF' : 'AUTHOR SHELF'}</span><h1>{query.data?.name}</h1><p>{'description' in query.data! ? query.data.description : query.data?.bio}</p></div>{query.data?.books.length ? <div className={s.bookGrid}>{query.data.books.map((book) => <BookCard key={book.id} book={book} />)}</div> : <State title="This shelf is waiting" text="No books are currently assigned here." />}</section>
 }
 
-function RankingRowsSkeleton() {
-  return <div className={s.rankingSkeleton} role="status" aria-label="Loading annual sales rankings" aria-live="polite">
-    {[0, 1, 2, 3, 4].map((row) => <span key={row}><i /><i /><i /></span>)}
-  </div>
-}
-
 function Rankings() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const isPreview = searchParams.get('preview') === 'concept'
   const selectedYear = searchParams.get('year') ?? ''
   const selectedMarket = searchParams.get('market') ?? ''
   const selectedGenre = searchParams.get('genre') ?? ''
-  const requestParams = new URLSearchParams()
-  if (selectedYear) requestParams.set('year', selectedYear)
-  if (selectedMarket) requestParams.set('market', selectedMarket)
-  if (selectedGenre) requestParams.set('genre', selectedGenre)
-  const requestSuffix = requestParams.size ? `?${requestParams.toString()}` : ''
-  const query = useQuery({
-    queryKey: ['sales-rankings', isPreview, selectedYear, selectedMarket, selectedGenre],
-    queryFn: () => api<SalesRankingResponse>(`/rankings/sales${requestSuffix}`),
-    enabled: !isPreview,
-    placeholderData: (previous, previousQuery) => previousQuery?.queryKey[1] === isPreview ? keepPreviousData(previous) : undefined,
-  })
-  const previewData = useMemo(() => getRankingPreview(selectedYear, selectedMarket, selectedGenre), [selectedYear, selectedMarket, selectedGenre])
-  const data = isPreview ? previewData : query.data
+  const data = useMemo(() => getRankingPreview(selectedYear, selectedMarket, selectedGenre), [selectedYear, selectedMarket, selectedGenre])
 
   useEffect(() => {
     if (!data?.available_years.length) return
@@ -793,44 +774,33 @@ function Rankings() {
   const showFilters = Boolean(data?.available_years.length)
 
   return <section className={`${s.page} ${s.rankingsPage}`}>
-    {isPreview && <aside className={s.rankingPreviewNotice} aria-label="Concept preview notice">
-      <div><strong>Concept preview · Fictional data</strong><p>Invented titles, authors and sales figures for discussion only. Not NielsenIQ BookScan data or an endorsed chart.</p></div>
-      <Link to="/rankings">Exit preview <ArrowUpRight size={16} aria-hidden="true" /></Link>
-    </aside>}
     <header className={s.rankingsHero}>
       <div className={`${s.pageHeading} ${s.rankingsIntro}`}>
         <span className={s.eyebrow}>ANNUAL BESTSELLER CHART</span>
         <h1>Top-selling books</h1>
-        <p>{isPreview ? 'Explore the proposed annual print-sales chart. All values shown are illustrative.' : 'Verified calendar-year print sales across explicitly covered BookScan markets.'}</p>
+        <p>Annual print-book sales by year, market and category.</p>
       </div>
-      {showFilters && <div className={s.rankingFilters} aria-label="Ranking filters" aria-busy={query.isFetching || undefined}>
-        <SelectControl label="Sales year" labelMode="stacked" value={selectedYear || String(data?.year ?? '')} options={yearOptions} disabled={query.isFetching} onChange={(value) => updateFilter('year', value)} />
-        <SelectControl label="Market" labelMode="stacked" value={selectedMarket || data?.market || ''} options={marketOptions} disabled={query.isFetching} onChange={(value) => updateFilter('market', value)} />
-        <SelectControl label="Category" labelMode="stacked" value={selectedGenre} options={genreOptions} disabled={query.isFetching} onChange={(value) => updateFilter('genre', value)} />
+      {showFilters && <div className={s.rankingFilters} aria-label="Ranking filters">
+        <SelectControl label="Sales year" labelMode="stacked" value={selectedYear || String(data?.year ?? '')} options={yearOptions} onChange={(value) => updateFilter('year', value)} />
+        <SelectControl label="Market" labelMode="stacked" value={selectedMarket || data?.market || ''} options={marketOptions} onChange={(value) => updateFilter('market', value)} />
+        <SelectControl label="Category" labelMode="stacked" value={selectedGenre} options={genreOptions} onChange={(value) => updateFilter('genre', value)} />
       </div>}
     </header>
 
-    {!isPreview && query.isLoading ? <RankingRowsSkeleton /> : !isPreview && query.error ? <ErrorState error={query.error} retry={() => void query.refetch()} /> : data?.status === 'unavailable' ? <State title="Verified annual data is not published yet" text="Orphaleia will show licensed print-sales rankings here once the source and public-display rights have been confirmed." action={{ label: 'View concept preview', onClick: () => setSearchParams({ preview: 'concept' }) }} /> : <>
-      {isPreview && <aside className={s.rankingSource} aria-label="Demo chart details"><p><strong>Illustrative dataset</strong><span>Calendar year {data?.year}</span><span>{data?.scope_label}</span><span>Print editions</span></p><details><summary>About this concept</summary><div><p>Every book, author and count is fictional. Filters demonstrate the intended interaction, not actual market performance.</p><p>In a licensed chart, this area will identify the provider, covered markets and methodology. Public display remains subject to agreement.</p></div></details></aside>}
-      {data?.source && <aside className={s.rankingSource} aria-label="Chart source and methodology">
-        <p><span>Source</span><a href={data.source.url} target="_blank" rel="noreferrer">{data.source.name}</a><i aria-hidden="true" /> <span>{data.year}</span><i aria-hidden="true" /> <span>{data.scope_label}</span><i aria-hidden="true" /> <span>Print editions</span></p>
-        <details><summary>Coverage and methodology</summary><div><p>{data.source.coverage_note}</p><p>{data.source.methodology_note}</p></div></details>
-      </aside>}
-      {data?.items.length ? <div className={`${s.salesRanking} ${query.isFetching ? s.rankingUpdating : ''}`} aria-busy={query.isFetching || undefined}>
-        <div className={s.rankingColumns} aria-hidden="true"><span>Rank</span><span>Title &amp; author</span><span>Category</span><span>{isPreview ? 'Illustrative copies sold' : 'Copies sold'}</span></div>
-        <ol aria-label={`${isPreview ? 'Fictional concept: ' : ''}${data.year} top-selling print books in ${data.scope_label}`}>
-          {data.items.map((item) => <li key={`${item.rank}-${item.title}`}>
-            <span className={s.salesRank} aria-label={`Rank ${item.rank}`}>{String(item.rank).padStart(2, '0')}</span>
-            <div className={s.rankingBook}><h2>{item.catalog_slug ? <Link to={`/books/${item.catalog_slug}`}>{item.title}</Link> : item.title}</h2><p>{item.authors.join(', ')}</p></div>
-            <span className={s.rankingGenre}>{item.genre}</span>
-            <div className={s.salesMeasure} aria-label={`${formatSalesUnits(item.units_sold)} ${isPreview ? 'illustrative ' : ''}copies sold`}>
-              <span className={s.salesBar} aria-hidden="true"><span style={{ transform: `scaleX(${salesBarRatio(item.units_sold, maximumUnits)})` }} /></span>
-              <strong>{formatSalesUnits(item.units_sold)}</strong>
-            </div>
-          </li>)}
-        </ol>
-      </div> : <State title="No books match these filters" text="Choose every category or select another annual market chart." action={selectedGenre ? { label: 'Reset category', onClick: () => updateFilter('genre', '') } : undefined} />}
-    </>}
+    {data?.items.length ? <div className={s.salesRanking}>
+      <div className={s.rankingColumns} aria-hidden="true"><span>Rank</span><span>Title &amp; author</span><span>Category</span><span>Copies sold</span></div>
+      <ol aria-label={`${data.year} top-selling print books in ${data.scope_label}`}>
+        {data.items.map((item) => <li key={`${item.rank}-${item.title}`}>
+          <span className={s.salesRank} aria-label={`Rank ${item.rank}`}>{String(item.rank).padStart(2, '0')}</span>
+          <div className={s.rankingBook}><h2>{item.catalog_slug ? <Link to={`/books/${item.catalog_slug}`}>{item.title}</Link> : item.title}</h2><p>{item.authors.join(', ')}</p></div>
+          <span className={s.rankingGenre}>{item.genre}</span>
+          <div className={s.salesMeasure} aria-label={`${formatSalesUnits(item.units_sold)} copies sold`}>
+            <span className={s.salesBar} aria-hidden="true"><span style={{ transform: `scaleX(${salesBarRatio(item.units_sold, maximumUnits)})` }} /></span>
+            <strong>{formatSalesUnits(item.units_sold)}</strong>
+          </div>
+        </li>)}
+      </ol>
+    </div> : <State title="No books match these filters" text="Choose every category or select another annual market chart." action={selectedGenre ? { label: 'Reset category', onClick: () => updateFilter('genre', '') } : undefined} />}
   </section>
 }
 

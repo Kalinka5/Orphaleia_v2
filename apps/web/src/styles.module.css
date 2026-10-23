@@ -1320,30 +1320,14 @@
   .tableRow > div:last-child { min-width: 0; }
 }
 
-/* Licensed annual bestseller chart. */
+/* Annual bestseller chart. */
 .rankingsPage { margin-inline: auto; }
 .rankingsHero { min-height: clamp(20rem, 29vw, 25rem); margin-bottom: 54px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(520px, .78fr); align-items: center; gap: clamp(44px, 7vw, 110px); border-bottom: 1px solid var(--line); }
 .rankingsIntro { max-width: 850px; margin: 0; }
-.rankingPreviewNotice { margin-bottom: 32px; padding: 18px 22px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; color: #173f31; background: #eef5f1; border: 1px solid #b9d1c5; border-radius: 10px; }
-.rankingPreviewNotice > div { flex: 1 1 280px; }
-.rankingPreviewNotice strong { font-size: 14px; }
-.rankingPreviewNotice p { max-width: 80ch; margin: 6px 0 0; font-size: 13px; line-height: 1.6; }
-.rankingPreviewNotice a { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-size: 13px; font-weight: 600; text-underline-offset: 4px; }
 .rankingsIntro h1 { text-wrap: balance; }
 .rankingsIntro p { text-wrap: pretty; }
 .rankingFilters { display: grid; grid-template-columns: .8fr 1.25fr 1.15fr; gap: 14px; transition: opacity .2s ease; }
-.rankingFilters[aria-busy='true'] { opacity: .62; }
-.rankingSource { margin-bottom: 32px; padding: 18px 20px; color: #34443d; background: #eef5f1; border-left: 3px solid var(--bronze); border-radius: 0 10px 10px 0; font-size: 12px; }
-.rankingSource > p { margin: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 9px; }
-.rankingSource > p span:first-child { color: #5f7068; font: 500 9px 'JetBrains Mono', monospace; letter-spacing: .1em; text-transform: uppercase; }
-.rankingSource a { color: #173f31; font-weight: 600; text-underline-offset: 3px; }
-.rankingSource i { width: 3px; height: 3px; display: inline-block; background: #83a394; border-radius: 50%; }
-.rankingSource details { margin-top: 10px; }
-.rankingSource summary { width: fit-content; color: #285f4c; cursor: pointer; font-weight: 600; }
-.rankingSource details > div { max-width: 86ch; padding: 8px 0 1px; color: #55655e; line-height: 1.55; }
-.rankingSource details p { margin: 5px 0; }
 .salesRanking { transition: opacity .2s ease, transform .2s ease; }
-.rankingUpdating { opacity: .58; transform: translateY(2px); }
 .rankingColumns, .salesRanking li { display: grid; grid-template-columns: 64px minmax(280px, 1fr) 180px minmax(210px, 280px); gap: clamp(16px, 2.6vw, 40px); align-items: center; }
 .rankingColumns { min-height: 54px; padding: 0 16px; color: #697871; border-bottom: 1px solid var(--line); font: 600 10px 'JetBrains Mono', monospace; letter-spacing: .09em; text-transform: uppercase; }
 .rankingColumns span:last-child { text-align: right; }
@@ -1361,13 +1345,6 @@
 .salesBar { position: absolute; inset: 0; display: block; background: #f2f3ee; border-radius: inherit; overflow: hidden; }
 .salesBar > span { position: absolute; inset: 0; display: block; background: #cfe1d8; border-radius: inherit; transform-origin: right center; transition: transform .48s cubic-bezier(.22,.8,.24,1); }
 .salesMeasure strong { padding: 0 14px; position: relative; z-index: 1; color: #17231e; font: 600 15px 'JetBrains Mono', monospace; }
-.rankingSkeleton { min-height: 580px; border-top: 1px solid var(--line); }
-.rankingSkeleton > span { min-height: 116px; padding: 25px 16px; display: grid; grid-template-columns: 64px 1fr 240px; align-items: center; gap: 32px; border-bottom: 1px solid var(--line); }
-.rankingSkeleton i { height: 18px; display: block; background: linear-gradient(90deg, #e8e6df 24%, #f6f3eb 45%, #e8e6df 66%); background-size: 240% 100%; border-radius: 6px; animation: rankingShimmer 1.3s ease-in-out infinite; }
-.rankingSkeleton i:first-child { width: 32px; }
-.rankingSkeleton i:nth-child(2) { width: min(70%, 420px); height: 28px; }
-.rankingSkeleton i:last-child { width: 100%; height: 50px; }
-@keyframes rankingShimmer { to { background-position: -120% 0; } }
 
 @media (max-width: 1050px) {
   .rankingsHero { grid-template-columns: 1fr; align-items: start; gap: 34px; }
@@ -1378,9 +1355,6 @@
 @media (max-width: 760px) {
   .rankingsHero { margin-bottom: 24px; gap: 28px; }
   .rankingFilters { grid-template-columns: 1fr; gap: 10px; }
-  .rankingSource { padding: 16px; }
-  .rankingSource > p { align-items: flex-start; flex-direction: column; gap: 5px; }
-  .rankingSource i { display: none; }
   .rankingColumns { display: none; }
   .salesRanking { border-top: 1px solid var(--line); }
   .salesRanking li { min-height: 0; padding: 22px 4px; grid-template-columns: 42px minmax(0, 1fr); gap: 12px 10px; align-items: start; }
@@ -1390,13 +1364,8 @@
   .rankingGenre { grid-column: 2; }
   .salesMeasure { height: 48px; grid-column: 2; margin-top: 2px; }
   .salesMeasure strong { font-size: 13px; }
-  .rankingSkeleton { min-height: 500px; }
-  .rankingSkeleton > span { min-height: 100px; padding: 20px 4px; grid-template-columns: 38px 1fr; gap: 12px; }
-  .rankingSkeleton i:nth-child(2) { width: 80%; }
-  .rankingSkeleton i:last-child { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .rankingSkeleton i { animation: none; }
   .salesBar > span, .salesRanking { transition: none; }
 }

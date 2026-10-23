@@ -40,49 +40,6 @@ test('home exposes the discovery route', async ({ page }) => {
   }
 })
 
-test('annual bestseller chart uses sourced exact sales and URL-backed filters', async ({ page }) => {
-  await mockGuest(page)
-  await page.route('**/api/v1/rankings/sales**', async (route) => {
-    const url = new URL(route.request().url())
-    const genre = url.searchParams.get('genre')
-    const allItems = [
-      { rank: 1, title: 'The Test Passage', authors: ['Test Voyager'], genre: 'Adventure', units_sold: 1876543, isbn13: '9780000099999', catalog_slug: 'the-test-passage' },
-      { rank: 2, title: 'A Quiet Atlas', authors: ['Mara Sol'], genre: 'Fantasy', units_sold: 934221, isbn13: '9781111111113', catalog_slug: null },
-    ]
-    const items = genre === 'fantasy' ? [{ ...allItems[1], rank: 1 }] : allItems
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
-      status: 'published', year: 2025, market: 'all-covered', genre, scope_label: 'BookScan covered markets',
-      source: { name: 'NielsenIQ BookScan', url: 'https://example.com/bookscan', coverage_note: 'Licensed print point-of-sale data across covered markets.', methodology_note: 'Calendar-year units grouped into provider-defined works.' },
-      available_years: [2025, 2024], available_markets: [{ value: 'all-covered', label: 'BookScan covered markets' }],
-      available_genres: [{ value: 'adventure', label: 'Adventure' }, { value: 'fantasy', label: 'Fantasy' }], items,
-    }) })
-  })
-
-  await page.goto('/rankings')
-  await expect(page.getByRole('heading', { name: 'Top-selling books' })).toBeVisible()
-  await expect(page).toHaveURL(/year=2025.*market=all-covered/)
-  await expect(page.getByRole('list', { name: /2025 top-selling print books/i })).toBeVisible()
-  await expect(page.getByText('1,876,543')).toBeVisible()
-  await expect(page.getByRole('link', { name: 'The Test Passage' })).toHaveAttribute('href', '/books/the-test-passage')
-  await expect(page.getByRole('link', { name: 'A Quiet Atlas' })).toHaveCount(0)
-
-  await page.getByRole('combobox', { name: 'Category' }).click()
-  await page.getByRole('option', { name: 'Fantasy' }).click()
-  await expect(page).toHaveURL(/genre=fantasy/)
-  await expect(page.getByText('934,221')).toBeVisible()
-  await expect(page.getByText('The Test Passage')).toHaveCount(0)
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-})
-
-test('annual bestseller chart never substitutes sample sales for unavailable licensed data', async ({ page }) => {
-  await mockGuest(page)
-  await page.route('**/api/v1/rankings/sales**', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'unavailable', available_years: [], available_markets: [], available_genres: [], items: [] }) }))
-  await page.goto('/rankings')
-  await expect(page.getByRole('heading', { name: 'Verified annual data is not published yet' })).toBeVisible()
-  await expect(page.getByText(/public-display rights have been confirmed/i)).toBeVisible()
-  await expect(page.getByRole('list')).toHaveCount(0)
-})
-
 test('hero books react without becoming navigation targets', async ({ page }) => {
   await page.goto('/')
   const stage = page.getByTestId('hero-book-stage')

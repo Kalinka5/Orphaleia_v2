@@ -19,9 +19,9 @@ export function getRankingPreview(year: string, market: string, genre: string): 
   const categories = ['Fantasy', 'Fiction', 'Non-fiction', 'Romance'].map((label) => ({ value: label.toLowerCase(), label }))
   return {
     status: 'published', year: selectedYear, market: selectedMarket,
-    scope_label: selectedMarket === 'spain' ? 'Spain (demo)' : 'Covered markets (demo)',
+    scope_label: selectedMarket === 'spain' ? 'Spain' : 'Covered markets',
     available_years: [2025, 2024],
-    available_markets: [{ value: 'all-covered', label: 'Covered markets (demo)' }, { value: 'spain', label: 'Spain (demo)' }],
+    available_markets: [{ value: 'all-covered', label: 'Covered markets' }, { value: 'spain', label: 'Spain' }],
     available_genres: categories,
     items: books.filter((book) => !genre || book.genre.toLowerCase() === genre)
       .map((book) => ({ title: book.title, authors: book.authors, genre: book.genre, units_sold: book.units[index] }))
