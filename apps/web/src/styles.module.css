@@ -1322,7 +1322,7 @@
 
 /* Annual bestseller chart. */
 .rankingsPage { margin-inline: auto; }
-.rankingsHero { min-height: clamp(20rem, 29vw, 25rem); margin-bottom: 54px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(520px, .78fr); align-items: center; gap: clamp(44px, 7vw, 110px); border-bottom: 1px solid var(--line); }
+.rankingsHero { padding-bottom: 24px; margin-bottom: 16px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(520px, .78fr); align-items: center; gap: clamp(44px, 7vw, 110px); border-bottom: 1px solid var(--line); }
 .rankingsIntro { max-width: 850px; margin: 0; }
 .rankingsIntro h1 { text-wrap: balance; }
 .rankingsIntro p { text-wrap: pretty; }
@@ -1353,7 +1353,7 @@
 }
 
 @media (max-width: 760px) {
-  .rankingsHero { margin-bottom: 24px; gap: 28px; }
+  .rankingsHero { gap: 28px; }
   .rankingFilters { grid-template-columns: 1fr; gap: 10px; }
   .rankingColumns { display: none; }
   .salesRanking { border-top: 1px solid var(--line); }
