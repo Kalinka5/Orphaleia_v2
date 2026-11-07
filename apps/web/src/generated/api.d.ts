@@ -381,6 +381,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/book-oracle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Book Oracle Intro */
+        get: operations["book_oracle_intro_api_v1_book_oracle_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/book-oracle/step": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Book Oracle Step */
+        post: operations["book_oracle_step_api_v1_book_oracle_step_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/reading-current": {
         parameters: {
             query?: never;
@@ -1214,6 +1248,144 @@ export interface components {
             email: string;
             /** Password */
             password: string;
+        };
+        /** OracleAnswerEvent */
+        OracleAnswerEvent: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "answer";
+            /** Question Id */
+            question_id: string;
+            /**
+             * Answer
+             * @enum {string}
+             */
+            answer: "yes" | "no" | "probably" | "probably-not" | "unknown";
+        };
+        /** OracleBook */
+        OracleBook: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /** Author */
+            author: string;
+            /** Explanation */
+            explanation: string;
+            /** Shop Slug */
+            shop_slug?: string | null;
+        };
+        /** OracleChoice */
+        OracleChoice: {
+            /**
+             * Id
+             * @enum {string}
+             */
+            id: "yes" | "no" | "probably" | "probably-not" | "unknown";
+            /** Label */
+            label: string;
+        };
+        /** OracleDefeatState */
+        OracleDefeatState: {
+            /** Version */
+            version: string;
+            /** Question Count */
+            question_count: number;
+            /** Guess Count */
+            guess_count: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            status: "defeat";
+            /** Message */
+            message: string;
+        };
+        /** OracleGuessEvent */
+        OracleGuessEvent: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "guess";
+            /** Book Id */
+            book_id: string;
+            /** Correct */
+            correct: boolean;
+        };
+        /** OracleGuessState */
+        OracleGuessState: {
+            /** Version */
+            version: string;
+            /** Question Count */
+            question_count: number;
+            /** Guess Count */
+            guess_count: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            status: "guess";
+            book: components["schemas"]["OracleBook"];
+        };
+        /** OracleManifest */
+        OracleManifest: {
+            /** Version */
+            version: string;
+            /** Title */
+            title: string;
+            /** Introduction */
+            introduction: string;
+            /** Library Size */
+            library_size: number;
+            /** Choices */
+            choices: components["schemas"]["OracleChoice"][];
+        };
+        /** OracleQuestion */
+        OracleQuestion: {
+            /** Id */
+            id: string;
+            /** Prompt */
+            prompt: string;
+        };
+        /** OracleQuestionState */
+        OracleQuestionState: {
+            /** Version */
+            version: string;
+            /** Question Count */
+            question_count: number;
+            /** Guess Count */
+            guess_count: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            status: "question";
+            question: components["schemas"]["OracleQuestion"];
+        };
+        /** OracleStepInput */
+        OracleStepInput: {
+            /** Version */
+            version: string;
+            /** Events */
+            events?: (components["schemas"]["OracleAnswerEvent"] | components["schemas"]["OracleGuessEvent"])[];
+        };
+        /** OracleSuccessState */
+        OracleSuccessState: {
+            /** Version */
+            version: string;
+            /** Question Count */
+            question_count: number;
+            /** Guess Count */
+            guess_count: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            status: "success";
+            book: components["schemas"]["OracleBook"];
         };
         /** OrderStatusInput */
         OrderStatusInput: {
@@ -2073,6 +2245,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    book_oracle_intro_api_v1_book_oracle_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OracleManifest"];
+                };
+            };
+        };
+    };
+    book_oracle_step_api_v1_book_oracle_step_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OracleStepInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OracleQuestionState"] | components["schemas"]["OracleGuessState"] | components["schemas"]["OracleSuccessState"] | components["schemas"]["OracleDefeatState"];
                 };
             };
             /** @description Validation Error */

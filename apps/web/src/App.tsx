@@ -6,6 +6,7 @@ import { api, apiFieldError, errorMessage, money } from './api'
 import { portfolioDemoAddress } from './address'
 import { trackAnalytics } from './analytics'
 import { BookHeroScene, type HeroBook } from './components/BookHeroScene'
+import { BookOracleInvitation } from './components/BookOracleInvitation'
 import { AuthorShowcase } from './components/AuthorShowcase'
 import { GenreDirectory } from './components/GenreDirectory'
 import { PageMeta } from './components/PageMeta'
@@ -31,6 +32,7 @@ import type { Author, Book, Cart, Genre, Order, Page, User } from './types'
 import s from './styles.module.css'
 
 const BookDetailExperience = lazy(() => import('./components/BookDetailExperience').then((module) => ({ default: module.BookDetailExperience })))
+const BookOracle = lazy(() => import('./components/BookOracle'))
 const AccountHub = lazy(() => import('./components/AccountHub').then((module) => ({ default: module.AccountHub })))
 const ReadingCurrentExperience = lazy(() => import('./components/ReadingCurrentExperience').then((module) => ({ default: module.ReadingCurrentExperience })))
 const ReadingCurrentShared = lazy(() => import('./components/ReadingCurrentExperience').then((module) => ({ default: module.ReadingCurrentShared })))
@@ -112,7 +114,7 @@ function Layout({ children }: { children: ReactNode }) {
       </> : <>
         <button ref={menuButtonRef} className={s.menuButton} onClick={() => setMenu(!menu)} aria-expanded={menu} aria-controls="main-navigation" aria-label={menu ? 'Close navigation' : 'Open navigation'}>Menu</button>
         <nav ref={navRef} id="main-navigation" className={`${s.nav} ${menu ? s.navOpen : ''}`} aria-label="Main navigation" onClick={() => setMenu(false)}>
-          <NavLink to="/books">All books</NavLink><NavLink to="/genres">Genres</NavLink><NavLink to="/authors">Authors</NavLink><NavLink to="/rankings">Bestseller charts</NavLink>
+          <NavLink to="/books">All books</NavLink><NavLink to="/genres">Genres</NavLink><NavLink to="/authors">Authors</NavLink><NavLink to="/rankings">Bestseller charts</NavLink><NavLink to="/book-oracle">Book Oracle</NavLink>
           {user ? <>
             <NavLink className={s.mobileNavSession} to="/account">Your account</NavLink>
             {user.role === 'admin' && <NavLink className={s.mobileNavSession} to="/admin">Shop admin</NavLink>}
@@ -130,7 +132,7 @@ function Layout({ children }: { children: ReactNode }) {
     {!isAuthRoute && <footer className={s.footer}>
       <div className={s.footerLead}><div className={s.footerBrand}>Orphaleia</div><p>A fictional storefront created to demonstrate product design and engineering.</p></div>
       <div><b>Browse</b><Link to="/books">All books</Link><Link to="/rankings">Bestseller charts</Link><Link to="/genres">Collections</Link></div>
-      <div><b>Explore</b><Link to="/authors">Featured authors</Link><Link to="/account">Demo account</Link><span>No sales or delivery</span></div>
+      <div><b>Explore</b><Link to="/authors">Featured authors</Link><Link to="/book-oracle">Book Oracle</Link><Link to="/account">Demo account</Link><span>No sales or delivery</span></div>
       <div><b>About</b><Link to="/privacy">Demo privacy note</Link><Link to="/terms">Portfolio demo notice</Link><span>Created for portfolio review</span></div>
       <p className={s.copyright}>© 2026 Orphaleia concept. Portfolio demonstration only.</p>
     </footer>}
@@ -142,6 +144,7 @@ function getRouteMeta(pathname: string) {
   if (pathname === '/books' || pathname === '/all-books') return { title: 'All books', description: 'Search Orphaleia’s complete catalogue by title, author, genre, rating, and availability.' }
   if (pathname.startsWith('/books/')) return { title: 'Book details', description: 'Read about this Orphaleia edition, reader ratings, and related books.' }
   if (pathname === '/genres') return { title: 'Genres', description: 'Explore literary collections and follow a new reading current.' }
+  if (pathname === '/book-oracle') return { title: 'The Book Oracle', description: 'Think of a book and let Orphaleia’s oracle follow your clues. A literary guessing game with 100 well-known stories.' }
   if (pathname === '/reading-current') return { title: 'Find Your Reading Current', description: 'Answer eight illustrated questions and discover your closest Orphaleia genres and books.' }
   if (pathname.startsWith('/reading-current/shared/')) return { title: 'A Shared Reading Current', description: 'A reader has shared an Orphaleia reading current.' }
   if (pathname.startsWith('/genres/')) return { title: 'Genre collection', description: 'Browse books from this Orphaleia collection.' }
@@ -510,6 +513,8 @@ function Home() {
           </div>
         </div>}
     </section>
+
+    <BookOracleInvitation />
 
     <section className={s.collectionStory} aria-labelledby="collection-story-title">
       <div className={s.collectionIntro} data-testid="collection-intro">
@@ -1222,7 +1227,7 @@ export default function App() {
   return <AuthProvider><Layout><Suspense fallback={<State title="Opening this passage…" loading viewport />}><Routes>
     <Route path="/" element={<Home />} /><Route path="/books" element={<Catalog />} /><Route path="/all-books" element={<Catalog />} /><Route path="/books/:slug" element={<BookPage />} />
     <Route path="/genres" element={<Directory kind="genres" />} /><Route path="/genres/:slug" element={<Shelf kind="genres" />} /><Route path="/authors" element={<Directory kind="authors" />} /><Route path="/authors/:slug" element={<Shelf kind="authors" />} /><Route path="/rankings" element={<Rankings />} />
-    <Route path="/reading-current" element={<ReadingCurrentPage />} /><Route path="/reading-current/shared/:token" element={<ReadingCurrentShared />} />
+    <Route path="/book-oracle" element={<BookOracle />} /><Route path="/reading-current" element={<ReadingCurrentPage />} /><Route path="/reading-current/shared/:token" element={<ReadingCurrentShared />} />
     <Route path="/sign-in" element={<AuthPage />} /><Route path="/register" element={<Navigate to="/sign-in" replace />} /><Route path="/verify" element={<Navigate to="/sign-in" replace />} /><Route path="/forgot-password" element={<Navigate to="/sign-in" replace />} /><Route path="/reset-password" element={<Navigate to="/sign-in" replace />} /><Route path="/confirm-email-change" element={<Navigate to="/sign-in" replace />} />
     <Route path="/cart" element={<RequireUser><CartPage /></RequireUser>} /><Route path="/checkout" element={<RequireUser><Checkout /></RequireUser>} /><Route path="/payment/return" element={<PaymentReturn />} /><Route path="/account" element={<RequireUser><Account /></RequireUser>} />
     <Route path="/privacy" element={<PrivacyPolicyPage />} /><Route path="/terms" element={<TermsPage />} />

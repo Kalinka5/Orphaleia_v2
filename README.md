@@ -2,6 +2,8 @@
 
 An Odyssey-inspired physical book shop built with FastAPI, React, PostgreSQL, Stripe, and PayPal. The repository includes the customer storefront, reader accounts, yearly rating history, comments, checkout, a staff console, image storage, a background worker, transactional email, and original demo content.
 
+**The Book Oracle** at `/book-oracle` is a separate guest guessing game. Think of one of 100 well-known books and answer adaptive questions while Orphaleia’s illustrated oracle follows your clues. Rounds resume in the same browser tab, and the game uses a curated, sourced library without external AI calls. See [the oracle guide](docs/book-oracle.md).
+
 ## Run the complete shop
 
 1. Run `make demo` to create an ignored local environment with generated secrets, seed the demo catalog, and start the stack with mock payments.

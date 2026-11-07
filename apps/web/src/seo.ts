@@ -4,6 +4,7 @@ const INDEXABLE_ROUTES = new Set([
   '/genres',
   '/authors',
   '/rankings',
+  '/book-oracle',
   '/privacy',
   '/terms',
 ])

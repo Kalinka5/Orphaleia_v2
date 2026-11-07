@@ -21,6 +21,8 @@ from sqlalchemy import func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
+from .book_oracle import introduction as oracle_introduction
+from .book_oracle import step as oracle_step
 from .config import settings
 from .database import Base, engine, get_db
 from .email_templates import verification_email
@@ -49,6 +51,7 @@ from .models import (
     ShippingZone,
     User,
 )
+from .oracle_schemas import OracleManifest, OracleState, OracleStepInput
 from .reading_current import (
     QUIZ_VERSION,
     TOTAL_STEPS,
@@ -695,6 +698,16 @@ def genre_detail(slug: str, db: Session = Depends(get_db)):
     if not genre:
         raise HTTPException(404, "Genre not found")
     return {**genre_out(genre), "books": [book_out(db, x) for x in genre.books if x.active]}
+
+
+@app.get("/api/v1/book-oracle", response_model=OracleManifest)
+def book_oracle_intro():
+    return oracle_introduction()
+
+
+@app.post("/api/v1/book-oracle/step", response_model=OracleState, dependencies=[Depends(throttle(120, 60, "book-oracle:step:ip"))])
+def book_oracle_step(data: OracleStepInput, db: Session = Depends(get_db)):
+    return oracle_step(data, db)
 
 
 @app.get("/api/v1/reading-current")

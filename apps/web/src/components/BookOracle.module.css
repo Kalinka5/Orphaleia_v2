@@ -1,0 +1,95 @@
+.page { --oracle-bg: #f7f4eb; --oracle-text: #111827; --oracle-muted: #56635b; --oracle-accent: #285f4c; --oracle-surface: #fdfbf7; --oracle-line: #d8ded5; background: var(--oracle-bg); color: var(--oracle-text); padding: 28px clamp(22px, 5vw, 80px) 36px; }
+.topline { max-width: 1280px; margin: auto; display: flex; justify-content: space-between; align-items: center; gap: 20px; font-size: 12px; color: var(--oracle-muted); }
+.topline a, .topline > span { display: inline-flex; align-items: center; gap: 9px; text-decoration: none; }
+.topline a:hover { color: var(--oracle-accent); text-decoration: underline; }
+.stage { max-width: 1280px; margin: 25px auto 30px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: clamp(32px, 5vw, 80px); align-items: center; min-height: 570px; }
+.portrait { position: relative; min-width: 0; align-self: center; isolation: isolate; padding-bottom: 56px; }
+.portraitCircle { position: absolute; z-index: -1; width: 85%; aspect-ratio: 1; border: 1px solid var(--oracle-line); border-radius: 50%; top: 9%; left: 7%; background: #e6ecdf; box-shadow: 0 0 0 18px var(--oracle-bg), 0 0 0 19px var(--oracle-line); }
+.oracle { width: 100%; height: auto; aspect-ratio: 1; object-fit: contain; position: relative; filter: drop-shadow(0 15px 18px #23382c15); }
+.portraitCaption { margin: 2px 0 0; position: absolute; bottom: 0; left: 10%; font-size: 12px; line-height: 1.7; color: var(--oracle-accent); }
+.portraitCaption span { color: var(--oracle-muted); }
+.conversation { max-width: 590px; padding: 22px 0; min-width: 0; }
+.eyebrow { margin: 0 0 23px; display: flex; align-items: center; gap: 9px; font: 500 10px/1.6 'JetBrains Mono', monospace; letter-spacing: .1em; text-transform: uppercase; color: var(--oracle-accent); }
+.conversation h1 { font-size: clamp(34px, 3.7vw, 54px); font-weight: 500; letter-spacing: -.055em; line-height: 1.13; margin: 0 0 22px; outline: none; text-wrap: balance; }
+.conversation h1 span { color: var(--oracle-accent); }
+.lead { font-size: 16px; line-height: 1.8; max-width: 450px; color: var(--oracle-muted); margin: 0 0 24px; }
+.instructions { font-size: 13px; line-height: 1.8; max-width: 440px; color: var(--oracle-muted); margin: 0 0 28px; }
+.primary, .secondary { min-height: 48px; padding: 13px 20px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; gap: 15px; font-size: 13px; font-weight: 500; text-decoration: none; border: 1px solid transparent; transition: background .2s, transform .2s; }
+.primary { color: #fdfbf7; background: var(--oracle-accent, #285f4c); }
+.primary:hover { background: #204c3d; }
+.secondary { color: var(--oracle-text); border-color: var(--oracle-line); background: var(--oracle-surface); }
+.secondary:hover { background: #e6ecdf; }
+.primary:active, .secondary:active { transform: scale(.98); }
+.page :is(button, a):focus-visible { outline: 2px solid var(--oracle-accent); outline-offset: 4px; }
+.fine { font-size: 10px; line-height: 1.6; margin: 17px 0 0; color: var(--oracle-muted); }
+.conversation h1.question { font-size: clamp(28px, 3vw, 43px); line-height: 1.23; margin-bottom: 14px; }
+.hint { font-size: 12px; line-height: 1.7; color: var(--oracle-muted); margin: 0 0 25px; }
+.answers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.answers button { display: flex; align-items: center; justify-content: space-between; gap: 20px; text-align: left; min-height: 54px; padding: 12px 18px; border: 1px solid var(--oracle-line); background: var(--oracle-surface); color: var(--oracle-text); border-radius: 8px; font-size: 14px; transition: background .2s, border-color .2s, transform .2s; }
+.answers button:hover { background: #e2ebdf; border-color: var(--oracle-accent); }
+.answers button:active { transform: scale(.98); }
+.answers button.definite { font-weight: 600; }
+.answers button:last-child { grid-column: 1 / -1; color: var(--oracle-muted); }
+.guessLabel { margin: 0 0 13px; color: var(--oracle-muted); font-size: 14px; }
+.conversation h1.bookTitle { font-size: clamp(34px, 3.5vw, 50px); margin-bottom: 12px; }
+.author { font-size: 16px; color: var(--oracle-accent); margin: 0 0 24px; }
+.explanation { color: var(--oracle-muted); font-size: 13px; line-height: 1.8; margin: 0 0 25px; }
+.confirmation { display: flex; flex-wrap: wrap; gap: 10px; }
+.bookLink { margin-top: 25px; display: flex; align-items: center; width: fit-content; gap: 10px; color: var(--oracle-accent); font-size: 12px; text-underline-offset: 5px; }
+.success { color: var(--oracle-muted); font-size: 13px; line-height: 1.8; margin-bottom: 22px; }
+.requestStatus { min-height: 20px; color: var(--oracle-accent); font-size: 12px; margin: 18px 0 0; }
+.controls { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--oracle-line); margin-top: 16px; padding-top: 15px; gap: 12px; }
+.controls > span { color: var(--oracle-muted); font-size: 10px; }
+.textButton { background: transparent; border: 0; color: var(--oracle-accent); display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 3px 0; font-size: 12px; }
+.textButton:hover { text-decoration: underline; text-underline-offset: 4px; }
+.note, .error { padding: 14px 16px; font-size: 12px; line-height: 1.7; border-radius: 8px; margin: 15px 0; }
+.note { background: var(--oracle-surface); color: var(--oracle-muted); border: 1px solid var(--oracle-line); }
+.error { color: #8a2f18; background: #fff0eb; border: 1px solid #e1bbae; }
+.error p { margin: 0 0 10px; }
+.loading { color: var(--oracle-muted); font-size: 13px; min-height: 48px; }
+.bottomNote { max-width: 1280px; margin: 0 auto; padding-top: 24px; border-top: 1px solid var(--oracle-line); display: flex; justify-content: space-between; gap: 22px; color: var(--oracle-muted); font-size: 11px; line-height: 1.7; }
+.bottomNote > span { color: var(--oracle-accent); white-space: nowrap; }
+.bottomNote p { margin: 0; }
+.invitation { color: #111827; background: #eef2e9; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: center; overflow: hidden; padding: 45px clamp(28px, 7vw, 112px) 0; }
+.invitationCopy { padding: 35px 0 65px; max-width: 500px; }
+.invitationCopy .eyebrow { color: #285f4c; }
+.invitation h2 { font: 500 clamp(36px, 4.3vw, 64px)/1.06 Inter, sans-serif; letter-spacing: -.055em; margin: 0 0 24px; }
+.invitationCopy > p:not(.eyebrow) { font-size: 14px; line-height: 1.8; color: #56635b; margin: 0 0 28px; }
+.invitationArt { align-self: end; width: min(100%, 550px); justify-self: center; }
+.invitationArt img { aspect-ratio: 1; object-fit: contain; width: 100%; height: auto; }
+@media (prefers-reduced-motion: no-preference) {
+  .conversation h1 { animation: question-arrive .3s ease-out; }
+  @keyframes question-arrive { from { transform: translateY(7px); } to { transform: translateY(0); } }
+}
+@media (prefers-color-scheme: dark) {
+  .page { --oracle-bg: #15251f; --oracle-text: #f2f2e8; --oracle-muted: #b8c7bd; --oracle-accent: #b1d7bf; --oracle-surface: #20362b; --oracle-line: #3c5547; }
+  .page .primary { color: #15251f; background: #b1d7bf; }
+  .page .primary:hover { background: #c9e5d1; }
+  .portraitCircle { background: #263c30; }
+  .answers button:hover, .page .secondary:hover { background: #304d3d; }
+  .error { color: #ffd9ca; background: #442d27; border-color: #815c4b; }
+}
+@media (max-width: 1050px) {
+  .stage { gap: 35px; min-height: 560px; }
+}
+@media (max-width: 760px) {
+  .page { padding: 20px 22px 28px; }
+  .topline > span { display: none; }
+  .stage { grid-template-columns: 1fr; gap: 0; margin: 10px auto 28px; min-height: 0; }
+  .portrait { padding: 0; width: min(58vw, 250px); justify-self: center; margin: 5px 0 12px; }
+  .portraitCircle { box-shadow: 0 0 0 8px var(--oracle-bg), 0 0 0 9px var(--oracle-line); }
+  .portraitCaption { display: none; }
+  .conversation { max-width: 560px; width: 100%; margin: 0 auto; padding: 8px 0 0; }
+  .eyebrow { margin-bottom: 15px; font-size: 9px; }
+  .conversation h1 { font-size: clamp(31px, 7.8vw, 44px); margin-bottom: 17px; }
+  .conversation h1.question { font-size: clamp(25px, 6.5vw, 34px); }
+  .lead { font-size: 14px; line-height: 1.7; margin-bottom: 16px; }
+  .instructions { font-size: 12px; margin-bottom: 20px; }
+  .hint { font-size: 11px; margin-bottom: 18px; }
+  .answers button { min-height: 48px; font-size: 13px; padding: 11px 15px; }
+  .bottomNote { display: block; padding-top: 20px; }
+  .bottomNote p { margin-top: 5px; }
+  .invitation { grid-template-columns: 1fr; gap: 0; padding: 35px 28px 0; }
+  .invitationCopy { padding: 0; }
+  .invitationArt { width: min(85%, 360px); margin-top: 15px; }
+}

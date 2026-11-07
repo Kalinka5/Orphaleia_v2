@@ -1,0 +1,412 @@
+{
+  "manifest": {
+    "version": "oracle-2",
+    "title": "The Book Oracle",
+    "introduction": "Think of a book. Keep its title secret.",
+    "library_size": 100,
+    "choices": [
+      {
+        "id": "yes",
+        "label": "Yes"
+      },
+      {
+        "id": "no",
+        "label": "No"
+      },
+      {
+        "id": "probably",
+        "label": "Probably"
+      },
+      {
+        "id": "probably-not",
+        "label": "Probably not"
+      },
+      {
+        "id": "unknown",
+        "label": "Don’t know"
+      }
+    ]
+  },
+  "answers": [
+    {
+      "type": "answer",
+      "question_id": "society",
+      "answer": "no"
+    },
+    {
+      "type": "answer",
+      "question_id": "journey",
+      "answer": "yes"
+    },
+    {
+      "type": "answer",
+      "question_id": "fantasy",
+      "answer": "yes"
+    },
+    {
+      "type": "answer",
+      "question_id": "before-1900",
+      "answer": "no"
+    },
+    {
+      "type": "answer",
+      "question_id": "female",
+      "answer": "no"
+    },
+    {
+      "type": "answer",
+      "question_id": "clue-the-little-prince",
+      "answer": "no"
+    },
+    {
+      "type": "answer",
+      "question_id": "clue-the-hobbit",
+      "answer": "yes"
+    }
+  ],
+  "states": {
+    "[]": {
+      "version": "oracle-2",
+      "question_count": 0,
+      "guess_count": 0,
+      "status": "question",
+      "question": {
+        "id": "society",
+        "prompt": "Are social class, inequality, or institutions a major concern?"
+      }
+    },
+    "[{\"type\":\"answer\",\"question_id\":\"society\",\"answer\":\"no\"}]": {
+      "version": "oracle-2",
+      "question_count": 1,
+      "guess_count": 0,
+      "status": "question",
+      "question": {
+        "id": "journey",
+        "prompt": "Is a journey or expedition central to the story?"
+      }
+    },
+    "[{\"type\":\"answer\",\"question_id\":\"society\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"journey\",\"answer\":\"yes\"}]": {
+      "version": "oracle-2",
+      "question_count": 2,
+      "guess_count": 0,
+      "status": "question",
+      "question": {
+        "id": "fantasy",
+        "prompt": "Does magic or the supernatural play a central role?"
+      }
+    },
+    "[{\"type\":\"answer\",\"question_id\":\"society\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"journey\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"fantasy\",\"answer\":\"yes\"}]": {
+      "version": "oracle-2",
+      "question_count": 3,
+      "guess_count": 0,
+      "status": "question",
+      "question": {
+        "id": "before-1900",
+        "prompt": "Was it first published before 1900?"
+      }
+    },
+    "[{\"type\":\"answer\",\"question_id\":\"society\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"journey\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"fantasy\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"before-1900\",\"answer\":\"no\"}]": {
+      "version": "oracle-2",
+      "question_count": 4,
+      "guess_count": 0,
+      "status": "question",
+      "question": {
+        "id": "female",
+        "prompt": "Is a girl or woman one of the central viewpoint characters?"
+      }
+    },
+    "[{\"type\":\"answer\",\"question_id\":\"society\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"journey\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"fantasy\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"before-1900\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"female\",\"answer\":\"no\"}]": {
+      "version": "oracle-2",
+      "question_count": 5,
+      "guess_count": 0,
+      "status": "question",
+      "question": {
+        "id": "clue-the-little-prince",
+        "prompt": "Does a stranded pilot meet a young traveler from a tiny asteroid?"
+      }
+    },
+    "[{\"type\":\"answer\",\"question_id\":\"society\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"journey\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"fantasy\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"before-1900\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"female\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"clue-the-little-prince\",\"answer\":\"no\"}]": {
+      "version": "oracle-2",
+      "question_count": 6,
+      "guess_count": 0,
+      "status": "question",
+      "question": {
+        "id": "clue-the-hobbit",
+        "prompt": "Does a reluctant home-loving traveler join dwarves on a quest to reclaim a dragon’s treasure?"
+      }
+    },
+    "[{\"type\":\"answer\",\"question_id\":\"society\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"journey\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"fantasy\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"before-1900\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"female\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"clue-the-little-prince\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"clue-the-hobbit\",\"answer\":\"yes\"}]": {
+      "version": "oracle-2",
+      "question_count": 7,
+      "guess_count": 0,
+      "status": "guess",
+      "book": {
+        "id": "the-hobbit",
+        "title": "The Hobbit",
+        "author": "J. R. R. Tolkien",
+        "shop_slug": "the-hobbit",
+        "explanation": "Your clues about this story’s distinctive premise pointed here."
+      }
+    },
+    "[{\"type\":\"answer\",\"question_id\":\"society\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"journey\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"fantasy\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"before-1900\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"female\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"clue-the-little-prince\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"clue-the-hobbit\",\"answer\":\"yes\"},{\"type\":\"guess\",\"book_id\":\"the-hobbit\",\"correct\":true}]": {
+      "version": "oracle-2",
+      "question_count": 7,
+      "guess_count": 1,
+      "status": "success",
+      "book": {
+        "id": "the-hobbit",
+        "title": "The Hobbit",
+        "author": "J. R. R. Tolkien",
+        "shop_slug": "the-hobbit",
+        "explanation": "Your clues about this story’s distinctive premise pointed here."
+      }
+    },
+    "[{\"type\":\"answer\",\"question_id\":\"society\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"journey\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"fantasy\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"before-1900\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"female\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"clue-the-little-prince\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"clue-the-hobbit\",\"answer\":\"yes\"},{\"type\":\"guess\",\"book_id\":\"the-hobbit\",\"correct\":false}]": {
+      "version": "oracle-2",
+      "question_count": 7,
+      "guess_count": 1,
+      "status": "question",
+      "question": {
+        "id": "animal",
+        "prompt": "Are animals central characters with lives or viewpoints of their own?"
+      }
+    }
+  },
+  "alice": {
+    "answers": [
+      {
+        "type": "answer",
+        "question_id": "society",
+        "answer": "no"
+      },
+      {
+        "type": "answer",
+        "question_id": "journey",
+        "answer": "no"
+      },
+      {
+        "type": "answer",
+        "question_id": "children",
+        "answer": "yes"
+      },
+      {
+        "type": "answer",
+        "question_id": "before-1900",
+        "answer": "unknown"
+      },
+      {
+        "type": "answer",
+        "question_id": "fantasy",
+        "answer": "yes"
+      },
+      {
+        "type": "answer",
+        "question_id": "female",
+        "answer": "yes"
+      },
+      {
+        "type": "answer",
+        "question_id": "before-1800",
+        "answer": "unknown"
+      },
+      {
+        "type": "answer",
+        "question_id": "clue-the-little-mermaid",
+        "answer": "no"
+      },
+      {
+        "type": "answer",
+        "question_id": "clue-beauty-and-the-beast",
+        "answer": "no"
+      },
+      {
+        "type": "answer",
+        "question_id": "family",
+        "answer": "no"
+      },
+      {
+        "type": "answer",
+        "question_id": "animal",
+        "answer": "yes"
+      },
+      {
+        "type": "answer",
+        "question_id": "stories",
+        "answer": "no"
+      },
+      {
+        "type": "answer",
+        "question_id": "clue-alices-adventures-in-wonderland",
+        "answer": "yes"
+      }
+    ],
+    "states": {
+      "[]": {
+        "version": "oracle-2",
+        "question_count": 0,
+        "guess_count": 0,
+        "status": "question",
+        "question": {
+          "id": "society",
+          "prompt": "Are social class, inequality, or institutions a major concern?"
+        }
+      },
+      "[{\"type\":\"answer\",\"question_id\":\"society\",\"answer\":\"no\"}]": {
+        "version": "oracle-2",
+        "question_count": 1,
+        "guess_count": 0,
+        "status": "question",
+        "question": {
+          "id": "journey",
+          "prompt": "Is a journey or expedition central to the story?"
+        }
+      },
+      "[{\"type\":\"answer\",\"question_id\":\"society\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"journey\",\"answer\":\"no\"}]": {
+        "version": "oracle-2",
+        "question_count": 2,
+        "guess_count": 0,
+        "status": "question",
+        "question": {
+          "id": "children",
+          "prompt": "Was it written primarily for children or younger readers?"
+        }
+      },
+      "[{\"type\":\"answer\",\"question_id\":\"society\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"journey\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"children\",\"answer\":\"yes\"}]": {
+        "version": "oracle-2",
+        "question_count": 3,
+        "guess_count": 0,
+        "status": "question",
+        "question": {
+          "id": "before-1900",
+          "prompt": "Was it first published before 1900?"
+        }
+      },
+      "[{\"type\":\"answer\",\"question_id\":\"society\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"journey\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"children\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"before-1900\",\"answer\":\"unknown\"}]": {
+        "version": "oracle-2",
+        "question_count": 4,
+        "guess_count": 0,
+        "status": "question",
+        "question": {
+          "id": "fantasy",
+          "prompt": "Does magic or the supernatural play a central role?"
+        }
+      },
+      "[{\"type\":\"answer\",\"question_id\":\"society\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"journey\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"children\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"before-1900\",\"answer\":\"unknown\"},{\"type\":\"answer\",\"question_id\":\"fantasy\",\"answer\":\"yes\"}]": {
+        "version": "oracle-2",
+        "question_count": 5,
+        "guess_count": 0,
+        "status": "question",
+        "question": {
+          "id": "female",
+          "prompt": "Is a girl or woman one of the central viewpoint characters?"
+        }
+      },
+      "[{\"type\":\"answer\",\"question_id\":\"society\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"journey\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"children\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"before-1900\",\"answer\":\"unknown\"},{\"type\":\"answer\",\"question_id\":\"fantasy\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"female\",\"answer\":\"yes\"}]": {
+        "version": "oracle-2",
+        "question_count": 6,
+        "guess_count": 0,
+        "status": "question",
+        "question": {
+          "id": "before-1800",
+          "prompt": "Was it first published before 1800?"
+        }
+      },
+      "[{\"type\":\"answer\",\"question_id\":\"society\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"journey\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"children\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"before-1900\",\"answer\":\"unknown\"},{\"type\":\"answer\",\"question_id\":\"fantasy\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"female\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"before-1800\",\"answer\":\"unknown\"}]": {
+        "version": "oracle-2",
+        "question_count": 7,
+        "guess_count": 0,
+        "status": "question",
+        "question": {
+          "id": "clue-the-little-mermaid",
+          "prompt": "Does a young sea princess long for a human prince and a life above the water?"
+        }
+      },
+      "[{\"type\":\"answer\",\"question_id\":\"society\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"journey\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"children\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"before-1900\",\"answer\":\"unknown\"},{\"type\":\"answer\",\"question_id\":\"fantasy\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"female\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"before-1800\",\"answer\":\"unknown\"},{\"type\":\"answer\",\"question_id\":\"clue-the-little-mermaid\",\"answer\":\"no\"}]": {
+        "version": "oracle-2",
+        "question_count": 8,
+        "guess_count": 0,
+        "status": "question",
+        "question": {
+          "id": "clue-beauty-and-the-beast",
+          "prompt": "Does a merchant’s daughter go to live in an enchanted palace with a frightening beast?"
+        }
+      },
+      "[{\"type\":\"answer\",\"question_id\":\"society\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"journey\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"children\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"before-1900\",\"answer\":\"unknown\"},{\"type\":\"answer\",\"question_id\":\"fantasy\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"female\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"before-1800\",\"answer\":\"unknown\"},{\"type\":\"answer\",\"question_id\":\"clue-the-little-mermaid\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"clue-beauty-and-the-beast\",\"answer\":\"no\"}]": {
+        "version": "oracle-2",
+        "question_count": 9,
+        "guess_count": 0,
+        "status": "question",
+        "question": {
+          "id": "family",
+          "prompt": "Are family relationships a major focus of the story?"
+        }
+      },
+      "[{\"type\":\"answer\",\"question_id\":\"society\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"journey\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"children\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"before-1900\",\"answer\":\"unknown\"},{\"type\":\"answer\",\"question_id\":\"fantasy\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"female\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"before-1800\",\"answer\":\"unknown\"},{\"type\":\"answer\",\"question_id\":\"clue-the-little-mermaid\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"clue-beauty-and-the-beast\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"family\",\"answer\":\"no\"}]": {
+        "version": "oracle-2",
+        "question_count": 10,
+        "guess_count": 0,
+        "status": "question",
+        "question": {
+          "id": "animal",
+          "prompt": "Are animals central characters with lives or viewpoints of their own?"
+        }
+      },
+      "[{\"type\":\"answer\",\"question_id\":\"society\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"journey\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"children\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"before-1900\",\"answer\":\"unknown\"},{\"type\":\"answer\",\"question_id\":\"fantasy\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"female\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"before-1800\",\"answer\":\"unknown\"},{\"type\":\"answer\",\"question_id\":\"clue-the-little-mermaid\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"clue-beauty-and-the-beast\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"family\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"animal\",\"answer\":\"yes\"}]": {
+        "version": "oracle-2",
+        "question_count": 11,
+        "guess_count": 0,
+        "status": "question",
+        "question": {
+          "id": "stories",
+          "prompt": "Is it a collection of separate stories rather than one continuous tale?"
+        }
+      },
+      "[{\"type\":\"answer\",\"question_id\":\"society\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"journey\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"children\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"before-1900\",\"answer\":\"unknown\"},{\"type\":\"answer\",\"question_id\":\"fantasy\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"female\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"before-1800\",\"answer\":\"unknown\"},{\"type\":\"answer\",\"question_id\":\"clue-the-little-mermaid\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"clue-beauty-and-the-beast\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"family\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"animal\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"stories\",\"answer\":\"no\"}]": {
+        "version": "oracle-2",
+        "question_count": 12,
+        "guess_count": 0,
+        "status": "question",
+        "question": {
+          "id": "clue-alices-adventures-in-wonderland",
+          "prompt": "Does a girl follow a white rabbit into a world of curious creatures and changing sizes?"
+        }
+      },
+      "[{\"type\":\"answer\",\"question_id\":\"society\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"journey\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"children\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"before-1900\",\"answer\":\"unknown\"},{\"type\":\"answer\",\"question_id\":\"fantasy\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"female\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"before-1800\",\"answer\":\"unknown\"},{\"type\":\"answer\",\"question_id\":\"clue-the-little-mermaid\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"clue-beauty-and-the-beast\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"family\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"animal\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"stories\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"clue-alices-adventures-in-wonderland\",\"answer\":\"yes\"}]": {
+        "version": "oracle-2",
+        "question_count": 13,
+        "guess_count": 0,
+        "status": "guess",
+        "book": {
+          "id": "alices-adventures-in-wonderland",
+          "title": "Alice’s Adventures in Wonderland",
+          "author": "Lewis Carroll",
+          "shop_slug": "alices-adventures-in-wonderland",
+          "explanation": "Your clues about this story’s distinctive premise pointed here."
+        }
+      },
+      "[{\"type\":\"answer\",\"question_id\":\"society\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"journey\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"children\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"before-1900\",\"answer\":\"unknown\"},{\"type\":\"answer\",\"question_id\":\"fantasy\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"female\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"before-1800\",\"answer\":\"unknown\"},{\"type\":\"answer\",\"question_id\":\"clue-the-little-mermaid\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"clue-beauty-and-the-beast\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"family\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"animal\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"stories\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"clue-alices-adventures-in-wonderland\",\"answer\":\"yes\"},{\"type\":\"guess\",\"book_id\":\"alices-adventures-in-wonderland\",\"correct\":true}]": {
+        "version": "oracle-2",
+        "question_count": 13,
+        "guess_count": 1,
+        "status": "success",
+        "book": {
+          "id": "alices-adventures-in-wonderland",
+          "title": "Alice’s Adventures in Wonderland",
+          "author": "Lewis Carroll",
+          "shop_slug": "alices-adventures-in-wonderland",
+          "explanation": "Your clues about this story’s distinctive premise pointed here."
+        }
+      },
+      "[{\"type\":\"answer\",\"question_id\":\"society\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"journey\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"children\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"before-1900\",\"answer\":\"unknown\"},{\"type\":\"answer\",\"question_id\":\"fantasy\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"female\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"before-1800\",\"answer\":\"unknown\"},{\"type\":\"answer\",\"question_id\":\"clue-the-little-mermaid\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"clue-beauty-and-the-beast\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"family\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"animal\",\"answer\":\"yes\"},{\"type\":\"answer\",\"question_id\":\"stories\",\"answer\":\"no\"},{\"type\":\"answer\",\"question_id\":\"clue-alices-adventures-in-wonderland\",\"answer\":\"yes\"},{\"type\":\"guess\",\"book_id\":\"alices-adventures-in-wonderland\",\"correct\":false}]": {
+        "version": "oracle-2",
+        "question_count": 13,
+        "guess_count": 1,
+        "status": "question",
+        "question": {
+          "id": "clue-the-wonderful-wizard-of-oz",
+          "prompt": "Does a girl carried away by a cyclone follow a yellow-brick road with three unlikely companions?"
+        }
+      }
+    }
+  }
+}
