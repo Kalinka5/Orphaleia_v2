@@ -94,6 +94,7 @@ function Layout({ children }: { children: ReactNode }) {
   return <>
     <PageMeta title={routeMeta.title} description={routeMeta.description} canonicalPath={location.pathname.startsWith('/reading-current/shared/') ? null : getCanonicalPath(location.pathname, location.search)} noIndex={location.pathname.startsWith('/reading-current/shared/')} />
     <div className={s.portfolioBanner} role="note">Portfolio demonstration — no books are sold and no payments are taken.</div>
+    <div className={s.headerRegion}>
     <header className={`${s.header} ${location.pathname === '/' ? s.headerHome : ''} ${isAuthRoute ? s.headerAuth : ''}`}>
       <Link className={s.brand} to="/" aria-label="Orphaleia home">
         <span className={s.brandMark}><img src="/brand/orphaleia-mark.svg" alt="" /></span><span><b>Orphaleia</b><small>PORTFOLIO BOOKSHOP</small></span>
@@ -120,6 +121,7 @@ function Layout({ children }: { children: ReactNode }) {
         </div>
       </>}
     </header>
+    </div>
     <main id="main" tabIndex={-1} className={`${s.siteMain} ${isAuthRoute ? s.authMain : ''}`}>{children}</main>
     {!isAuthRoute && <footer className={s.footer}>
       <div className={s.footerLead}><div className={s.footerBrand}>Orphaleia</div><p>A fictional storefront created to demonstrate product design and engineering.</p></div>

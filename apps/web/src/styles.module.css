@@ -1,4 +1,6 @@
-.portfolioBanner { min-height: 38px; padding: 8px 20px; display: grid; place-items: center; position: sticky; top: 0; z-index: 100; color: #f7f2e7; background: #9b4a2f; border-bottom: 1px solid rgba(255,255,255,.24); font: 600 11px/1.45 'IBM Plex Mono', monospace; letter-spacing: .045em; text-align: center; }
+.portfolioBanner { min-height: 38px; padding: 10px 20px; display: grid; place-items: center; color: #643e2c; background: #f1e6dd; border-bottom: 1px solid rgba(100,62,44,.14); font: 500 12px/1.5 'Geist', sans-serif; text-align: center; text-wrap: balance; }
+/* Anchor the floating home header below the disclosure, whatever its wrapped height. */
+.headerRegion { position: relative; }
 .header { height: 88px; padding: 0 clamp(24px, 5vw, 78px); background: var(--night); color: var(--marble); display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 42px; border-bottom: 1px solid rgba(240,231,211,.18); position: relative; z-index: 20; }
 .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
 .brandMark { display: grid; place-items: center; width: 42px; height: 42px; flex: 0 0 42px; }
