@@ -488,8 +488,6 @@
   .featuredDwarf:not([data-mobile-visible='true']) { display: none; }
   .featuredDwarf { width: clamp(96px, 28vw, 118px); }
   .dwarfTop2 { width: clamp(145px, 40vw, 170px); left: 50%; top: var(--dwarf-reveal-space); transform: translate(-50%, -88%); }
-  .dwarfLeft1 { left: 0; top: calc(var(--dwarf-reveal-space) + 310px); transform: translate(-66%, -50%) rotate(-2deg); }
-  .dwarfRight2 { right: 0; top: calc(var(--dwarf-reveal-space) + 820px); bottom: auto; transform: translate(64%, -50%) rotate(-2deg); }
   .featuredBento { min-height: 0; display: grid; grid-template-columns: 1fr; grid-template-rows: none; grid-auto-flow: dense; }
   .bentoBook1, .bentoBook2, .bentoBook3, .bentoBook4 { min-height: 480px; grid-column: auto; grid-row: auto; grid-template-columns: 1fr; }
   .bentoBook2 .bentoCopy { position: absolute; }

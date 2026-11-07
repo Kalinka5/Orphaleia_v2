@@ -268,11 +268,11 @@ test('seven storybook dwarfs peek from behind the featured bento', async ({ page
   }
 
   const mobile = (page.viewportSize()?.width ?? 0) <= 760
-  await expect(visibleDwarfs).toHaveCount(mobile ? 3 : 7)
+  await expect(visibleDwarfs).toHaveCount(mobile ? 1 : 7)
   const visibleSides = await visibleDwarfs.evaluateAll((items) => items.map((item) => item.getAttribute('data-dwarf-side')))
-  expect(visibleSides.filter((side) => side === 'left')).toHaveLength(mobile ? 1 : 2)
+  expect(visibleSides.filter((side) => side === 'left')).toHaveLength(mobile ? 0 : 2)
   expect(visibleSides.filter((side) => side === 'top')).toHaveLength(mobile ? 1 : 3)
-  expect(visibleSides.filter((side) => side === 'right')).toHaveLength(mobile ? 1 : 2)
+  expect(visibleSides.filter((side) => side === 'right')).toHaveLength(mobile ? 0 : 2)
 
   const bentoBox = await bento.boundingBox()
   expect(bentoBox).not.toBeNull()

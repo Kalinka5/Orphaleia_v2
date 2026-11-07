@@ -230,13 +230,13 @@ const readerTestimonials: Testimonial[] = [
 ]
 
 const featuredDwarfs = [
-  { id: 'left-1', side: 'left', className: s.dwarfLeft1, src: '/assets/landing/snow-white-dwarf-left-1.webp', width: 420, height: 984, mobile: true },
+  { id: 'left-1', side: 'left', className: s.dwarfLeft1, src: '/assets/landing/snow-white-dwarf-left-1.webp', width: 420, height: 984, mobile: false },
   { id: 'left-2', side: 'left', className: s.dwarfLeft2, src: '/assets/landing/snow-white-dwarf-left-2.webp', width: 420, height: 869, mobile: false },
   { id: 'top-1', side: 'top', className: s.dwarfTop1, src: '/assets/landing/snow-white-dwarf-top-1.webp', width: 560, height: 546, mobile: false },
   { id: 'top-2', side: 'top', className: s.dwarfTop2, src: '/assets/landing/snow-white-dwarf-top-2.webp', width: 560, height: 622, mobile: true },
   { id: 'top-3', side: 'top', className: s.dwarfTop3, src: '/assets/landing/snow-white-dwarf-top-3.webp', width: 560, height: 693, mobile: false },
   { id: 'right-1', side: 'right', className: s.dwarfRight1, src: '/assets/landing/snow-white-dwarf-right-1.webp', width: 420, height: 896, mobile: false },
-  { id: 'right-2', side: 'right', className: s.dwarfRight2, src: '/assets/landing/snow-white-dwarf-right-2.webp', width: 420, height: 957, mobile: true },
+  { id: 'right-2', side: 'right', className: s.dwarfRight2, src: '/assets/landing/snow-white-dwarf-right-2.webp', width: 420, height: 957, mobile: false },
 ] as const
 
 const fallbackHeroBooks: HeroBook[] = [
