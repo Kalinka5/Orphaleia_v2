@@ -1,4 +1,4 @@
-import { createContext, FormEvent, lazy, ReactNode, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, FormEvent, lazy, ReactNode, Suspense, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, ArrowRight, ArrowUpRight, CaretRight, Check, EnvelopeSimple, Eye, EyeSlash, MagnifyingGlass, Pause, Play, Star } from '@phosphor-icons/react'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
@@ -71,6 +71,10 @@ function Layout({ children }: { children: ReactNode }) {
   const cart = useQuery({ queryKey: ['cart'], queryFn: () => api<Cart>('/cart'), enabled: !!user })
   const count = cart.data?.items.reduce((sum, item) => sum + item.quantity, 0) ?? 0
   const isAuthRoute = location.pathname === '/sign-in' || location.pathname === '/register'
+  useLayoutEffect(() => {
+    // New pages start at the top, even when the site enables smooth scrolling.
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  }, [location.pathname])
   useEffect(() => {
     setMenu(false)
     if (previousPath.current !== location.pathname) {
