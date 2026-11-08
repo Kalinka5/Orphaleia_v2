@@ -63,24 +63,13 @@ describe('AccountHub', () => {
     expect(await screen.findByRole('heading', { name: 'Books on their way and on your shelf' })).toBeInTheDocument()
   })
 
-  it('shows the latest Reading Current and active public links', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
-      profile: {
-        version: '2026.1', updated_at: '2026-09-17T12:00:00Z', is_stale: false,
-        result: {
-          primary_genre: { id: 'genre-1', name: 'Fantasy', slug: 'fantasy', description: 'Wonder.' },
-          related_genres: [{ id: 'genre-2', name: 'Adventure', slug: 'adventure', description: 'Journeys.' }],
-          archetype: { id: 'elsewhere-dreamer', name: 'The Elsewhere Dreamer', description: 'Wonder.' },
-          explanation: 'Your choices point to room for wonder.', traits: ['room for wonder'], books: [], version: '2026.1', completed_at: '2026-09-17T12:00:00Z',
-        },
-      },
-      shares: [{ id: 'share-1', url: 'https://books.example/reading-current/shared/token', display_name: null, created_at: '2026-09-17T12:00:00Z', expires_at: '2027-09-17T12:00:00Z', revoked_at: null }],
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } })))
+  it('opens orders at retired Reading Current account links', async () => {
+    const fetch = vi.fn(async (...args: [RequestInfo | URL]) => { void args; return new Response(JSON.stringify({ items: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }) })
+    vi.stubGlobal('fetch', fetch)
     renderHub('/account?section=reading-current')
-    expect(await screen.findByRole('heading', { name: 'Fantasy' })).toBeInTheDocument()
-    expect(screen.getByText('The Elsewhere Dreamer')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Anonymous reading current' })).toHaveAttribute('href', 'https://books.example/reading-current/shared/token')
-    expect(screen.getByRole('button', { name: 'Revoke' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Books on their way and on your shelf' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Reading Current/ })).not.toBeInTheDocument()
+    expect(fetch.mock.calls.some((args) => String(args[0]).includes('reading-current'))).toBe(false)
   })
 
   it('opens a deep-linked order with timeline, delivery, and safe carrier tracking', async () => {

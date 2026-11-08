@@ -34,8 +34,6 @@ import s from './styles.module.css'
 const BookDetailExperience = lazy(() => import('./components/BookDetailExperience').then((module) => ({ default: module.BookDetailExperience })))
 const BookOracle = lazy(() => import('./components/BookOracle'))
 const AccountHub = lazy(() => import('./components/AccountHub').then((module) => ({ default: module.AccountHub })))
-const ReadingCurrentExperience = lazy(() => import('./components/ReadingCurrentExperience').then((module) => ({ default: module.ReadingCurrentExperience })))
-const ReadingCurrentShared = lazy(() => import('./components/ReadingCurrentExperience').then((module) => ({ default: module.ReadingCurrentShared })))
 const AdminOrderOperations = lazy(() => import('./components/AdminOrderOperations').then((module) => ({ default: module.AdminOrderOperations })))
 const NotFoundPage = lazy(() => import('./components/NotFoundPage').then((module) => ({ default: module.NotFoundPage })))
 const PrivacyPolicyPage = lazy(() => import('./components/LegalPages').then((module) => ({ default: module.PrivacyPolicyPage })))
@@ -98,7 +96,7 @@ function Layout({ children }: { children: ReactNode }) {
   }, [menu])
   const routeMeta = getRouteMeta(location.pathname)
   return <>
-    <PageMeta title={routeMeta.title} description={routeMeta.description} canonicalPath={location.pathname.startsWith('/reading-current/shared/') ? null : getCanonicalPath(location.pathname, location.search)} noIndex={location.pathname.startsWith('/reading-current/shared/')} />
+    <PageMeta title={routeMeta.title} description={routeMeta.description} canonicalPath={getCanonicalPath(location.pathname, location.search)} />
     <div className={s.portfolioBanner} role="note">Portfolio demonstration — no books are sold and no payments are taken.</div>
     <div className={s.headerRegion}>
     <header className={`${s.header} ${location.pathname === '/' ? s.headerHome : ''} ${isAuthRoute ? s.headerAuth : ''}`}>
@@ -143,10 +141,8 @@ function getRouteMeta(pathname: string) {
   if (pathname === '/') return { title: 'Portfolio bookshop concept', description: 'A fictional editorial bookshop interface created to demonstrate product design and engineering.' }
   if (pathname === '/books' || pathname === '/all-books') return { title: 'All books', description: 'Search Orphaleia’s complete catalogue by title, author, genre, rating, and availability.' }
   if (pathname.startsWith('/books/')) return { title: 'Book details', description: 'Read about this Orphaleia edition, reader ratings, and related books.' }
-  if (pathname === '/genres') return { title: 'Genres', description: 'Explore literary collections and follow a new reading current.' }
+  if (pathname === '/genres') return { title: 'Genres', description: 'Explore literary collections and discover your next book.' }
   if (pathname === '/book-oracle') return { title: 'The Book Oracle', description: 'Think of a book and let Orphaleia’s oracle follow your clues. A literary guessing game with 100 well-known stories.' }
-  if (pathname === '/reading-current') return { title: 'Find Your Reading Current', description: 'Answer eight illustrated questions and discover your closest Orphaleia genres and books.' }
-  if (pathname.startsWith('/reading-current/shared/')) return { title: 'A Shared Reading Current', description: 'A reader has shared an Orphaleia reading current.' }
   if (pathname.startsWith('/genres/')) return { title: 'Genre collection', description: 'Browse books from this Orphaleia collection.' }
   if (pathname === '/authors') return { title: 'Authors', description: 'Follow the voices represented on Orphaleia’s shelves.' }
   if (pathname.startsWith('/authors/')) return { title: 'Author', description: 'Discover books by this Orphaleia author.' }
@@ -557,7 +553,6 @@ function Home() {
             <img src="/assets/landing/cheshire-cat-flying.webp" srcSet="/assets/landing/cheshire-cat-flying-640w.webp 640w, /assets/landing/cheshire-cat-flying-1024w.webp 1024w, /assets/landing/cheshire-cat-flying.webp 1536w" sizes="(max-width: 760px) 78vw, 38vw" alt="" width="1536" height="1024" loading="lazy" decoding="async" />
           </figure>
           <p>Move sideways through the shelves. The collection that opens is the one asking for your attention.</p>
-          <Link className={s.readingCurrentLink} to="/reading-current" state={{ readingCurrentSource: 'home' }}>Or take the eight-choice voyage <ArrowRight size={16} aria-hidden="true" /></Link>
         </div>
       </div>
       <div className={s.genreAccordion} data-testid="genre-accordion">{collectionGenres.map((genre, index) => {
@@ -724,7 +719,7 @@ function Directory({ kind }: { kind: 'genres' | 'authors' }) {
         <img src="/assets/authors/puss-in-boots-sleeping.webp" srcSet="/assets/authors/puss-in-boots-sleeping-768w.webp 768w, /assets/authors/puss-in-boots-sleeping-1280w.webp 1280w, /assets/authors/puss-in-boots-sleeping.webp 1774w" sizes="(max-width: 1050px) 100vw, 55vw" alt="A three-dimensional storybook cat in boots sleeping with his feathered hat tipped over his eyes." width="1774" height="887" loading="eager" fetchPriority="high" decoding="async" />
       </figure>
     </div> : <div className={s.genresHero}>
-      <div className={s.pageHeading}><span className={s.eyebrow}>SHELVES BY MOOD</span><h1>Choose a current</h1><p>A shelf is a direction, never a boundary.</p><Link className={s.readingCurrentLink} to="/reading-current" state={{ readingCurrentSource: 'genres' }}>Let eight choices find yours <ArrowRight size={16} aria-hidden="true" /></Link></div>
+      <div className={s.pageHeading}><span className={s.eyebrow}>SHELVES BY MOOD</span><h1>Choose a current</h1><p>A shelf is a direction, never a boundary.</p></div>
       <figure className={s.genresIllustration}>
         <img src="/assets/genres/harry-potter-voldemort-duel-v2.webp" alt="Harry Potter and Voldemort duelling, with golden and green magic colliding between their wands and green smoke swirling behind Voldemort." width="1920" height="897" loading="eager" decoding="async" />
       </figure>
@@ -1059,12 +1054,6 @@ function Account() {
   return <AccountHub user={user} refresh={refresh} portfolioDemo />
 }
 
-function ReadingCurrentPage() {
-  const { user } = useAuth()
-  const location = useLocation()
-  const state = location.state as { readingCurrentSource?: string } | null
-  return <ReadingCurrentExperience user={user} source={state?.readingCurrentSource ?? 'direct'} />
-}
 
 function Admin() {
   const { user, loading } = useAuth(); const client = useQueryClient(); const [tab, setTab] = useState('overview'); const [message, setMessage] = useState(''); const [messageVariant, setMessageVariant] = useState<NotificationVariant>('success'); const [taxonomyBusy, setTaxonomyBusy] = useState(false); const [zoneBusy, setZoneBusy] = useState(false)
@@ -1227,7 +1216,7 @@ export default function App() {
   return <AuthProvider><Layout><Suspense fallback={<State title="Opening this passage…" loading viewport />}><Routes>
     <Route path="/" element={<Home />} /><Route path="/books" element={<Catalog />} /><Route path="/all-books" element={<Catalog />} /><Route path="/books/:slug" element={<BookPage />} />
     <Route path="/genres" element={<Directory kind="genres" />} /><Route path="/genres/:slug" element={<Shelf kind="genres" />} /><Route path="/authors" element={<Directory kind="authors" />} /><Route path="/authors/:slug" element={<Shelf kind="authors" />} /><Route path="/rankings" element={<Rankings />} />
-    <Route path="/book-oracle" element={<BookOracle />} /><Route path="/reading-current" element={<ReadingCurrentPage />} /><Route path="/reading-current/shared/:token" element={<ReadingCurrentShared />} />
+    <Route path="/book-oracle" element={<BookOracle />} />
     <Route path="/sign-in" element={<AuthPage />} /><Route path="/register" element={<Navigate to="/sign-in" replace />} /><Route path="/verify" element={<Navigate to="/sign-in" replace />} /><Route path="/forgot-password" element={<Navigate to="/sign-in" replace />} /><Route path="/reset-password" element={<Navigate to="/sign-in" replace />} /><Route path="/confirm-email-change" element={<Navigate to="/sign-in" replace />} />
     <Route path="/cart" element={<RequireUser><CartPage /></RequireUser>} /><Route path="/checkout" element={<RequireUser><Checkout /></RequireUser>} /><Route path="/payment/return" element={<PaymentReturn />} /><Route path="/account" element={<RequireUser><Account /></RequireUser>} />
     <Route path="/privacy" element={<PrivacyPolicyPage />} /><Route path="/terms" element={<TermsPage />} />
