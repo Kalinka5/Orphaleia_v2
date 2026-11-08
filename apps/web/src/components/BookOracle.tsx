@@ -4,9 +4,9 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, ApiRequestError, errorMessage } from '../api'
 import { ORACLE_STORAGE_KEY, readOracleRound, type OracleAnswer, type OracleEvent, type OracleManifest, type OracleState } from '../bookOracle'
+import { getOracleReaction } from '../oracleReactions'
+import { BookOraclePortrait } from './BookOraclePortrait'
 import s from './BookOracle.module.css'
-
-const art = '/assets/book-oracle/'
 
 export default function BookOracle() {
   const manifest = useQuery({ queryKey: ['book-oracle'], queryFn: () => api<OracleManifest>('/book-oracle'), retry: false })
@@ -77,17 +77,14 @@ export default function BookOracle() {
     if (state?.status !== 'guess' || waiting) return
     setPending([...events, { type: 'guess', book_id: state.book.id, correct }])
   }
-  const expression = state?.status === 'success' ? 'successful' : state?.status === 'defeat' ? 'defeated' : state ? 'thinking' : 'welcoming'
   const needsFreshStart = stale && error instanceof ApiRequestError
+  const reactionEvents = pending !== null && !error ? pending : events
+  const reaction = getOracleReaction(pending !== null && !error ? 'question' : state?.status ?? null, reactionEvents)
 
   return <div className={s.page}>
     <div className={s.topline}><Link to="/books"><ArrowLeft size={16} aria-hidden="true" /> Back to the shelves</Link><span><BookOpen size={16} aria-hidden="true" /> Orphaleia’s Book Oracle</span></div>
     <div className={s.stage}>
-      <aside className={s.portrait} aria-label="The Orphaleia book oracle">
-        <div className={s.portraitCircle} aria-hidden="true" />
-        <img className={s.oracle} src={`${art}${expression}.webp`} alt={`An illustrated oracle in a green robe, ${expression === 'successful' ? 'smiling with delight' : expression === 'defeated' ? 'giving an amused shrug' : expression === 'thinking' ? 'considering your clues' : 'welcoming you with an open book'}.`} width="900" height="900" fetchPriority="high" />
-        <p className={s.portraitCaption}>A keeper of stories.<br /><span>A reader of clues.</span></p>
-      </aside>
+      <BookOraclePortrait reaction={reaction} turn={reactionEvents.length} waiting={waiting && !error} />
       <section className={s.conversation} aria-label="Book guessing game" aria-busy={busy}>
         <p className={s.eyebrow}><Sparkle size={15} aria-hidden="true" /> {state ? state.status === 'question' ? `Question ${state.question_count + 1}` : state.status === 'guess' ? 'A story comes to mind' : state.status === 'success' ? 'A little magic, a few good clues' : 'A mystery for another day' : 'A book in mind. A little magic.'}</p>
         {!state && <>

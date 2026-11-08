@@ -6,8 +6,8 @@
 .portrait { position: relative; min-width: 0; align-self: center; isolation: isolate; padding-bottom: 56px; }
 .portraitCircle { position: absolute; z-index: -1; width: 85%; aspect-ratio: 1; border: 1px solid var(--oracle-line); border-radius: 50%; top: 9%; left: 7%; background: #e6ecdf; box-shadow: 0 0 0 18px var(--oracle-bg), 0 0 0 19px var(--oracle-line); }
 .oracle { width: 100%; height: auto; aspect-ratio: 1; object-fit: contain; position: relative; filter: drop-shadow(0 15px 18px #23382c15); }
-.portraitCaption { margin: 2px 0 0; position: absolute; bottom: 0; left: 10%; font-size: 12px; line-height: 1.7; color: var(--oracle-accent); }
-.portraitCaption span { color: var(--oracle-muted); }
+.characterFrame { aspect-ratio: 1; transform-origin: 50% 90%; }
+.portraitCaption { margin: 2px 0 0; position: absolute; bottom: 0; left: 5%; right: 5%; min-height: 42px; text-align: center; text-wrap: balance; font-size: 12px; line-height: 1.7; color: var(--oracle-accent); }
 .conversation { max-width: 590px; padding: 22px 0; min-width: 0; }
 .eyebrow { margin: 0 0 23px; display: flex; align-items: center; gap: 9px; font: 500 10px/1.6 'JetBrains Mono', monospace; letter-spacing: .1em; text-transform: uppercase; color: var(--oracle-accent); }
 .conversation h1 { font-size: clamp(34px, 3.7vw, 54px); font-weight: 500; letter-spacing: -.055em; line-height: 1.13; margin: 0 0 22px; outline: none; text-wrap: balance; }
@@ -58,6 +58,14 @@
 .invitationArt { align-self: end; width: min(100%, 550px); justify-self: center; }
 .invitationArt img { aspect-ratio: 1; object-fit: contain; width: 100%; height: auto; }
 @media (prefers-reduced-motion: no-preference) {
+  .characterFrame { animation: oracle-breathe 6s ease-in-out infinite; }
+  .oracle { animation: oracle-react .4s ease-out; transform-origin: 50% 80%; }
+  .oracle[data-expression="angry"] { animation: oracle-grumble .5s ease-in-out; }
+  .portrait[data-waiting="true"] .portraitCircle { animation: oracle-glow 1.8s ease-in-out infinite; }
+  @keyframes oracle-breathe { 50% { transform: translateY(-4px) rotate(.25deg); } }
+  @keyframes oracle-react { from { opacity: .65; transform: translateY(4px) scale(.985); } to { opacity: 1; transform: none; } }
+  @keyframes oracle-grumble { 20%, 60% { transform: rotate(-1deg); } 40%, 80% { transform: rotate(1deg); } }
+  @keyframes oracle-glow { 50% { opacity: .6; } }
   .conversation h1 { animation: question-arrive .3s ease-out; }
   @keyframes question-arrive { from { transform: translateY(7px); } to { transform: translateY(0); } }
 }
@@ -76,9 +84,9 @@
   .page { padding: 20px 22px 28px; }
   .topline > span { display: none; }
   .stage { grid-template-columns: 1fr; gap: 0; margin: 10px auto 28px; min-height: 0; }
-  .portrait { padding: 0; width: min(58vw, 250px); justify-self: center; margin: 5px 0 12px; }
+  .portrait { padding: 0 0 42px; width: min(58vw, 250px); justify-self: center; margin: 5px 0 12px; }
   .portraitCircle { box-shadow: 0 0 0 8px var(--oracle-bg), 0 0 0 9px var(--oracle-line); }
-  .portraitCaption { display: none; }
+  .portraitCaption { left: -25px; right: -25px; min-height: 34px; font-size: 11px; }
   .conversation { max-width: 560px; width: 100%; margin: 0 auto; padding: 8px 0 0; }
   .eyebrow { margin-bottom: 15px; font-size: 9px; }
   .conversation h1 { font-size: clamp(31px, 7.8vw, 44px); margin-bottom: 17px; }

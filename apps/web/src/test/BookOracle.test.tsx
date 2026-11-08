@@ -46,6 +46,34 @@ async function answer() {
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); sessionStorage.clear() })
 
 describe('Book Oracle', () => {
+  it('reacts to answers immediately and restores committed reactions on failure, Back, and Restart', async () => {
+    const fetchMock = mockApi(); mount(); await start()
+    const portrait = screen.getByRole('complementary', { name: 'The Orphaleia book oracle' })
+    const respond = async (label: string, count: number) => {
+      fetchMock.mockResolvedValueOnce(response({ version: manifest.version, status: 'question', question_count: count, guess_count: 0, question: { id: `q${count}`, prompt: `Clue ${count}?` } }))
+      fireEvent.click(screen.getByRole('button', { name: label }))
+      await screen.findByRole('heading', { name: `Clue ${count}?` })
+    }
+    await respond('No', 1)
+    expect(portrait).toHaveAttribute('data-emotion', 'skeptical')
+    await respond('No', 2)
+    await respond('No', 3)
+    expect(portrait).toHaveAttribute('data-emotion', 'angry')
+    fetchMock.mockRejectedValueOnce(new TypeError('Offline'))
+    fireEvent.click(screen.getByRole('button', { name: 'Probably' }))
+    expect(portrait).toHaveAttribute('data-emotion', 'thinking')
+    await screen.findByRole('button', { name: 'Retry' })
+    expect(portrait).toHaveAttribute('data-emotion', 'angry')
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }))
+    await screen.findByRole('heading', { name: prompts[2] })
+    expect(portrait).toHaveAttribute('data-emotion', 'skeptical')
+    await respond('Probably', 3)
+    expect(portrait).toHaveAttribute('data-emotion', 'thinking')
+    fireEvent.click(screen.getByRole('button', { name: 'Restart' }))
+    await screen.findByRole('heading', { name: prompts[0] })
+    expect(portrait).toHaveAttribute('data-emotion', 'thinking')
+  })
+
   it('plays as a guest, confirms a guess, and links only an available shop match', async () => {
     mockApi(); mount(); await start()
     for (let i = 0; i < 3; i++) {

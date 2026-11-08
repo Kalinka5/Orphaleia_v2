@@ -33,6 +33,55 @@ async function noSeriousViolations(page: Page) {
   expect(result.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')).toEqual([])
 }
 
+test('the character reacts to clues, restores earlier moods, and celebrates or concedes', async ({ page }, info) => {
+  await page.route('**/api/v1/book-oracle', (route) => route.fulfill({ json: fixture.manifest }))
+  await page.route('**/api/v1/book-oracle/step', (route) => {
+    const events = route.request().postDataJSON().events as Event[]
+    const answers = events.filter((event) => event.type === 'answer')
+    const guesses = events.filter((event) => event.type === 'guess')
+    const last = events.at(-1)
+    const base = { version: (fixture.manifest as { version: string }).version, question_count: answers.length, guess_count: guesses.length }
+    const book = { id: 'the-hobbit', title: 'The Hobbit', author: 'J. R. R. Tolkien', explanation: 'A little literary magic.', shop_slug: null }
+    const state = last?.type === 'guess'
+      ? last.correct ? { ...base, status: 'success', book } : { ...base, status: 'defeat', message: 'You have outwitted me.' }
+      : answers.length >= 7 ? { ...base, status: 'guess', book }
+        : { ...base, status: 'question', question: { id: `q${answers.length}`, prompt: `Mystery clue ${answers.length + 1}?` } }
+    return route.fulfill({ json: state })
+  })
+  await page.goto('/book-oracle')
+  const portrait = page.getByRole('complementary', { name: 'The Orphaleia book oracle' })
+  const image = portrait.getByRole('img')
+  async function expression(emotion: string) {
+    await expect(portrait).toHaveAttribute('data-emotion', emotion)
+    await expect(image).toHaveAttribute('data-expression', emotion)
+    await expect.poll(() => image.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true)
+  }
+  const choose = (label: string) => transition(page, () => page.getByRole('button', { name: label, exact: true }).click())
+  await expression('welcoming')
+  await start(page); await expression('thinking')
+  await choose('No'); await expression('skeptical')
+  await choose('No'); await choose('No'); await expression('angry')
+  await page.screenshot({ path: info.outputPath('oracle-angry.png'), fullPage: true })
+  await choose('Back'); await expression('skeptical')
+  await choose('Probably'); await expression('thinking')
+  await page.screenshot({ path: info.outputPath('oracle-thinking.png'), fullPage: true })
+  await choose('Probably not'); await expression('thinking')
+  await choose('Don’t know'); await expression('thinking')
+  await choose('Yes'); await expression('welcoming')
+  await choose('Yes'); await expression('excited')
+  await choose('Keep looking'); await expression('defeated')
+  await page.screenshot({ path: info.outputPath('oracle-defeated.png'), fullPage: true })
+  await choose('Back'); await expression('excited')
+  await choose('That’s my book'); await expression('excited')
+  await page.screenshot({ path: info.outputPath('oracle-celebrating.png'), fullPage: true })
+  await choose('Think of another book'); await expression('thinking')
+  await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: 'dark' })
+  await expect(page.getByRole('link', { name: 'Back to the shelves' })).toHaveCSS('color', 'rgb(184, 199, 189)')
+  expect(await image.evaluate((img) => [getComputedStyle(img).animationName, getComputedStyle(img.parentElement!).animationName])).toEqual(['none', 'none'])
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await noSeriousViolations(page)
+})
+
 test('plays a complete round, resumes the tab, goes back, and restarts', async ({ page }, info) => {
   if (!process.env.ORACLE_LIVE) await mockOracle(page)
   await page.goto('/book-oracle')
